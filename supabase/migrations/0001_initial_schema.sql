@@ -195,7 +195,7 @@ CREATE POLICY "leagues_select_member"
   ON leagues FOR SELECT
   USING (
     deleted_at IS NULL
-    AND (is_league_member(id) OR is_superadmin())
+    AND (is_league_member(id) OR created_by = auth.uid() OR is_superadmin())
   );
 
 CREATE POLICY "leagues_insert_authenticated"
