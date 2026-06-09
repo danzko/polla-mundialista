@@ -1,6 +1,10 @@
 import * as React from 'react';
 
-// Root layout pass-through for next-intl locale routing
+// Top-level root layout required by Next.js containing fallback html/body tags.
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return (
+    <html lang="es">
+      <body>{children}</body>
+    </html>
+  );
 }
