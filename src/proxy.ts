@@ -1,6 +1,6 @@
 import createMiddleware from "next-intl/middleware";
 import { createServerClient } from "@supabase/ssr";
-import { NextResponse, type NextRequest } from "next/server";
+import { type NextRequest } from "next/server";
 
 const intlMiddleware = createMiddleware({
   // A list of all locales that are supported
@@ -18,7 +18,7 @@ export default async function middleware(request: NextRequest) {
   const response = intlMiddleware(request);
 
   // 2. Sync / Refresh Supabase session
-  let supabaseResponse = response;
+  const supabaseResponse = response;
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
