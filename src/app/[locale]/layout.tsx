@@ -8,7 +8,13 @@ import '../globals.css';
 export const metadata: Metadata = {
   title: 'Polla Mundialista 2026',
   description: 'World Cup 2026 prediction pool for friend groups',
-  viewport: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0',
+};
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 interface LocaleLayoutProps {
