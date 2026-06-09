@@ -14,6 +14,9 @@ const intlMiddleware = createMiddleware({
 });
 
 export default async function middleware(request: NextRequest) {
+  // Set pathname header to propagate to layout/server components
+  request.headers.set("x-pathname", request.nextUrl.pathname);
+
   // 1. Run next-intl middleware
   const response = intlMiddleware(request);
 
