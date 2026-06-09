@@ -4,7 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Trophy, Calendar, Home, LogOut, Coffee, Menu, X } from 'lucide-react';
+import { Trophy, Calendar, Home, LogOut, Menu, X } from 'lucide-react';
 import { LanguageToggle } from './LanguageToggle';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -24,11 +24,6 @@ export function AppShell({ children, user, onLogout }: AppShellProps) {
 
   const currentLocale = pathname.split('/')[1] || 'es';
   const basePath = `/${currentLocale}`;
-
-  // Tip Jar URLs
-  const bmcUrl = process.env.NEXT_PUBLIC_BMC_URL || 'https://www.buymeacoffee.com/danzko';
-  const cafecitoUrl = process.env.NEXT_PUBLIC_CAFECITO_URL || 'https://cafecito.app/danzko';
-  const tipJarUrl = currentLocale === 'es' ? cafecitoUrl : bmcUrl;
 
   const navItems = [
     {
@@ -200,17 +195,8 @@ export function AppShell({ children, user, onLogout }: AppShellProps) {
 
       {/* FOOTER */}
       <footer className="w-full border-t border-border bg-card/30 py-6 text-center text-sm text-muted-foreground mt-auto">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <p>© 2026 {t('common.title')}</p>
-          <a
-            href={tipJarUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500 hover:text-slate-950 font-bold transition-all duration-300 shadow-sm hover:scale-105"
-          >
-            <Coffee className="h-4 w-4" />
-            {t('common.tipJar')}
-          </a>
         </div>
       </footer>
 
