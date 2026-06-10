@@ -112,6 +112,8 @@
     "unsavedChanges": "{count} sin guardar",
     "saveBtnCount": "Guardar pronósticos ({count})",
     "alreadyPlayed": "Ya jugados",
+    "knockoutSection": "Eliminatorias",
+    "knockoutSectionNote": "Se habilitan al terminar la fase de grupos",
     "resultLabel": "Resultado",
     "phaseHeaderTitle": "Fases de la Polla",
     "phaseGroups": "Grupos",

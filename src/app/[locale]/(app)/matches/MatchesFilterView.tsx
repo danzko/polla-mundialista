@@ -75,18 +75,22 @@ export function MatchesFilterView({ initialMatches, locale }: MatchesFilterViewP
     });
   }, [matches, selectedStage, selectedDate]);
 
-  // Partition matches
-  const { editableMatches, readOnlyMatches } = React.useMemo(() => {
+  // Partition matches: editable group matches, played/locked group matches,
+  // and knockout matches (locked until the bracket phase opens)
+  const { editableMatches, playedMatches, knockoutMatches } = React.useMemo(() => {
     const editable: MatchView[] = [];
-    const readOnly: MatchView[] = [];
+    const played: MatchView[] = [];
+    const knockout: MatchView[] = [];
     filteredMatches.forEach(m => {
-      if (m.stage === 'group' && !m.locked && !m.isVoided) {
+      if (m.stage !== 'group') {
+        knockout.push(m);
+      } else if (!m.locked && !m.isVoided) {
         editable.push(m);
       } else {
-        readOnly.push(m);
+        played.push(m);
       }
     });
-    return { editableMatches: editable, readOnlyMatches: readOnly };
+    return { editableMatches: editable, playedMatches: played, knockoutMatches: knockout };
   }, [filteredMatches]);
 
   // Track unsaved changes (only for open group matches)
@@ -122,7 +126,8 @@ export function MatchesFilterView({ initialMatches, locale }: MatchesFilterViewP
   };
 
   const groupedEditable = React.useMemo(() => groupMatchesByDate(editableMatches), [editableMatches]);
-  const groupedReadOnly = React.useMemo(() => groupMatchesByDate(readOnlyMatches), [readOnlyMatches]);
+  const groupedPlayed = React.useMemo(() => groupMatchesByDate(playedMatches), [playedMatches]);
+  const groupedKnockout = React.useMemo(() => groupMatchesByDate(knockoutMatches), [knockoutMatches]);
 
   // Format date headers nicely
   const formatDateHeader = (dateStr: string) => {
@@ -404,22 +409,52 @@ export function MatchesFilterView({ initialMatches, locale }: MatchesFilterViewP
           </div>
         )}
 
-        {/* SECTION 2: READ-ONLY / LOCK / YA JUGADOS MATCHES */}
-        {Object.keys(groupedReadOnly).length > 0 && (
+        {/* SECTION 2: YA JUGADOS (played or locked group matches) */}
+        {Object.keys(groupedPlayed).length > 0 && (
           <div className="space-y-6 pt-6 border-t border-border/20 opacity-90">
             <h2 className="text-base font-extrabold tracking-wider text-muted-foreground uppercase pl-1 select-none flex items-center gap-2">
               <span>⚽️ {t('matches.alreadyPlayed')}</span>
               <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-950/60 border border-border/40 text-muted-foreground">
-                {readOnlyMatches.length}
+                {playedMatches.length}
               </span>
             </h2>
-            {Object.keys(groupedReadOnly).map(dateKey => (
+            {Object.keys(groupedPlayed).map(dateKey => (
               <div key={dateKey} className="space-y-4">
                 <h3 className="text-sm font-extrabold text-muted-foreground/80 tracking-wider uppercase pl-1 select-none border-l-2 border-muted/50 ml-0.5">
                   {formatDateHeader(dateKey)}
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {groupedReadOnly[dateKey]!.map(match => (
+                  {groupedPlayed[dateKey]!.map(match => (
+                    <MatchCard
+                      key={match.id}
+                      match={match}
+                      locale={locale}
+                      homeScore={match.myPrediction?.homeScore ?? 0}
+                      awayScore={match.myPrediction?.awayScore ?? 0}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* SECTION 3: KNOCKOUT STAGE (locked until the bracket phase opens) */}
+        {Object.keys(groupedKnockout).length > 0 && (
+          <div className="space-y-6 pt-6 border-t border-border/20 opacity-90">
+            <h2 className="text-base font-extrabold tracking-wider text-muted-foreground uppercase pl-1 select-none flex items-center gap-2">
+              <span>🏆 {t('matches.knockoutSection')}</span>
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-500">
+                {t('matches.knockoutSectionNote')}
+              </span>
+            </h2>
+            {Object.keys(groupedKnockout).map(dateKey => (
+              <div key={dateKey} className="space-y-4">
+                <h3 className="text-sm font-extrabold text-muted-foreground/80 tracking-wider uppercase pl-1 select-none border-l-2 border-muted/50 ml-0.5">
+                  {formatDateHeader(dateKey)}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {groupedKnockout[dateKey]!.map(match => (
                     <MatchCard
                       key={match.id}
                       match={match}
@@ -435,7 +470,9 @@ export function MatchesFilterView({ initialMatches, locale }: MatchesFilterViewP
         )}
 
         {/* EMPTY STATE */}
-        {Object.keys(groupedEditable).length === 0 && Object.keys(groupedReadOnly).length === 0 && (
+        {Object.keys(groupedEditable).length === 0 &&
+          Object.keys(groupedPlayed).length === 0 &&
+          Object.keys(groupedKnockout).length === 0 && (
           <div className="p-12 text-center text-muted-foreground font-light glass-card border border-border/40 rounded-3xl">
             {t('matches.noMatches')}
           </div>

@@ -112,6 +112,8 @@
     "unsavedChanges": "{count} unsaved",
     "saveBtnCount": "Save predictions ({count})",
     "alreadyPlayed": "Already played",
+    "knockoutSection": "Knockout stage",
+    "knockoutSectionNote": "Opens when the group stage ends",
     "resultLabel": "Result",
     "phaseHeaderTitle": "Pool Phases",
     "phaseGroups": "Groups",
