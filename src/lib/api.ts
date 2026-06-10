@@ -190,8 +190,8 @@ export async function getLeague(leagueId: string): Promise<LeagueDetail | null> 
         userId: m.user_id,
         displayName: (m.users as any)?.display_name || "Usuario / User",
         totalPoints: score?.total_points ?? 0,
-        matchPoints: score?.total_points ?? 0,
-        bonusPoints: 0,
+        matchPoints: score?.match_points ?? 0,
+        bonusPoints: score?.bonus_points ?? 0,
         exactCount: score?.exact_count ?? 0,
         resultCount: score?.result_count ?? 0,
         isMe: m.user_id === user.id,
@@ -866,6 +866,136 @@ export async function submitBonuses(
       ok: false,
       error: err.message || "Error al guardar bonos / Error saving bonuses",
     };
+  }
+}
+
+// ==========================================
+// LEAGUE ADMINISTRATION
+// ==========================================
+
+async function requireLeagueAdmin(
+  supabase: any,
+  leagueId: string
+): Promise<{ ok: true; userId: string } | { ok: false; error: string }> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "No autenticado / Not authenticated" };
+
+  const { data: league } = await supabase
+    .from("leagues")
+    .select("admin_user_id")
+    .eq("id", leagueId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (!league) return { ok: false, error: "Liga no encontrada / League not found" };
+
+  if (league.admin_user_id !== user.id) {
+    const { data: profile } = await supabase
+      .from("users")
+      .select("is_superadmin")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (!profile?.is_superadmin) {
+      return { ok: false, error: "Solo el admin de la liga puede hacer esto / League admin only" };
+    }
+  }
+  return { ok: true, userId: user.id };
+}
+
+export async function renameLeague(
+  input: { leagueId: string; name: string }
+): Promise<ActionResult> {
+  const nameValidation = leagueNameSchema.safeParse(input.name);
+  if (!nameValidation.success) {
+    return {
+      ok: false,
+      error: nameValidation.error.issues[0]?.message || "Nombre de liga inválido / Invalid league name",
+    };
+  }
+  try {
+    const supabase = await createClient();
+    const auth = await requireLeagueAdmin(supabase, input.leagueId);
+    if (!auth.ok) return auth;
+
+    const { error } = await supabase
+      .from("leagues")
+      .update({ name: nameValidation.data })
+      .eq("id", input.leagueId);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, data: undefined };
+  } catch (err: any) {
+    return { ok: false, error: err.message || "Error al renombrar / Error renaming" };
+  }
+}
+
+export async function regenerateLeagueCode(
+  input: { leagueId: string }
+): Promise<ActionResult<{ inviteCode: string }>> {
+  try {
+    const supabase = await createClient();
+    const auth = await requireLeagueAdmin(supabase, input.leagueId);
+    if (!auth.ok) return auth;
+
+    let lastError: any = null;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const inviteCode = generateInviteCode();
+      const { error } = await supabase
+        .from("leagues")
+        .update({ invite_code: inviteCode })
+        .eq("id", input.leagueId);
+      if (!error) return { ok: true, data: { inviteCode } };
+      lastError = error;
+      if (error.code !== "23505") break;
+    }
+    return { ok: false, error: lastError?.message || "Error al regenerar código / Error regenerating code" };
+  } catch (err: any) {
+    return { ok: false, error: err.message || "Error al regenerar código / Error regenerating code" };
+  }
+}
+
+export async function deleteLeague(
+  input: { leagueId: string }
+): Promise<ActionResult> {
+  try {
+    const supabase = await createClient();
+    const auth = await requireLeagueAdmin(supabase, input.leagueId);
+    if (!auth.ok) return auth;
+
+    // Soft delete via SECURITY DEFINER RPC: a plain UPDATE is rejected by
+    // RLS because the new row (deleted_at set) escapes the SELECT policy.
+    const { data: deleted, error } = await supabase.rpc("soft_delete_league", {
+      p_league_id: input.leagueId,
+    });
+    if (error) return { ok: false, error: error.message };
+    if (!deleted) {
+      return { ok: false, error: "No se pudo eliminar la liga / Could not delete league" };
+    }
+    return { ok: true, data: undefined };
+  } catch (err: any) {
+    return { ok: false, error: err.message || "Error al eliminar liga / Error deleting league" };
+  }
+}
+
+export async function kickMember(
+  input: { leagueId: string; userId: string }
+): Promise<ActionResult> {
+  try {
+    const supabase = await createClient();
+    const auth = await requireLeagueAdmin(supabase, input.leagueId);
+    if (!auth.ok) return auth;
+
+    if (input.userId === auth.userId) {
+      return { ok: false, error: "El admin no puede expulsarse a sí mismo / Admin cannot remove themselves" };
+    }
+
+    const { error } = await supabase
+      .from("league_members")
+      .delete()
+      .eq("league_id", input.leagueId)
+      .eq("user_id", input.userId);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, data: undefined };
+  } catch (err: any) {
+    return { ok: false, error: err.message || "Error al expulsar / Error removing member" };
   }
 }
 

@@ -86,7 +86,21 @@
     "inviteCodeLabel": "Código de invitación",
     "inviteCodePlaceholder": "CÓDIGO",
     "joinSubmit": "Unirse a Liga",
-    "joinedSuccess": "¡Te has unido con éxito!"
+    "joinedSuccess": "¡Te has unido con éxito!",
+    "tabSettings": "Ajustes",
+    "settingsSaved": "Cambios guardados",
+    "renameLabel": "Nombre de la liga",
+    "regenLabel": "Código de invitación",
+    "regenDesc": "Genera un código nuevo. El código anterior dejará de funcionar.",
+    "regenBtn": "Regenerar código",
+    "regenDone": "Nuevo código",
+    "deleteLabel": "Eliminar liga",
+    "deleteDesc": "La liga desaparecerá para todos sus miembros. Las predicciones de cada uno no se borran (son globales).",
+    "deleteBtn": "Eliminar esta liga",
+    "deleteConfirmBtn": "Sí, eliminar liga",
+    "kickBtn": "Expulsar",
+    "kickConfirmBtn": "Confirmar",
+    "kickDone": "Participante expulsado"
   },
   "matches": {
     "title": "Pronósticos de Partidos",

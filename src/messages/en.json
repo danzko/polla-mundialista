@@ -86,7 +86,21 @@
     "inviteCodeLabel": "Invite code",
     "inviteCodePlaceholder": "CODE",
     "joinSubmit": "Join League",
-    "joinedSuccess": "Successfully joined the league!"
+    "joinedSuccess": "Successfully joined the league!",
+    "tabSettings": "Settings",
+    "settingsSaved": "Changes saved",
+    "renameLabel": "League name",
+    "regenLabel": "Invite code",
+    "regenDesc": "Generate a new code. The old code will stop working.",
+    "regenBtn": "Regenerate code",
+    "regenDone": "New code",
+    "deleteLabel": "Delete league",
+    "deleteDesc": "The league will disappear for all members. Their predictions are not deleted (they are global).",
+    "deleteBtn": "Delete this league",
+    "deleteConfirmBtn": "Yes, delete league",
+    "kickBtn": "Remove",
+    "kickConfirmBtn": "Confirm",
+    "kickDone": "Member removed"
   },
   "matches": {
     "title": "Match Predictions",
