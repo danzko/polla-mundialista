@@ -38,6 +38,7 @@
     "emailLabel": "Email Address",
     "emailPlaceholder": "you@example.com",
     "sendButton": "Send Access Link",
+    "linkError": "That sign-in link is invalid or has expired. Request a new one and open it in the same browser where you asked for it.",
     "checkEmail": "Check your email!",
     "checkEmailDesc": "We sent a magic link to {email}. Click the link to log in.",
     "error": "Error sending email. Please try again."

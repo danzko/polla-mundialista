@@ -28,6 +28,16 @@ export default function LoginPage() {
   const [isSuccess, setIsSuccess] = React.useState(false);
   const [submittedEmail, setSubmittedEmail] = React.useState('');
   const [apiError, setApiError] = React.useState<string | null>(null);
+  const [linkError, setLinkError] = React.useState(false);
+
+  // The auth callback redirects here with ?error=auth when a magic link is
+  // invalid, expired, or opened in a different browser. Surface it.
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('error') === 'auth') {
+      setLinkError(true);
+    }
+  }, []);
 
   const {
     register,
@@ -73,6 +83,11 @@ export default function LoginPage() {
               </CardHeader>
               
               <CardContent className="space-y-4">
+                {linkError && !apiError && (
+                  <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 p-3 text-xs font-semibold text-amber-400 text-center">
+                    ⚠️ {t('auth.linkError')}
+                  </div>
+                )}
                 {apiError && (
                   <div className="rounded-xl bg-destructive/10 border border-destructive/30 p-3 text-xs font-semibold text-destructive text-center">
                     ⚠️ {apiError}

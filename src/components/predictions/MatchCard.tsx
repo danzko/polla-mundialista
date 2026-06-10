@@ -20,6 +20,13 @@ interface MatchCardProps {
 export function MatchCard({ match, locale, homeScore, awayScore, onChange }: MatchCardProps) {
   const t = useTranslations();
 
+  // Kickoff is shown in the viewer's local timezone, which the server can't
+  // know — render it only after mount to avoid a hydration mismatch.
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Format kickoff time
   const formatKickoff = (isoString: string) => {
     const date = new Date(isoString);
@@ -111,7 +118,7 @@ export function MatchCard({ match, locale, homeScore, awayScore, onChange }: Mat
               </span>
             ) : (
               <span className="text-primary-foreground/90 font-medium">
-                {formatKickoff(match.kickoffAt)}
+                {mounted ? formatKickoff(match.kickoffAt) : ' '}
               </span>
             )}
           </div>

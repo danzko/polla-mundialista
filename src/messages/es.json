@@ -38,6 +38,7 @@
     "emailLabel": "Correo Electrónico",
     "emailPlaceholder": "tu@email.com",
     "sendButton": "Enviar enlace de acceso",
+    "linkError": "El enlace de acceso no es válido o ya expiró. Solicita uno nuevo y ábrelo en el mismo navegador donde lo pediste.",
     "checkEmail": "¡Revisa tu correo!",
     "checkEmailDesc": "Hemos enviado un enlace mágico a {email}. Haz clic en él para ingresar.",
     "error": "Ocurrió un error al enviar el correo. Por favor inténtalo de nuevo."
