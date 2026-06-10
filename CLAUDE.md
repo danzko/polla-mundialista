@@ -54,10 +54,13 @@ Points per team the player correctly has advancing to each round (from their pre
 - 3rd-place finisher correct: 20 pts
 
 Bonus picks (locked at tournament start June 11, 19:00 UTC):
-- Golden Boot (FIFA top scorer): 30 pts
-- Golden Ball (FIFA best player): 30 pts
-- Entry is 3 ranked picks each (gold/silver/bronze, Excel parity); whether silver/bronze
-  earn anything is an OPEN DECISION for the owner -- default assumption: only the gold pick pays 30.
+- 3 ranked picks each for Boot and Ball, scored SLOT-EXACT against FIFA's official
+  Golden/Silver/Bronze Boot and Golden/Silver/Bronze Ball awards (owner decision
+  June 10: "graded scheme but bias the winner"):
+  - gold pick correct: 30 pts
+  - silver pick correct: 10 pts
+  - bronze pick correct: 5 pts
+  - no cross-slot partial credit (right player in the wrong slot = 0)
 
 Tiebreaker: total pts, then most points earned in the knockout stage.
 
