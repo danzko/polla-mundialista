@@ -19,8 +19,15 @@ Working end to end: magic-link auth, onboarding, create/join leagues (join uses 
 **Read `docs/HANDOFF-MYTHOS.md` first** -- it corrects this file where they disagree and records decisions already made.
 
 What's next (before June 28, when knockouts start):
-1. Per-user predictive bracket (the Excel model): group tables computed from the user's own scores -> best-thirds lookup -> R32 -> propagate to champion. `scripts/wc2026-bracket-structure.json` has the validated structure + 495 best-thirds combinations.
-2. Knockout scoring option A wired into the leaderboard (points only when the user's predicted pairing matches the real pairing), plus Golden Boot/Ball scoring once outcomes are known.
+1. Bracket entry UI on the REAL Round of 32 (one-shot: pick R16 winners through
+   the final + third-place game), open only in the June 27 -> 28 window, locked
+   at first R32 kickoff. `scripts/wc2026-bracket-structure.json` has the
+   validated bracket tree; per-user predicted brackets are NOT needed anymore.
+2. Scoring rewrite in leaderboard_view: advancement points (R32 tier derived
+   from each player's locked group predictions via group tables + best-thirds
+   lookup; later tiers from bracket picks), champion/boot/ball 50/25/25 from
+   bonus_predictions, tiebreak by knockout-stage points. Drop the 6/2/0 x2
+   knockout-match scoring and the 15/10/5/3 team bonuses.
 3. Standings race view (docs/antigravity-handoff-2.md; data ready in `leaderboard_matchday`).
 4. Admin: assign real knockout teams as groups conclude.
 
@@ -44,23 +51,31 @@ Group stage (per match):
 - Wrong result: 0 pts
 
 Knockout stage (advancement-based -- knockout SCORES earn nothing; only teams advancing count).
-Points per team the player correctly has advancing to each round (from their predictive bracket):
-- Round of 32: 2 pts per team
-- Round of 16: 4 pts per team
+ENTRY MODEL (owner decision June 10): two entry events. (1) Group scores, locked
+per match at kickoff. (2) ONE knockout entry window after the last group match
+and before the first R32 kickoff (June 27 -> June 28 02:00/19:00 UTC): players
+fill the ENTIRE real bracket (R32 winners through champion + third-place game)
+in one sitting on the REAL qualified teams. No per-user predicted brackets.
+Points per team correctly advancing to each round:
+- Round of 32: 2 pts per team -- DERIVED from the player's locked group-score
+  predictions (their implied group tables + best-thirds), since the real R32 is
+  known by entry time
+- Round of 16: 4 pts per team (picked in the bracket window)
 - Quarterfinals: 7 pts per team
 - Semifinals: 15 pts per team
 - Final: 25 pts per team
-- Champion correct: 50 pts
-- 3rd-place finisher correct: 20 pts
+- 3rd-place finisher correct: 20 pts (the bracket's third-place game pick)
+- Champion is NOT scored from the bracket -- it pays via the pre-tournament
+  pick below (no double counting; reaching the final still pays 25/team)
 
-Bonus picks (locked at tournament start June 11, 19:00 UTC):
-- 3 ranked picks each for Boot and Ball, scored SLOT-EXACT against FIFA's official
-  Golden/Silver/Bronze Boot and Golden/Silver/Bronze Ball awards (owner decision
-  June 10: "graded scheme but bias the winner"):
-  - gold pick correct: 30 pts
-  - silver pick correct: 10 pts
-  - bronze pick correct: 5 pts
-  - no cross-slot partial credit (right player in the wrong slot = 0)
+Tournament picks (exactly THREE, locked at tournament start June 11, 19:00 UTC;
+owner decision June 10: "simplify -- no runners up"):
+- Champion: 50 pts
+- Top scorer (FIFA Golden Boot winner): 25 pts
+- Best player (FIFA Golden Ball winner): 25 pts
+Single picks each. Legacy columns (runner-up, third place, semifinalists,
+silver/bronze boot/ball slots) remain in bonus_predictions but are UNSCORED
+and no longer collected by the UI.
 
 Tiebreaker: total pts, then most points earned in the knockout stage.
 
