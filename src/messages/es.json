@@ -102,7 +102,22 @@
     "predictionSaved": "Pronóstico guardado",
     "locked": "Predicción cerrada",
     "voided": "Anulado",
-    "knockoutMultiplier": "Fase Final (Puntos x2)"
+    "knockoutMultiplier": "Fase Final (Puntos x2)",
+    "saveConfirmTitle": "Guardar Pronósticos",
+    "saveConfirmDesc": "Vas a guardar {count} pronósticos. Recuerda que puedes editar cualquier partido hasta su inicio.",
+    "saveConfirmBtn": "Confirmar y Guardar",
+    "toastSuccess": "¡Pronósticos guardados con éxito!",
+    "toastSkipped": "Se omitieron {count} partidos por haber comenzado o estar anulados: {matches}",
+    "unsavedChanges": "{count} sin guardar",
+    "saveBtnCount": "Guardar pronósticos ({count})",
+    "alreadyPlayed": "Ya jugados",
+    "phaseHeaderTitle": "Fases de la Polla",
+    "phaseGroups": "Grupos",
+    "phaseBonuses": "Bonos",
+    "phaseKnockouts": "Eliminatorias",
+    "comingSoon": "próximamente",
+    "completed": "Completado",
+    "savedCount": "{count}/72 guardados"
   },
   "bonuses": {
     "title": "Pronósticos del Torneo",

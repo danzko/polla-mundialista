@@ -5,33 +5,29 @@ import { Plus, Minus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ScoreStepperProps {
-  value: number | null;
+  value: number;
   onChange: (value: number) => void;
   disabled?: boolean;
-  placeholder?: string;
 }
 
 export function ScoreStepper({
-  value,
+  value = 0,
   onChange,
   disabled = false,
-  placeholder = '-',
 }: ScoreStepperProps) {
   const increment = (e: React.MouseEvent) => {
     e.preventDefault();
     if (disabled) return;
-    const current = value ?? 0;
-    if (current < 15) {
-      onChange(current + 1);
+    if (value < 15) {
+      onChange(value + 1);
     }
   };
 
   const decrement = (e: React.MouseEvent) => {
     e.preventDefault();
     if (disabled) return;
-    const current = value ?? 0;
-    if (current > 0) {
-      onChange(current - 1);
+    if (value > 0) {
+      onChange(value - 1);
     }
   };
 
@@ -39,8 +35,7 @@ export function ScoreStepper({
     if (disabled) return;
     const val = e.target.value;
     if (val === '') {
-      // Allow empty value state temporarily in the input box, 
-      // but we resolve it to 0 or leave as is. Let's force a number or default.
+      onChange(0);
       return;
     }
     const parsed = parseInt(val, 10);
@@ -56,10 +51,10 @@ export function ScoreStepper({
       <button
         type="button"
         onClick={decrement}
-        disabled={disabled || (value !== null && value <= 0)}
+        disabled={disabled || value <= 0}
         className={cn(
           "flex h-8 w-8 items-center justify-center rounded-lg border border-border/80 bg-card text-foreground transition-all active:scale-90 select-none",
-          (disabled || (value !== null && value <= 0))
+          (disabled || value <= 0)
             ? "opacity-30 pointer-events-none cursor-not-allowed"
             : "hover:bg-primary/20 hover:text-primary hover:border-primary/40 cursor-pointer"
         )}
@@ -72,8 +67,7 @@ export function ScoreStepper({
         type="text"
         inputMode="numeric"
         pattern="[0-9]*"
-        value={value !== null ? value : ''}
-        placeholder={placeholder}
+        value={value}
         onChange={handleInputChange}
         disabled={disabled}
         className={cn(
@@ -86,10 +80,10 @@ export function ScoreStepper({
       <button
         type="button"
         onClick={increment}
-        disabled={disabled || (value !== null && value >= 15)}
+        disabled={disabled || value >= 15}
         className={cn(
           "flex h-8 w-8 items-center justify-center rounded-lg border border-border/80 bg-card text-foreground transition-all active:scale-90 select-none",
-          (disabled || (value !== null && value >= 15))
+          (disabled || value >= 15)
             ? "opacity-30 pointer-events-none cursor-not-allowed"
             : "hover:bg-primary/20 hover:text-primary hover:border-primary/40 cursor-pointer"
         )}

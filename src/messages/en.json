@@ -102,7 +102,22 @@
     "predictionSaved": "Prediction saved",
     "locked": "Prediction locked",
     "voided": "Voided",
-    "knockoutMultiplier": "Knockout Stage (Double Points!)"
+    "knockoutMultiplier": "Knockout Stage (Double Points!)",
+    "saveConfirmTitle": "Save Predictions",
+    "saveConfirmDesc": "You are saving {count} predictions. You can edit any match until it starts.",
+    "saveConfirmBtn": "Confirm & Save",
+    "toastSuccess": "Predictions saved successfully!",
+    "toastSkipped": "Skipped {count} matches because they already started or were voided: {matches}",
+    "unsavedChanges": "{count} unsaved",
+    "saveBtnCount": "Save predictions ({count})",
+    "alreadyPlayed": "Already played",
+    "phaseHeaderTitle": "Pool Phases",
+    "phaseGroups": "Groups",
+    "phaseBonuses": "Bonuses",
+    "phaseKnockouts": "Knockouts",
+    "comingSoon": "coming soon",
+    "completed": "Completed",
+    "savedCount": "{count}/72 saved"
   },
   "bonuses": {
     "title": "Tournament Predictions",

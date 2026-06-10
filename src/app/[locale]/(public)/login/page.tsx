@@ -4,16 +4,15 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslations } from 'next-intl';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { z } from 'zod';
 import { AppShell } from '@/components/shared/AppShell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { Mail, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Mail, CheckCircle2 } from 'lucide-react';
 import { requestMagicLink } from '@/lib/api';
 import { emailSchema } from '@/lib/validation';
-import { currentUser, setCurrentUser } from '@/lib/fixtures';
 
 const formSchema = z.object({
   email: emailSchema,
@@ -23,10 +22,8 @@ type FormData = z.infer<typeof formSchema>;
 
 export default function LoginPage() {
   const t = useTranslations();
-  const router = useRouter();
   const pathname = usePathname();
   const currentLocale = pathname.split('/')[1] || 'es';
-  const basePath = `/${currentLocale}`;
 
   const [isSuccess, setIsSuccess] = React.useState(false);
   const [submittedEmail, setSubmittedEmail] = React.useState('');
@@ -55,23 +52,6 @@ export default function LoginPage() {
       setIsSuccess(true);
     } else {
       setApiError(result.error);
-    }
-  };
-
-  // Preview helper function to bypass real email check
-  const simulateLogin = (onboarded: boolean) => {
-    setCurrentUser({
-      id: 'user-me',
-      displayName: onboarded ? 'Danny' : '',
-      preferredLanguage: currentLocale as any,
-      isSuperadmin: true,
-      onboarded: onboarded,
-    });
-
-    if (onboarded) {
-      router.push(`${basePath}/dashboard`);
-    } else {
-      router.push(`${basePath}/onboarding`);
     }
   };
 
@@ -122,37 +102,10 @@ export default function LoginPage() {
                 </div>
               </CardContent>
               
-              <CardFooter className="flex flex-col gap-3 pt-2">
+              <CardFooter className="pt-2">
                 <Button type="submit" disabled={isSubmitting} className="w-full rounded-xl font-bold py-5">
                   {isSubmitting ? t('common.saving') : t('auth.sendButton')}
                 </Button>
-
-                {/* Developer Preview Shortcuts */}
-                <div className="w-full border-t border-border/60 mt-4 pt-4 text-center">
-                  <span className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest block mb-2">
-                    Preview Shortcuts (Mocks)
-                  </span>
-                  <div className="flex gap-2 justify-center">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => simulateLogin(false)}
-                      className="text-xs px-2.5 rounded-lg border-primary/20 hover:bg-primary/5 hover:text-primary"
-                    >
-                      New User Onboarding
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => simulateLogin(true)}
-                      className="text-xs px-2.5 rounded-lg border-primary/20 hover:bg-primary/5 hover:text-primary"
-                    >
-                      Returning Dashboard
-                    </Button>
-                  </div>
-                </div>
               </CardFooter>
             </form>
           ) : (
@@ -169,22 +122,6 @@ export default function LoginPage() {
                 <p className="text-sm text-muted-foreground font-light leading-relaxed">
                   {t('auth.checkEmailDesc', { email: submittedEmail })}
                 </p>
-              </div>
-
-              <div className="w-full border-t border-border/60 pt-6 space-y-3">
-                <span className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest block">
-                  Simulate click from email:
-                </span>
-                <div className="flex flex-col gap-2">
-                  <Button onClick={() => simulateLogin(false)} variant="secondary" className="w-full rounded-xl text-xs py-4 flex items-center justify-center gap-2">
-                    Login as New User (Needs Onboarding)
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button onClick={() => simulateLogin(true)} variant="secondary" className="w-full rounded-xl text-xs py-4 flex items-center justify-center gap-2">
-                    Login as Active User (Goes to Dashboard)
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
               </div>
             </div>
           )}

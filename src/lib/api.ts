@@ -461,6 +461,15 @@ export async function getBonuses(): Promise<BonusView> {
 // MUTATIONS
 // ==========================================
 
+async function checkUserProfile(supabase: any, userId: string): Promise<boolean> {
+  const { data } = await supabase
+    .from("users")
+    .select("id")
+    .eq("id", userId)
+    .maybeSingle();
+  return !!data;
+}
+
 export async function requestMagicLink(
   input: { email: string; locale: Locale }
 ): Promise<ActionResult> {
@@ -573,6 +582,11 @@ export async function createLeague(
       return { ok: false, error: "No autenticado / Not authenticated" };
     }
 
+    const hasProfile = await checkUserProfile(supabase, user.id);
+    if (!hasProfile) {
+      return { ok: false, error: "Debes completar tu perfil antes de continuar / Please complete onboarding first" };
+    }
+
     const inviteCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 
     const { data: league, error: leagueError } = await supabase
@@ -644,6 +658,11 @@ export async function joinLeague(
       return { ok: false, error: "No autenticado / Not authenticated" };
     }
 
+    const hasProfile = await checkUserProfile(supabase, user.id);
+    if (!hasProfile) {
+      return { ok: false, error: "Debes completar tu perfil antes de continuar / Please complete onboarding first" };
+    }
+
     const { data: league, error: leagueError } = await supabase
       .from("leagues")
       .select("*")
@@ -706,6 +725,11 @@ export async function submitPrediction(
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       return { ok: false, error: "No autenticado / Not authenticated" };
+    }
+
+    const hasProfile = await checkUserProfile(supabase, user.id);
+    if (!hasProfile) {
+      return { ok: false, error: "Debes completar tu perfil antes de continuar / Please complete onboarding first" };
     }
 
     const { data: match, error: matchError } = await supabase
@@ -773,6 +797,11 @@ export async function submitBonuses(
       return { ok: false, error: "No autenticado / Not authenticated" };
     }
 
+    const hasProfile = await checkUserProfile(supabase, user.id);
+    if (!hasProfile) {
+      return { ok: false, error: "Debes completar tu perfil antes de continuar / Please complete onboarding first" };
+    }
+
     const { error: upsertError } = await supabase
       .from("bonus_predictions")
       .upsert({
@@ -800,3 +829,57 @@ export async function submitBonuses(
     };
   }
 }
+
+export async function submitPredictions(
+  input: { predictions: { matchId: string; homeScore: number; awayScore: number }[] }
+): Promise<ActionResult<{ saved: number; skipped: string[] }>> {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { ok: false, error: "No autenticado / Not authenticated" };
+
+    const hasProfile = await checkUserProfile(supabase, user.id);
+    if (!hasProfile) {
+      return { ok: false, error: "Debes completar tu perfil antes de continuar / Please complete onboarding first" };
+    }
+
+    for (const p of input.predictions) {
+      if (!scoreSchema.safeParse(p.homeScore).success || !scoreSchema.safeParse(p.awayScore).success) {
+        return { ok: false, error: "Marcador inválido / Invalid score (0-15)" };
+      }
+    }
+
+    const ids = input.predictions.map((p) => p.matchId);
+    const { data: matches } = await supabase
+      .from("matches")
+      .select("id, kickoff_at, is_voided")
+      .in("id", ids);
+
+    const now = Date.now();
+    const openIds = new Set(
+      (matches ?? [])
+        .filter((m) => !m.is_voided && new Date(m.kickoff_at).getTime() > now)
+        .map((m) => m.id)
+    );
+
+    const rows = input.predictions
+      .filter((p) => openIds.has(p.matchId))
+      .map((p) => ({
+        user_id: user.id,
+        match_id: p.matchId,
+        home_score: p.homeScore,
+        away_score: p.awayScore,
+        updated_at: new Date().toISOString(),
+      }));
+    const skipped = input.predictions.filter((p) => !openIds.has(p.matchId)).map((p) => p.matchId);
+
+    if (rows.length > 0) {
+      const { error } = await supabase.from("predictions").upsert(rows);
+      if (error) return { ok: false, error: error.message };
+    }
+    return { ok: true, data: { saved: rows.length, skipped } };
+  } catch (err: any) {
+    return { ok: false, error: err.message || "Error al guardar / Error saving" };
+  }
+}
+

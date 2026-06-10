@@ -105,15 +105,6 @@ export default function JoinLeaguePage() {
               )}
             </div>
 
-            {/* Quick Helper Tips for reviewer */}
-            <div className="rounded-xl bg-slate-900/60 p-3.5 border border-border/60 text-xs text-muted-foreground space-y-1 select-none">
-              <span className="font-extrabold text-[10px] uppercase text-primary tracking-widest block mb-1">
-                Demo Codes:
-              </span>
-              <p>• <code className="text-foreground font-extrabold font-mono">AMIGOS</code>: Join La Polla de los Amigos</p>
-              <p>• <code className="text-foreground font-extrabold font-mono">OFFICE</code>: Join Workplace WC Pool</p>
-              <p>• <code className="text-foreground font-extrabold font-mono">ERROR6</code>: Test generic/connection error path</p>
-            </div>
           </CardContent>
           
           <CardFooter className="pt-2">

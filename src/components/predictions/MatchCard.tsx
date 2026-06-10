@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useTranslations } from 'next-intl';
-import { Lock, Check, AlertCircle, RefreshCw } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import { ScoreStepper } from './ScoreStepper';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -11,28 +11,13 @@ import type { MatchView, Locale } from '@/lib/types';
 interface MatchCardProps {
   match: MatchView;
   locale: Locale;
-  onSubmitPrediction: (matchId: string, homeScore: number, awayScore: number) => Promise<{ ok: boolean; error?: string }>;
+  homeScore: number;
+  awayScore: number;
+  onChange?: (matchId: string, homeScore: number, awayScore: number) => void;
 }
 
-export function MatchCard({ match, locale, onSubmitPrediction }: MatchCardProps) {
+export function MatchCard({ match, locale, homeScore, awayScore, onChange }: MatchCardProps) {
   const t = useTranslations();
-  
-  // Local prediction state (for optimistic UI updates)
-  const [homeScore, setHomeScore] = React.useState<number | null>(
-    match.myPrediction ? match.myPrediction.homeScore : null
-  );
-  const [awayScore, setAwayScore] = React.useState<number | null>(
-    match.myPrediction ? match.myPrediction.awayScore : null
-  );
-  
-  const [saveStatus, setSaveStatus] = React.useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
-
-  // Keep state sync'd if match data changes from outside (e.g. initial load)
-  React.useEffect(() => {
-    setHomeScore(match.myPrediction ? match.myPrediction.homeScore : null);
-    setAwayScore(match.myPrediction ? match.myPrediction.awayScore : null);
-  }, [match.myPrediction]);
 
   // Format kickoff time
   const formatKickoff = (isoString: string) => {
@@ -85,41 +70,6 @@ export function MatchCard({ match, locale, onSubmitPrediction }: MatchCardProps)
       final: 'Final',
     };
     return stages[match.stage] || match.stage.toUpperCase();
-  };
-
-  // Handle score change
-  const handleScoreChange = async (type: 'home' | 'away', value: number) => {
-    if (match.locked || match.isVoided) return;
-
-    let newHome = homeScore;
-    let newAway = awayScore;
-
-    if (type === 'home') {
-      newHome = value;
-      setHomeScore(value);
-    } else {
-      newAway = value;
-      setAwayScore(value);
-    }
-
-    // Only submit if both scores are filled in
-    if (newHome !== null && newAway !== null) {
-      setSaveStatus('saving');
-      setErrorMessage(null);
-      
-      const result = await onSubmitPrediction(match.id, newHome, newAway);
-      if (result.ok) {
-        setSaveStatus('saved');
-        // Clear saved indicator after 2 seconds
-        setTimeout(() => setSaveStatus('idle'), 2000);
-      } else {
-        setSaveStatus('error');
-        setErrorMessage(result.error || t('errors.generic'));
-        // Rollback on failure
-        setHomeScore(match.myPrediction ? match.myPrediction.homeScore : null);
-        setAwayScore(match.myPrediction ? match.myPrediction.awayScore : null);
-      }
-    }
   };
 
   // Determine scoring tag styling and messages
@@ -178,14 +128,14 @@ export function MatchCard({ match, locale, onSubmitPrediction }: MatchCardProps)
           </div>
         </div>
 
-        {/* MATCH TEAMS & STEPPERS ROW */}
+        {/* ROW 1: TEAMS (Home | VS | Away) */}
         <div className="grid grid-cols-7 items-center gap-2 py-2">
           {/* HOME TEAM */}
-          <div className="col-span-2 flex flex-col items-center justify-center text-center">
+          <div className="col-span-3 flex flex-col items-center justify-center text-center">
             <span className="text-3xl mb-1 filter drop-shadow-sm select-none">
               {match.homeTeam ? match.homeTeam.flagEmoji : '❓'}
             </span>
-            <span className="text-xs font-bold leading-tight line-clamp-1 max-w-[85px] md:max-w-full">
+            <span className="text-xs font-bold leading-tight line-clamp-1 max-w-[100px] md:max-w-full">
               {getTeamName(match.homeTeam, 'home')}
             </span>
             {match.homeTeam && (
@@ -195,42 +145,17 @@ export function MatchCard({ match, locale, onSubmitPrediction }: MatchCardProps)
             )}
           </div>
 
-          {/* STEPPERS & VS */}
-          <div className="col-span-3 flex flex-col items-center justify-center gap-1">
-            <div className="flex items-center gap-2">
-              {/* Home score selector */}
-              <ScoreStepper
-                value={homeScore}
-                onChange={(val) => handleScoreChange('home', val)}
-                disabled={!isPredictable}
-                placeholder={match.result ? String(match.result.homeScore) : '-'}
-              />
-              
-              <span className="text-xs font-extrabold text-muted-foreground select-none uppercase tracking-widest">VS</span>
-              
-              {/* Away score selector */}
-              <ScoreStepper
-                value={awayScore}
-                onChange={(val) => handleScoreChange('away', val)}
-                disabled={!isPredictable}
-                placeholder={match.result ? String(match.result.awayScore) : '-'}
-              />
-            </div>
-
-            {/* KNOCKOUT MULTIPLIER INDICATOR */}
-            {showMultiplier && (
-              <span className="text-[10px] font-extrabold text-emerald-400 bg-emerald-500/5 px-2 py-0.5 rounded border border-emerald-500/20 uppercase tracking-widest scale-95 mt-1 select-none">
-                {t('matches.knockoutMultiplier')}
-              </span>
-            )}
+          {/* VS */}
+          <div className="col-span-1 flex flex-col items-center justify-center">
+            <span className="text-xs font-extrabold text-muted-foreground select-none uppercase tracking-widest">VS</span>
           </div>
 
           {/* AWAY TEAM */}
-          <div className="col-span-2 flex flex-col items-center justify-center text-center">
+          <div className="col-span-3 flex flex-col items-center justify-center text-center">
             <span className="text-3xl mb-1 filter drop-shadow-sm select-none">
               {match.awayTeam ? match.awayTeam.flagEmoji : '❓'}
             </span>
-            <span className="text-xs font-bold leading-tight line-clamp-1 max-w-[85px] md:max-w-full">
+            <span className="text-xs font-bold leading-tight line-clamp-1 max-w-[100px] md:max-w-full">
               {getTeamName(match.awayTeam, 'away')}
             </span>
             {match.awayTeam && (
@@ -239,6 +164,32 @@ export function MatchCard({ match, locale, onSubmitPrediction }: MatchCardProps)
               </span>
             )}
           </div>
+        </div>
+
+        {/* ROW 2: STEPPERS (Centered and Roomy) */}
+        <div className="flex flex-col items-center justify-center gap-2 mt-3 pt-2 border-t border-border/20">
+          <div className="flex items-center gap-4">
+            <ScoreStepper
+              value={homeScore}
+              onChange={(val) => onChange?.(match.id, val, awayScore)}
+              disabled={!isPredictable}
+            />
+
+            <span className="text-xs font-extrabold text-muted-foreground select-none uppercase tracking-widest">-</span>
+
+            <ScoreStepper
+              value={awayScore}
+              onChange={(val) => onChange?.(match.id, homeScore, val)}
+              disabled={!isPredictable}
+            />
+          </div>
+
+          {/* KNOCKOUT MULTIPLIER INDICATOR */}
+          {showMultiplier && (
+            <span className="text-[10px] font-extrabold text-emerald-400 bg-emerald-500/5 px-2 py-0.5 rounded border border-emerald-500/20 uppercase tracking-widest scale-95 select-none">
+              {t('matches.knockoutMultiplier')}
+            </span>
+          )}
         </div>
 
         {/* BOTTOM METADATA / STATUS */}
@@ -255,30 +206,6 @@ export function MatchCard({ match, locale, onSubmitPrediction }: MatchCardProps)
 
           {/* Points earned */}
           {renderPointsTag()}
-
-          {/* Inline optimistic saving indicators */}
-          {!match.locked && (
-            <div className="h-4 flex items-center justify-center mt-1 text-[11px]">
-              {saveStatus === 'saving' && (
-                <span className="text-primary flex items-center gap-1 font-semibold animate-pulse">
-                  <RefreshCw className="h-3 w-3 animate-spin" />
-                  {t('common.saving')}
-                </span>
-              )}
-              {saveStatus === 'saved' && (
-                <span className="text-emerald-400 flex items-center gap-1 font-bold">
-                  <Check className="h-3.5 w-3.5 stroke-[3px]" />
-                  {t('common.saved')}
-                </span>
-              )}
-              {saveStatus === 'error' && (
-                <span className="text-destructive flex items-center gap-1 font-semibold" title={errorMessage || ''}>
-                  <AlertCircle className="h-3 w-3" />
-                  {t('errors.generic')}
-                </span>
-              )}
-            </div>
-          )}
         </div>
       </CardContent>
     </Card>
