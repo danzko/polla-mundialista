@@ -724,6 +724,10 @@ export async function joinLeague(
       });
 
     if (joinError) {
+      // 23505 = already a member (double-tap race); treat as success
+      if (joinError.code === "23505") {
+        return { ok: true, data: { leagueId: league.id } };
+      }
       console.error("Join league error:", joinError);
       return { ok: false, error: joinError.message };
     }
