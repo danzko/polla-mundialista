@@ -29,6 +29,16 @@ export const scoreSchema = z
   .min(0, { message: 'Score cannot be negative.' })
   .max(15, { message: 'Score cannot exceed 15.' });
 
+const playerNameSchema = z
+  .string()
+  .max(60, { message: 'Name cannot exceed 60 characters.' })
+  .transform((val) => val.trim());
+
+const uniqueIgnoringEmpty = (arr: string[]) => {
+  const filled = arr.filter((s) => s !== '').map((s) => s.toLowerCase());
+  return new Set(filled).size === filled.length;
+};
+
 export const bonusPredictionsSchema = z.object({
   championTeamId: z.string().nullable(),
   runnerUpTeamId: z.string().nullable(),
@@ -36,17 +46,19 @@ export const bonusPredictionsSchema = z.object({
   semifinalists: z
     .array(z.string())
     .max(4, { message: 'You can pick up to 4 semifinalists.' })
-    .refine((arr) => new Set(arr).size === arr.length, {
+    .refine(uniqueIgnoringEmpty, {
       message: 'Semifinalists must be unique teams.',
     }),
-  topScorerName: z
-    .string()
-    .max(60, { message: 'Name cannot exceed 60 characters.' })
-    .transform((val) => val.trim())
-    .nullable(),
-  bestPlayerName: z
-    .string()
-    .max(60, { message: 'Name cannot exceed 60 characters.' })
-    .transform((val) => val.trim())
-    .nullable(),
+  topScorerNames: z
+    .array(playerNameSchema)
+    .max(3, { message: 'You can pick up to 3 scorers.' })
+    .refine(uniqueIgnoringEmpty, {
+      message: 'Scorer picks must be different players.',
+    }),
+  bestPlayerNames: z
+    .array(playerNameSchema)
+    .max(3, { message: 'You can pick up to 3 players.' })
+    .refine(uniqueIgnoringEmpty, {
+      message: 'Best player picks must be different players.',
+    }),
 });

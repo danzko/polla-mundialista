@@ -4,8 +4,13 @@ import { createClient } from "@/lib/supabase/server";
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  // Default to Spanish dashboard after login
-  const next = searchParams.get("next") ?? "/es/dashboard";
+  // Default to Spanish dashboard after login.
+  // Only allow same-origin relative paths to avoid open redirects.
+  const rawNext = searchParams.get("next");
+  const next =
+    rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//")
+      ? rawNext
+      : "/es/dashboard";
 
   if (code) {
     const supabase = await createClient();

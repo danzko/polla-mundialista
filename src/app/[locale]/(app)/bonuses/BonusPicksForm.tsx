@@ -24,6 +24,13 @@ interface BonusPicksFormProps {
 
 type FormData = z.infer<typeof bonusPredictionsSchema>;
 
+// Pad a saved array to a fixed number of controlled inputs
+const padTo = (arr: string[], size: number) => {
+  const out = [...arr.slice(0, size)];
+  while (out.length < size) out.push('');
+  return out;
+};
+
 export function BonusPicksForm({ initialBonuses, teams, locale }: BonusPicksFormProps) {
   const t = useTranslations();
   
@@ -44,11 +51,9 @@ export function BonusPicksForm({ initialBonuses, teams, locale }: BonusPicksForm
       championTeamId: initialBonuses.championTeamId,
       runnerUpTeamId: initialBonuses.runnerUpTeamId,
       thirdPlaceTeamId: initialBonuses.thirdPlaceTeamId,
-      semifinalists: initialBonuses.semifinalists.length === 4 
-        ? initialBonuses.semifinalists 
-        : ['', '', '', ''], // Pad up to 4 inputs
-      topScorerName: initialBonuses.topScorerName || '',
-      bestPlayerName: initialBonuses.bestPlayerName || '',
+      semifinalists: padTo(initialBonuses.semifinalists, 4),
+      topScorerNames: padTo(initialBonuses.topScorerNames, 3),
+      bestPlayerNames: padTo(initialBonuses.bestPlayerNames, 3),
     },
   });
 
@@ -67,16 +72,18 @@ export function BonusPicksForm({ initialBonuses, teams, locale }: BonusPicksForm
     setSaveStatus('saving');
     setApiError(null);
 
-    // Filter out empty semifinalists
+    // Filter out empty entries before submitting
     const cleanedSemi = data.semifinalists.filter(id => id && id !== '');
+    const cleanedScorers = data.topScorerNames.filter(n => n && n.trim() !== '');
+    const cleanedPlayers = data.bestPlayerNames.filter(n => n && n.trim() !== '');
 
     const result = await submitBonuses({
       championTeamId: data.championTeamId,
       runnerUpTeamId: data.runnerUpTeamId,
       thirdPlaceTeamId: data.thirdPlaceTeamId,
       semifinalists: cleanedSemi,
-      topScorerName: data.topScorerName,
-      bestPlayerName: data.bestPlayerName,
+      topScorerNames: cleanedScorers,
+      bestPlayerNames: cleanedPlayers,
     });
 
     if (result.ok) {
@@ -230,47 +237,77 @@ export function BonusPicksForm({ initialBonuses, teams, locale }: BonusPicksForm
               )}
             </div>
 
-            {/* AWARDS */}
+            {/* AWARDS: 3 ranked scorers + 3 ranked best players (Excel parity) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-border/40">
-              
-              {/* Golden Boot (Top Scorer) */}
-              <div className="space-y-2">
-                <label htmlFor="topScorerName" className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 select-none">
+
+              {/* Golden / Silver / Bronze Boot */}
+              <div className="space-y-3">
+                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 select-none">
                   <Award className="h-4 w-4 text-amber-500" />
-                  {t('bonuses.topScorer')}
+                  {t('bonuses.topScorersTitle')}
                 </label>
-                <Input
-                  id="topScorerName"
-                  type="text"
-                  placeholder={locale === 'es' ? 'Nombre del goleador' : 'Player name'}
-                  className="rounded-xl font-semibold bg-card/65"
-                  disabled={locked}
-                  {...register('topScorerName')}
-                />
-                {errors.topScorerName && (
+                {([0, 1, 2] as const).map((index) => (
+                  <div key={index} className="space-y-1">
+                    <label
+                      htmlFor={`topScorerNames-${index}`}
+                      className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80 select-none"
+                    >
+                      {t(`bonuses.boot${index}`)}
+                    </label>
+                    <Input
+                      id={`topScorerNames-${index}`}
+                      type="text"
+                      placeholder={t('bonuses.playerPlaceholder')}
+                      className="rounded-xl font-semibold bg-card/65"
+                      disabled={locked}
+                      {...register(`topScorerNames.${index}`)}
+                    />
+                    {errors.topScorerNames?.[index] && (
+                      <p className="text-xs text-destructive font-medium mt-1">
+                        {errors.topScorerNames[index]?.message}
+                      </p>
+                    )}
+                  </div>
+                ))}
+                {typeof errors.topScorerNames?.message === 'string' && (
                   <p className="text-xs text-destructive font-medium mt-1">
-                    {errors.topScorerName.message}
+                    {errors.topScorerNames.message}
                   </p>
                 )}
               </div>
 
-              {/* Golden Ball (Best Player) */}
-              <div className="space-y-2">
-                <label htmlFor="bestPlayerName" className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 select-none">
+              {/* Golden / Silver / Bronze Ball */}
+              <div className="space-y-3">
+                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 select-none">
                   <Star className="h-4 w-4 text-emerald-500" />
-                  {t('bonuses.bestPlayer')}
+                  {t('bonuses.bestPlayersTitle')}
                 </label>
-                <Input
-                  id="bestPlayerName"
-                  type="text"
-                  placeholder={locale === 'es' ? 'Nombre del mejor jugador' : 'Player name'}
-                  className="rounded-xl font-semibold bg-card/65"
-                  disabled={locked}
-                  {...register('bestPlayerName')}
-                />
-                {errors.bestPlayerName && (
+                {([0, 1, 2] as const).map((index) => (
+                  <div key={index} className="space-y-1">
+                    <label
+                      htmlFor={`bestPlayerNames-${index}`}
+                      className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80 select-none"
+                    >
+                      {t(`bonuses.ball${index}`)}
+                    </label>
+                    <Input
+                      id={`bestPlayerNames-${index}`}
+                      type="text"
+                      placeholder={t('bonuses.playerPlaceholder')}
+                      className="rounded-xl font-semibold bg-card/65"
+                      disabled={locked}
+                      {...register(`bestPlayerNames.${index}`)}
+                    />
+                    {errors.bestPlayerNames?.[index] && (
+                      <p className="text-xs text-destructive font-medium mt-1">
+                        {errors.bestPlayerNames[index]?.message}
+                      </p>
+                    )}
+                  </div>
+                ))}
+                {typeof errors.bestPlayerNames?.message === 'string' && (
                   <p className="text-xs text-destructive font-medium mt-1">
-                    {errors.bestPlayerName.message}
+                    {errors.bestPlayerNames.message}
                   </p>
                 )}
               </div>

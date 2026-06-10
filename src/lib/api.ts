@@ -406,8 +406,8 @@ export async function getBonuses(): Promise<BonusView> {
         runnerUpTeamId: null,
         thirdPlaceTeamId: null,
         semifinalists: [],
-        topScorerName: null,
-        bestPlayerName: null,
+        topScorerNames: [],
+        bestPlayerNames: [],
         locked,
         lockAt,
       };
@@ -425,8 +425,8 @@ export async function getBonuses(): Promise<BonusView> {
         runnerUpTeamId: null,
         thirdPlaceTeamId: null,
         semifinalists: [],
-        topScorerName: null,
-        bestPlayerName: null,
+        topScorerNames: [],
+        bestPlayerNames: [],
         locked,
         lockAt,
       };
@@ -437,8 +437,8 @@ export async function getBonuses(): Promise<BonusView> {
       runnerUpTeamId: pred.runner_up_team_id,
       thirdPlaceTeamId: pred.third_place_team_id,
       semifinalists: (pred.semifinalists as string[]) || [],
-      topScorerName: pred.top_scorer_name,
-      bestPlayerName: pred.best_player_name,
+      topScorerNames: (pred.top_scorer_names as string[]) || [],
+      bestPlayerNames: (pred.best_player_names as string[]) || [],
       locked,
       lockAt,
     };
@@ -449,8 +449,8 @@ export async function getBonuses(): Promise<BonusView> {
       runnerUpTeamId: null,
       thirdPlaceTeamId: null,
       semifinalists: [],
-      topScorerName: null,
-      bestPlayerName: null,
+      topScorerNames: [],
+      bestPlayerNames: [],
       locked,
       lockAt,
     };
@@ -468,6 +468,17 @@ async function checkUserProfile(supabase: any, userId: string): Promise<boolean>
     .eq("id", userId)
     .maybeSingle();
   return !!data;
+}
+
+// Unambiguous alphabet: no I, L, O, 0, 1 (easy to read aloud / type on a phone)
+const INVITE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+
+function generateInviteCode(): string {
+  let code = "";
+  for (let i = 0; i < 6; i++) {
+    code += INVITE_ALPHABET[Math.floor(Math.random() * INVITE_ALPHABET.length)];
+  }
+  return code;
 }
 
 export async function requestMagicLink(
@@ -587,21 +598,32 @@ export async function createLeague(
       return { ok: false, error: "Debes completar tu perfil antes de continuar / Please complete onboarding first" };
     }
 
-    const inviteCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    let league: any = null;
+    let leagueError: any = null;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const inviteCode = generateInviteCode();
+      const { data, error } = await supabase
+        .from("leagues")
+        .insert({
+          name: nameValidation.data,
+          invite_code: inviteCode,
+          language: input.language,
+          created_by: user.id,
+          admin_user_id: user.id,
+        })
+        .select()
+        .single();
 
-    const { data: league, error: leagueError } = await supabase
-      .from("leagues")
-      .insert({
-        name: nameValidation.data,
-        invite_code: inviteCode,
-        language: input.language,
-        created_by: user.id,
-        admin_user_id: user.id,
-      })
-      .select()
-      .single();
+      if (!error && data) {
+        league = data;
+        break;
+      }
+      leagueError = error;
+      // 23505 = unique violation on invite_code; try a fresh code
+      if (error?.code !== "23505") break;
+    }
 
-    if (leagueError || !league) {
+    if (!league) {
       console.error("Create league error:", leagueError);
       return {
         ok: false,
@@ -625,7 +647,7 @@ export async function createLeague(
       ok: true,
       data: {
         leagueId: league.id,
-        inviteCode: inviteCode,
+        inviteCode: league.invite_code,
       },
     };
   } catch (err: any) {
@@ -663,12 +685,18 @@ export async function joinLeague(
       return { ok: false, error: "Debes completar tu perfil antes de continuar / Please complete onboarding first" };
     }
 
+    // RLS only lets members see a league, so a direct select by invite code
+    // returns nothing for non-members. Look it up via the SECURITY DEFINER
+    // RPC instead (exact-code match only, signed-in users only).
     const { data: league, error: leagueError } = await supabase
-      .from("leagues")
-      .select("*")
-      .eq("invite_code", code)
-      .is("deleted_at", null)
-      .maybeSingle();
+      .rpc("lookup_league_by_invite_code", { p_code: code })
+      .maybeSingle<{
+        id: string;
+        name: string;
+        invite_code: string;
+        language: string;
+        admin_user_id: string;
+      }>();
 
     if (leagueError || !league) {
       return {
@@ -802,16 +830,23 @@ export async function submitBonuses(
       return { ok: false, error: "Debes completar tu perfil antes de continuar / Please complete onboarding first" };
     }
 
+    const picks = validation.data;
+    const topScorers = picks.topScorerNames.filter((s) => s !== "");
+    const bestPlayers = picks.bestPlayerNames.filter((s) => s !== "");
+
     const { error: upsertError } = await supabase
       .from("bonus_predictions")
       .upsert({
         user_id: user.id,
-        champion_team_id: input.championTeamId,
-        runner_up_team_id: input.runnerUpTeamId,
-        third_place_team_id: input.thirdPlaceTeamId,
-        semifinalists: input.semifinalists,
-        top_scorer_name: input.topScorerName,
-        best_player_name: input.bestPlayerName,
+        champion_team_id: picks.championTeamId,
+        runner_up_team_id: picks.runnerUpTeamId,
+        third_place_team_id: picks.thirdPlaceTeamId,
+        semifinalists: picks.semifinalists.filter((s) => s !== ""),
+        top_scorer_names: topScorers,
+        best_player_names: bestPlayers,
+        // legacy single-pick columns: keep in sync with the gold pick
+        top_scorer_name: topScorers[0] ?? null,
+        best_player_name: bestPlayers[0] ?? null,
         updated_at: new Date().toISOString(),
       });
 

@@ -6,6 +6,7 @@ import { Lock } from 'lucide-react';
 import { ScoreStepper } from './ScoreStepper';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { knockoutSlotLabel } from '@/lib/bracket-slots';
 import type { MatchView, Locale } from '@/lib/types';
 
 interface MatchCardProps {
@@ -31,35 +32,23 @@ export function MatchCard({ match, locale, homeScore, awayScore, onChange }: Mat
     });
   };
 
-  // Helper for TBD team names
+  // Helper for TBD team names: use the real bracket slot descriptors
   const getTeamName = (team: typeof match.homeTeam, position: 'home' | 'away') => {
     if (team) {
       return locale === 'es' ? team.nameEs : team.nameEn;
     }
-    
-    // Estimate source matches for placeholders
-    const matchNumber = match.matchNumber;
-    if (matchNumber === 103) {
-      return locale === 'es' ? 'Perdedor Semifinal' : 'Loser Semifinal';
-    }
-    if (matchNumber === 104) {
-      return locale === 'es' ? 'Subcampeón/Ganador SF' : 'Finalist (TBD)';
-    }
-    
-    // Default placeholders
-    const sourceNumber = matchNumber > 96 
-      ? 80 + (matchNumber - 96) * 2 // approximation for SF/QF
-      : 48 + (matchNumber - 80) * 2; // approximation for R16/R32
-      
-    return locale === 'es' 
-      ? `Ganador P${sourceNumber - (position === 'home' ? 1 : 0)}`
-      : `Winner M${sourceNumber - (position === 'home' ? 1 : 0)}`;
+    return (
+      knockoutSlotLabel(match.matchNumber, position, locale) ??
+      (locale === 'es' ? 'Por definir' : 'TBD')
+    );
   };
 
   // Stage label translation
   const getStageLabel = () => {
     if (match.stage === 'group') {
-      return `${t('matches.stageFilter')}: Group ${match.groupLabel || ''}`;
+      return locale === 'es'
+        ? `Grupo ${match.groupLabel || ''}`
+        : `Group ${match.groupLabel || ''}`;
     }
     const stages: Record<string, string> = {
       r32: 'R32',
@@ -197,7 +186,7 @@ export function MatchCard({ match, locale, homeScore, awayScore, onChange }: Mat
           {/* Result recorded banner */}
           {match.result && (
             <div className="text-[11px] text-muted-foreground font-semibold flex items-center justify-center gap-1 bg-slate-900/60 py-1 rounded-lg border border-border/40 select-none">
-              <span>{t('matches.stageFilter')}:</span>
+              <span>{t('matches.resultLabel')}:</span>
               <span className="text-foreground font-extrabold">
                 {match.result.homeScore} - {match.result.awayScore}
               </span>

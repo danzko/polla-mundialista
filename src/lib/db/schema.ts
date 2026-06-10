@@ -215,8 +215,16 @@ export const bonusPredictions = pgTable("bonus_predictions", {
   runnerUpTeamId: uuid("runner_up_team_id").references(() => teams.id),
   thirdPlaceTeamId: uuid("third_place_team_id").references(() => teams.id),
   semifinalists: jsonb("semifinalists").$type<string[]>(), // array of 4 team UUIDs
-  topScorerName: text("top_scorer_name"), // free-form, Golden Boot
-  bestPlayerName: text("best_player_name"), // free-form, Golden Ball
+  topScorerName: text("top_scorer_name"), // legacy single pick, mirrors topScorerNames[0]
+  bestPlayerName: text("best_player_name"), // legacy single pick, mirrors bestPlayerNames[0]
+  topScorerNames: jsonb("top_scorer_names")
+    .$type<string[]>()
+    .notNull()
+    .default(sql`'[]'::jsonb`), // ranked: gold, silver, bronze boot
+  bestPlayerNames: jsonb("best_player_names")
+    .$type<string[]>()
+    .notNull()
+    .default(sql`'[]'::jsonb`), // ranked: gold, silver, bronze ball
   submittedAt: timestamp("submitted_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

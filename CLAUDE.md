@@ -10,27 +10,23 @@ Danny (danzko@gmail.com) -- superadmin of the platform.
 
 ## Status
 
-**Phase: Schema + seed ready, scaffold next.**
+**Phase: LIVE in production (launched for the June 11, 2026 kickoff).**
 
-What's done:
-- PRD finalized (docs/PRD.md) -- v2, revised scoring
-- Drizzle ORM schema (src/lib/db/schema.ts) -- all tables, relations, types
-- SQL migration with RLS policies (supabase/migrations/0001_initial_schema.sql)
-- Scoring engine with pure functions (src/lib/scoring/calculate-points.ts)
-- Unit tests for scoring (tests/scoring.test.ts)
-- Seed data extracted from buddy's Excel (scripts/wc2026-seed-data.json)
-- Seed script (scripts/seed.ts) -- inserts 48 teams + 104 matches
+Production: https://polla-mundialista-puce.vercel.app (Vercel auto-deploys from GitHub `danzko/polla-mundialista` `main`). Supabase project `nsaajzmtzotwjpbfwyad`, fully seeded (48 teams, 104 matches with kickoffs verified against the group's Excel) with RLS on.
 
-What's next (Week 1 continued):
-1. `npx create-next-app` with TypeScript, Tailwind v4, App Router
-2. Install deps: drizzle-orm, @supabase/ssr, next-intl, shadcn/ui, react-hook-form, zod, @tanstack/react-query
-3. Set up Supabase project, run migration, run seed
-4. Wire up magic link auth end to end
-5. Deploy skeleton to Vercel with custom domain
+Working end to end: magic-link auth, onboarding, create/join leagues (join uses the `lookup_league_by_invite_code` SECURITY DEFINER RPC), group-stage batch prediction entry (default 0-0, explicit save), bonus picks (podium + 4 semifinalists + 3 ranked top scorers + 3 ranked best players, locking June 11 19:00 UTC), superadmin result entry at `/[locale]/admin`, leaderboards via `leaderboard_view`.
+
+**Read `docs/HANDOFF-MYTHOS.md` first** -- it corrects this file where they disagree and records decisions already made.
+
+What's next (before June 28, when knockouts start):
+1. Per-user predictive bracket (the Excel model): group tables computed from the user's own scores -> best-thirds lookup -> R32 -> propagate to champion. `scripts/wc2026-bracket-structure.json` has the validated structure + 495 best-thirds combinations.
+2. Knockout scoring option A wired into the leaderboard (points only when the user's predicted pairing matches the real pairing), plus Golden Boot/Ball scoring once outcomes are known.
+3. Standings race view (docs/antigravity-handoff-2.md; data ready in `leaderboard_matchday`).
+4. Admin: assign real knockout teams as groups conclude.
 
 ## Stack
 
-- **Framework:** Next.js 15, App Router, React Server Components, Server Actions
+- **Framework:** Next.js 16 (Turbopack), App Router, React Server Components, Server Actions
 - **Hosting:** Vercel Hobby (free)
 - **Database:** Supabase Pro ($25/mo) -- Postgres 16 + Auth + RLS
 - **ORM:** Drizzle (schema authority, migrations, complex queries) + Supabase JS client (simple RLS-aware reads in RSC)
@@ -48,13 +44,13 @@ Per-match:
 - Wrong result: 0 pts
 - Knockout multiplier (R32 onward): x2
 
-Bonuses (locked at tournament start June 11):
+Bonuses (locked at tournament start June 11, 19:00 UTC):
 - Champion: 15 pts
 - Runner-up: 10 pts
 - 3rd place: 5 pts
 - Each semifinalist (4 max): 3 pts each
-- Golden Boot (top scorer): 10 pts
-- Golden Ball (best player): 10 pts
+- Golden Boot (top scorer): 10 pts -- entry is 3 ranked picks (gold/silver/bronze) for Excel parity; per-pick scoring decided when wiring outcomes
+- Golden Ball (best player): 10 pts -- entry is 3 ranked picks, same note as above
 
 Tiebreakers: total pts > exact count > result count > earliest first prediction
 
@@ -149,7 +145,7 @@ npx vercel --prod
 
 ## Non-goals (do NOT build these)
 
-- Bracket-style scoring
+- ~~Bracket-style scoring~~ SUPERSEDED: the owner chose the full predictive bracket like the group's Excel pool (see docs/HANDOFF-MYTHOS.md); phased to ship before June 28
 - Custom scoring rules per league
 - Real-time API sync (v1 is manual entry)
 - Email/SMS/push notifications

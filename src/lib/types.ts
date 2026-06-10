@@ -85,8 +85,8 @@ export interface BonusView {
   runnerUpTeamId: string | null;
   thirdPlaceTeamId: string | null;
   semifinalists: string[];        // up to 4 team ids
-  topScorerName: string | null;
-  bestPlayerName: string | null;
+  topScorerNames: string[];       // up to 3, ranked: gold, silver, bronze boot
+  bestPlayerNames: string[];      // up to 3, ranked: gold, silver, bronze ball
   locked: boolean;
   lockAt: string;                 // ISO 8601 UTC, '2026-06-11T19:00:00Z'
 }
