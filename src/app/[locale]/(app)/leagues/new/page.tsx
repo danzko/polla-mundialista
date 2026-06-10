@@ -120,7 +120,7 @@ export default function CreateLeaguePage() {
                   disabled={isSubmitting}
                   {...register('language')}
                 >
-                  <option value="es">🇲🇽 Español</option>
+                  <option value="es">🇨🇴 Español</option>
                   <option value="en">🇺🇸 English</option>
                 </select>
               </div>

@@ -159,7 +159,7 @@ export default function OnboardingPage() {
                       : "border-border bg-card/50 text-muted-foreground hover:text-foreground hover:bg-secondary"
                   )}
                 >
-                  <span className="text-base select-none">🇲🇽</span>
+                  <span className="text-base select-none">🇨🇴</span>
                   Español
                 </button>
                 <button

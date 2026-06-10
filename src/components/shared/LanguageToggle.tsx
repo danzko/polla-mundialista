@@ -26,7 +26,7 @@ export function LanguageToggle() {
       className="text-xs uppercase border-primary/20 bg-card hover:bg-primary/10 transition-colors"
       aria-label={currentLocale === 'es' ? 'Switch to English' : 'Cambiar a Español'}
     >
-      {currentLocale === 'es' ? '🇺🇸 EN' : '🇦🇷 ES'}
+      {currentLocale === 'es' ? '🇺🇸 EN' : '🇨🇴 ES'}
     </Button>
   );
 }
