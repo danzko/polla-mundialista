@@ -117,7 +117,7 @@ export function MatchCard({ match, locale, homeScore, awayScore, onChange }: Mat
                 {t('matches.locked')}
               </span>
             ) : (
-              <span className="text-primary-foreground/90 font-medium">
+              <span className="text-foreground/80 font-medium">
                 {mounted ? formatKickoff(match.kickoffAt) : ' '}
               </span>
             )}
