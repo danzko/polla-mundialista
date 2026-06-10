@@ -36,23 +36,40 @@ What's next (before June 28, when knockouts start):
 - **i18n:** next-intl with /es and /en route segments
 - **Auth:** Supabase magic link only, no OAuth, no passwords
 
-## Scoring rules (IMPORTANT -- these are baked into the Postgres view and TS engine)
+## Scoring rules (OFFICIAL pool rules from the owner, June 10 2026 -- supersede all earlier versions)
 
-Per-match:
+Group stage (per match):
 - Exact score: 6 pts
 - Correct result, wrong score: 2 pts
 - Wrong result: 0 pts
-- Knockout multiplier (R32 onward): x2
 
-Bonuses (locked at tournament start June 11, 19:00 UTC):
-- Champion: 15 pts
-- Runner-up: 10 pts
-- 3rd place: 5 pts
-- Each semifinalist (4 max): 3 pts each
-- Golden Boot (top scorer): 10 pts -- entry is 3 ranked picks (gold/silver/bronze) for Excel parity; per-pick scoring decided when wiring outcomes
-- Golden Ball (best player): 10 pts -- entry is 3 ranked picks, same note as above
+Knockout stage (advancement-based -- knockout SCORES earn nothing; only teams advancing count).
+Points per team the player correctly has advancing to each round (from their predictive bracket):
+- Round of 32: 2 pts per team
+- Round of 16: 4 pts per team
+- Quarterfinals: 7 pts per team
+- Semifinals: 15 pts per team
+- Final: 25 pts per team
+- Champion correct: 50 pts
+- 3rd-place finisher correct: 20 pts
 
-Tiebreakers: total pts > exact count > result count > earliest first prediction
+Bonus picks (locked at tournament start June 11, 19:00 UTC):
+- Golden Boot (FIFA top scorer): 30 pts
+- Golden Ball (FIFA best player): 30 pts
+- Entry is 3 ranked picks each (gold/silver/bronze, Excel parity); whether silver/bronze
+  earn anything is an OPEN DECISION for the owner -- default assumption: only the gold pick pays 30.
+
+Tiebreaker: total pts, then most points earned in the knockout stage.
+
+Prizes (1st 75% / 2nd 25% after 3rd gets buy-in back) are handled OUTSIDE the app -- never build payment features.
+
+IMPLEMENTATION STATUS: the live leaderboard_view + TS engine still score knockout
+matches as 6/2/0 x2 and team bonuses as 15/10/5/3 -- harmless until knockout
+results exist (June 28+). The rewrite to advancement-based scoring MUST land
+with the bracket build before June 28. R32 advancement is derivable from group
+predictions already locked at kickoff; champion + third picks are collected in
+bonus_predictions; runner-up/semifinalist picks are collected but not scored
+under the official rules.
 
 ## Architecture decisions (don't revisit these)
 

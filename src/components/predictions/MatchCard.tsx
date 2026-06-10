@@ -93,7 +93,6 @@ export function MatchCard({ match, locale, homeScore, awayScore, onChange }: Mat
   };
 
   const isPredictable = match.homeTeam !== null && match.awayTeam !== null && !match.locked && !match.isVoided;
-  const showMultiplier = match.stage !== 'group';
 
   return (
     <Card className={cn(
@@ -180,12 +179,6 @@ export function MatchCard({ match, locale, homeScore, awayScore, onChange }: Mat
             />
           </div>
 
-          {/* KNOCKOUT MULTIPLIER INDICATOR */}
-          {showMultiplier && (
-            <span className="text-[10px] font-extrabold text-emerald-400 bg-emerald-500/5 px-2 py-0.5 rounded border border-emerald-500/20 uppercase tracking-widest scale-95 select-none">
-              {t('matches.knockoutMultiplier')}
-            </span>
-          )}
         </div>
 
         {/* BOTTOM METADATA / STATUS */}
