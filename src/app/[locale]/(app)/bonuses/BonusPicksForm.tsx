@@ -10,9 +10,9 @@ import { CountdownToLock } from '@/components/shared/CountdownToLock';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { PlayerPicker } from '@/components/shared/PlayerPicker';
 import { submitBonuses } from '@/lib/api';
 import { bonusPredictionsSchema } from '@/lib/validation';
-import playersData from '@/lib/players-wc2026.json';
 import type { BonusView, Team, Locale } from '@/lib/types';
 import { Trophy, Award, Medal, Check, AlertCircle, RefreshCw, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -31,10 +31,6 @@ const padTo = (arr: string[], size: number) => {
   while (out.length < size) out.push('');
   return out;
 };
-
-// Official 2026 registered squads (48 teams, ~1,250 players), used for
-// the Boot/Ball autocomplete. Free text remains allowed.
-const PLAYERS = playersData as { n: string; t: string }[];
 
 export function BonusPicksForm({ initialBonuses, teams, locale }: BonusPicksFormProps) {
   const t = useTranslations();
@@ -113,15 +109,6 @@ export function BonusPicksForm({ initialBonuses, teams, locale }: BonusPicksForm
 
   return (
     <div className="space-y-6">
-
-      {/* Shared autocomplete source for all player inputs */}
-      <datalist id="wc-players">
-        {PLAYERS.map((p) => (
-          <option key={`${p.n}|${p.t}`} value={p.n}>
-            {p.t}
-          </option>
-        ))}
-      </datalist>
 
       {/* COUNTDOWN BANNER */}
       <div className="glass-card p-6 rounded-2xl border border-border/60 flex flex-col items-center text-center space-y-4 shadow-md">
@@ -268,15 +255,18 @@ export function BonusPicksForm({ initialBonuses, teams, locale }: BonusPicksForm
                     >
                       {t(`bonuses.boot${index}`)}
                     </label>
-                    <Input
-                      id={`topScorerNames-${index}`}
-                      type="text"
-                      list="wc-players"
-                      autoComplete="off"
-                      placeholder={t('bonuses.playerPlaceholder')}
-                      className="rounded-xl font-semibold bg-card/65"
-                      disabled={locked}
-                      {...register(`topScorerNames.${index}`)}
+                    <Controller
+                      name={`topScorerNames.${index}`}
+                      control={control}
+                      render={({ field }) => (
+                        <PlayerPicker
+                          id={`topScorerNames-${index}`}
+                          value={field.value || ''}
+                          onChange={field.onChange}
+                          disabled={locked}
+                          placeholder={t('bonuses.playerPlaceholder')}
+                        />
+                      )}
                     />
                     {errors.topScorerNames?.[index] && (
                       <p className="text-xs text-destructive font-medium mt-1">
@@ -306,15 +296,18 @@ export function BonusPicksForm({ initialBonuses, teams, locale }: BonusPicksForm
                     >
                       {t(`bonuses.ball${index}`)}
                     </label>
-                    <Input
-                      id={`bestPlayerNames-${index}`}
-                      type="text"
-                      list="wc-players"
-                      autoComplete="off"
-                      placeholder={t('bonuses.playerPlaceholder')}
-                      className="rounded-xl font-semibold bg-card/65"
-                      disabled={locked}
-                      {...register(`bestPlayerNames.${index}`)}
+                    <Controller
+                      name={`bestPlayerNames.${index}`}
+                      control={control}
+                      render={({ field }) => (
+                        <PlayerPicker
+                          id={`bestPlayerNames-${index}`}
+                          value={field.value || ''}
+                          onChange={field.onChange}
+                          disabled={locked}
+                          placeholder={t('bonuses.playerPlaceholder')}
+                        />
+                      )}
                     />
                     {errors.bestPlayerNames?.[index] && (
                       <p className="text-xs text-destructive font-medium mt-1">
