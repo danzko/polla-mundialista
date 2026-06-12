@@ -25,6 +25,11 @@
  * has been stable for STABLE_MS past full time. Inserted with
  * ON CONFLICT DO NOTHING — a human-entered or corrected result is
  * never overwritten; corrections go through the admin mismatch alert.
+ *
+ * AUTO-HEAL (owner: "make it auto", June 12): kickoff drift on
+ * not-yet-started matches adopts ESPN's time automatically, but only
+ * while BOTH clocks put kickoff >30 min away — anything closer stays
+ * an admin alert. Self-correcting: if ESPN reverts, so do we.
  */
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
@@ -277,6 +282,29 @@ Deno.serve(async (_req) => {
         notes.push(`auto: ${inserted.map((i) => label(i.match_id as string)).join(", ")}`);
       }
     }
+    // AUTO-HEAL kickoff drift on un-started matches.
+    const healed: string[] = [];
+    for (const r of rows) {
+      const drift = r.kickoff_drift_seconds as number | null;
+      if (drift === null || Math.abs(drift) < 60) continue;
+      if (r.status !== "pre") continue;
+      const m = matchById.get(r.match_id as string);
+      if (!m || m.is_voided) continue;
+      const ourKick = new Date(m.kickoff_at).getTime();
+      const provKick = new Date(r.provider_kickoff_at as string).getTime();
+      if (ourKick - Date.now() < 30 * 60_000 || provKick - Date.now() < 30 * 60_000) continue;
+      const { error: hErr } = await supabase
+        .from("matches")
+        .update({ kickoff_at: r.provider_kickoff_at })
+        .eq("id", r.match_id);
+      if (hErr) {
+        notes.push(`hora error #${m.match_number}: ${hErr.message}`);
+        continue;
+      }
+      healed.push(`#${m.match_number} -> ${r.provider_kickoff_at}`);
+    }
+    if (healed.length > 0) notes.push(`hora auto: ${healed.join(", ")}`);
+
     if (unmatched.length > 0) notes.push(`unmatched: ${unmatched.join(", ")}`);
 
     return await finish(

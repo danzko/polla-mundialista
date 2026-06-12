@@ -201,7 +201,9 @@ export function LivePanel({ items, sync }: { items: LiveItem[]; sync: SyncState 
 
           {drifted.length > 0 && (
             <div className="space-y-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 p-2">
-              <div className="text-xs font-bold text-amber-400">🕐 Horarios distintos a ESPN</div>
+              <div className="text-xs font-bold text-amber-400">
+                🕐 Hora distinta a ESPN — no se ajustó sola (kickoff muy cerca); revisa y decide
+              </div>
               {drifted.map((i) => (
                 <div key={i.matchId} className="flex items-center justify-between gap-2 text-sm">
                   <span className="min-w-0 truncate">

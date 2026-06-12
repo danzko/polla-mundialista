@@ -27,10 +27,14 @@ knockouts; scores stored oriented to OUR home/away. AUTO-CONFIRM (owner
 decision June 12): finals flow into match_results (source 'espn-auto',
 recorded_by null, migration 0009) once stable ~5 min past full time, via
 ON CONFLICT DO NOTHING -- a human-entered result is NEVER overwritten.
-/admin shows the panel: live scores, finals in their settling window
-(instant-confirm button), alerts when our recorded result differs from
-ESPN, kickoff-drift alerts with one-tap fix (ET times). Admin actions:
-`confirmLiveResult` (source 'espn'), `applyProviderKickoff`.
+AUTO-HEAL (owner "make it auto"): kickoff drift on un-started matches
+adopts ESPN's time automatically while both clocks put kickoff >30 min
+away; closer cases stay an admin alert. /admin shows the panel: live
+scores, finals in their settling window (instant-confirm button), alerts
+when our recorded result differs from ESPN, near-kickoff drift alerts
+with one-tap fix (ET times). Admin actions: `confirmLiveResult` (source
+'espn'), `applyProviderKickoff`. The ONLY thing that stays manual is
+overriding a result a human entered (red mismatch alert decides).
 
 **Read `docs/HANDOFF-MYTHOS.md` first** -- it corrects this file where they disagree and records decisions already made.
 
