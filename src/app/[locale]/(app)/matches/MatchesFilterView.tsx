@@ -6,8 +6,13 @@ import { useTranslations } from 'next-intl';
 import { MatchCard } from '@/components/predictions/MatchCard';
 import { Button } from '@/components/ui/button';
 import { submitPredictions } from '@/lib/api';
+import { TOURNAMENT_START_ISO } from '@/lib/tournament';
 import type { MatchView, MatchStage, Locale } from '@/lib/types';
 import { cn } from '@/lib/utils';
+
+// Local-timezone day key (YYYY-MM-DD). Grouping by UTC day put every
+// Colombian evening match under the next day's header.
+const localDayKey = (iso: string) => new Date(iso).toLocaleDateString('en-CA');
 import { Calendar as CalendarIcon, Filter, HelpCircle, CheckCircle2, AlertTriangle, X, Trophy } from 'lucide-react';
 
 interface MatchesFilterViewProps {
@@ -38,6 +43,15 @@ export function MatchesFilterView({ initialMatches, locale }: MatchesFilterViewP
     return initialEdits;
   });
 
+  // Date grouping depends on the viewer's timezone, which the server cannot
+  // know — render the date-grouped sections only after mount.
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const groupStageLocked = mounted && Date.now() >= new Date(TOURNAMENT_START_ISO).getTime();
+
   // UI state
   const [showConfirmModal, setShowConfirmModal] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -49,11 +63,11 @@ export function MatchesFilterView({ initialMatches, locale }: MatchesFilterViewP
     skippedNames?: string[];
   } | null>(null);
 
-  // Extract unique kickoff dates from matches (YYYY-MM-DD)
+  // Extract unique kickoff dates from matches (local YYYY-MM-DD)
   const uniqueDates = React.useMemo(() => {
     const datesSet = new Set<string>();
     initialMatches.forEach(m => {
-      datesSet.add(m.kickoffAt.substring(0, 10));
+      datesSet.add(localDayKey(m.kickoffAt));
     });
     return Array.from(datesSet).sort();
   }, [initialMatches]);
@@ -70,27 +84,37 @@ export function MatchesFilterView({ initialMatches, locale }: MatchesFilterViewP
   const filteredMatches = React.useMemo(() => {
     return matches.filter(m => {
       const matchesStage = selectedStage === 'all' ? true : m.stage === selectedStage;
-      const matchesDate = selectedDate === 'all' ? true : m.kickoffAt.substring(0, 10) === selectedDate;
+      const matchesDate = selectedDate === 'all' ? true : localDayKey(m.kickoffAt) === selectedDate;
       return matchesStage && matchesDate;
     });
   }, [matches, selectedStage, selectedDate]);
 
-  // Partition matches: editable group matches, played/locked group matches,
-  // and knockout matches (locked until the bracket phase opens)
-  const { editableMatches, playedMatches, knockoutMatches } = React.useMemo(() => {
+  // Partition matches: editable group matches, locked-but-upcoming group
+  // matches (entries closed at tournament start), already-played group
+  // matches, and knockout matches (locked until the bracket phase opens)
+  const { editableMatches, lockedUpcomingMatches, playedMatches, knockoutMatches } = React.useMemo(() => {
     const editable: MatchView[] = [];
+    const lockedUpcoming: MatchView[] = [];
     const played: MatchView[] = [];
     const knockout: MatchView[] = [];
+    const now = Date.now();
     filteredMatches.forEach(m => {
       if (m.stage !== 'group') {
         knockout.push(m);
       } else if (!m.locked && !m.isVoided) {
         editable.push(m);
+      } else if (!m.isVoided && new Date(m.kickoffAt).getTime() > now) {
+        lockedUpcoming.push(m);
       } else {
         played.push(m);
       }
     });
-    return { editableMatches: editable, playedMatches: played, knockoutMatches: knockout };
+    return {
+      editableMatches: editable,
+      lockedUpcomingMatches: lockedUpcoming,
+      playedMatches: played,
+      knockoutMatches: knockout,
+    };
   }, [filteredMatches]);
 
   // Track unsaved changes (only for open group matches)
@@ -111,11 +135,11 @@ export function MatchesFilterView({ initialMatches, locale }: MatchesFilterViewP
     return matches.filter(m => m.stage === 'group' && m.myPrediction !== null).length;
   }, [matches]);
 
-  // Group matches by date
+  // Group matches by local date
   const groupMatchesByDate = (matchList: MatchView[]) => {
     const groups: Record<string, MatchView[]> = {};
     matchList.forEach(m => {
-      const dateKey = m.kickoffAt.substring(0, 10);
+      const dateKey = localDayKey(m.kickoffAt);
       if (!groups[dateKey]) groups[dateKey] = [];
       groups[dateKey].push(m);
     });
@@ -126,6 +150,7 @@ export function MatchesFilterView({ initialMatches, locale }: MatchesFilterViewP
   };
 
   const groupedEditable = React.useMemo(() => groupMatchesByDate(editableMatches), [editableMatches]);
+  const groupedLockedUpcoming = React.useMemo(() => groupMatchesByDate(lockedUpcomingMatches), [lockedUpcomingMatches]);
   const groupedPlayed = React.useMemo(() => groupMatchesByDate(playedMatches), [playedMatches]);
   const groupedKnockout = React.useMemo(() => groupMatchesByDate(knockoutMatches), [knockoutMatches]);
 
@@ -382,10 +407,16 @@ export function MatchesFilterView({ initialMatches, locale }: MatchesFilterViewP
         </div>
       </div>
 
-      {/* B. MATCH SECTIONS (Active / Ya jugados) */}
+      {/* B. MATCH SECTIONS (grouped by the viewer's local day — client-only) */}
       <div className="space-y-12">
+        {!mounted && (
+          <div className="p-12 text-center text-muted-foreground font-light glass-card border border-border/40 rounded-3xl animate-pulse">
+            {t('common.loading')}
+          </div>
+        )}
+
         {/* SECTION 1: ACTIVE / EDITABLE MATCHES */}
-        {Object.keys(groupedEditable).length > 0 && (
+        {mounted && Object.keys(groupedEditable).length > 0 && (
           <div className="space-y-6">
             {Object.keys(groupedEditable).map(dateKey => (
               <div key={dateKey} className="space-y-4">
@@ -409,8 +440,38 @@ export function MatchesFilterView({ initialMatches, locale }: MatchesFilterViewP
           </div>
         )}
 
-        {/* SECTION 2: YA JUGADOS (played or locked group matches) */}
-        {Object.keys(groupedPlayed).length > 0 && (
+        {/* SECTION 1.5: LOCKED BUT NOT YET PLAYED (entries closed at tournament start) */}
+        {mounted && Object.keys(groupedLockedUpcoming).length > 0 && (
+          <div className="space-y-6 pt-6 border-t border-border/20">
+            <h2 className="text-base font-extrabold tracking-wider text-muted-foreground uppercase pl-1 select-none flex items-center gap-2">
+              <span>🔒 {t('matches.lockedUpcoming')}</span>
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-500 normal-case tracking-normal">
+                {t('matches.lockedUpcomingNote')}
+              </span>
+            </h2>
+            {Object.keys(groupedLockedUpcoming).map(dateKey => (
+              <div key={dateKey} className="space-y-4">
+                <h3 className="text-sm font-extrabold text-muted-foreground/80 tracking-wider uppercase pl-1 select-none border-l-2 border-muted/50 ml-0.5">
+                  {formatDateHeader(dateKey)}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {groupedLockedUpcoming[dateKey]!.map(match => (
+                    <MatchCard
+                      key={match.id}
+                      match={match}
+                      locale={locale}
+                      homeScore={match.myPrediction?.homeScore ?? 0}
+                      awayScore={match.myPrediction?.awayScore ?? 0}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* SECTION 2: YA JUGADOS (played group matches) */}
+        {mounted && Object.keys(groupedPlayed).length > 0 && (
           <div className="space-y-6 pt-6 border-t border-border/20 opacity-90">
             <h2 className="text-base font-extrabold tracking-wider text-muted-foreground uppercase pl-1 select-none flex items-center gap-2">
               <span>⚽️ {t('matches.alreadyPlayed')}</span>
@@ -440,7 +501,7 @@ export function MatchesFilterView({ initialMatches, locale }: MatchesFilterViewP
         )}
 
         {/* SECTION 3: KNOCKOUT STAGE (locked until the bracket phase opens) */}
-        {Object.keys(groupedKnockout).length > 0 && (
+        {mounted && Object.keys(groupedKnockout).length > 0 && (
           <div className="space-y-6 pt-6 border-t border-border/20 opacity-90">
             <h2 className="text-base font-extrabold tracking-wider text-muted-foreground uppercase pl-1 select-none flex items-center gap-2">
               <span>🏆 {t('matches.knockoutSection')}</span>
@@ -470,7 +531,9 @@ export function MatchesFilterView({ initialMatches, locale }: MatchesFilterViewP
         )}
 
         {/* EMPTY STATE */}
-        {Object.keys(groupedEditable).length === 0 &&
+        {mounted &&
+          Object.keys(groupedEditable).length === 0 &&
+          Object.keys(groupedLockedUpcoming).length === 0 &&
           Object.keys(groupedPlayed).length === 0 &&
           Object.keys(groupedKnockout).length === 0 && (
           <div className="p-12 text-center text-muted-foreground font-light glass-card border border-border/40 rounded-3xl">
@@ -502,7 +565,9 @@ export function MatchesFilterView({ initialMatches, locale }: MatchesFilterViewP
                 <>
                   <span className="hidden sm:inline text-xs text-muted-foreground">•</span>
                   <span className="text-[10px] sm:text-xs font-bold text-emerald-400">
-                    {locale === 'es' ? 'Todo guardado' : 'All saved'}
+                    {groupStageLocked
+                      ? t('matches.lockedUpcoming')
+                      : locale === 'es' ? 'Todo guardado' : 'All saved'}
                   </span>
                 </>
               )}

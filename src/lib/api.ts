@@ -12,6 +12,7 @@ import {
   inviteCodeSchema, scoreSchema, bonusPredictionsSchema
 } from "./validation";
 import { calculateMatchPoints } from "./scoring/calculate-points";
+import { TOURNAMENT_START_ISO } from "./tournament";
 
 // ==========================================
 // READS
@@ -335,7 +336,10 @@ export async function getMatches(
         : null;
 
       const kickoffDate = new Date(m.kickoff_at);
-      const locked = m.is_voided || kickoffDate <= now;
+      const locked =
+        m.is_voided ||
+        kickoffDate <= now ||
+        (m.stage === "group" && now >= new Date(TOURNAMENT_START_ISO));
 
       const pred = predictionsMap.get(m.id);
       const myPrediction = pred
@@ -774,7 +778,12 @@ export async function submitPrediction(
       return { ok: false, error: "Partido no encontrado / Match not found" };
     }
 
-    if (match.is_voided || new Date(match.kickoff_at) <= new Date()) {
+    const startedTournament = new Date() >= new Date(TOURNAMENT_START_ISO);
+    if (
+      match.is_voided ||
+      new Date(match.kickoff_at) <= new Date() ||
+      (match.stage === "group" && startedTournament)
+    ) {
       return {
         ok: false,
         error: "El partido está bloqueado para predicciones / Match is locked for predictions",
@@ -1021,13 +1030,19 @@ export async function submitPredictions(
     const ids = input.predictions.map((p) => p.matchId);
     const { data: matches } = await supabase
       .from("matches")
-      .select("id, kickoff_at, is_voided")
+      .select("id, kickoff_at, is_voided, stage")
       .in("id", ids);
 
     const now = Date.now();
+    const tournamentStarted = now >= new Date(TOURNAMENT_START_ISO).getTime();
     const openIds = new Set(
       (matches ?? [])
-        .filter((m) => !m.is_voided && new Date(m.kickoff_at).getTime() > now)
+        .filter(
+          (m) =>
+            !m.is_voided &&
+            new Date(m.kickoff_at).getTime() > now &&
+            !(m.stage === "group" && tournamentStarted)
+        )
         .map((m) => m.id)
     );
 
