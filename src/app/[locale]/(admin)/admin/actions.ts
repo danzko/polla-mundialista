@@ -60,6 +60,59 @@ export async function clearResult(input: { matchId: string }): Promise<ActionRes
   return { ok: true };
 }
 
+/**
+ * Copies the ESPN-staged final score for a match into match_results.
+ * The sync never writes match_results itself — this is the human confirm.
+ */
+export async function confirmLiveResult(input: { matchId: string }): Promise<ActionResult> {
+  const auth = await requireSuperadmin();
+  if (!auth.ok) return { ok: false, error: auth.error };
+
+  const { data: live, error: liveError } = await auth.supabase
+    .from("live_scores")
+    .select("home_score, away_score, completed")
+    .eq("match_id", input.matchId)
+    .maybeSingle();
+  if (liveError) return { ok: false, error: liveError.message };
+  if (!live) return { ok: false, error: "Sin datos en vivo para este partido" };
+  if (!live.completed || live.home_score === null || live.away_score === null) {
+    return { ok: false, error: "El partido aún no está finalizado en ESPN" };
+  }
+
+  const { error } = await auth.supabase.from("match_results").upsert({
+    match_id: input.matchId,
+    home_score: live.home_score,
+    away_score: live.away_score,
+    recorded_by: auth.user!.id,
+    recorded_at: new Date().toISOString(),
+  });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+/** Adopts ESPN's kickoff time for a match whose hora drifted from ours. */
+export async function applyProviderKickoff(input: { matchId: string }): Promise<ActionResult> {
+  const auth = await requireSuperadmin();
+  if (!auth.ok) return { ok: false, error: auth.error };
+
+  const { data: live, error: liveError } = await auth.supabase
+    .from("live_scores")
+    .select("provider_kickoff_at")
+    .eq("match_id", input.matchId)
+    .maybeSingle();
+  if (liveError) return { ok: false, error: liveError.message };
+  if (!live?.provider_kickoff_at) {
+    return { ok: false, error: "Sin hora de ESPN para este partido" };
+  }
+
+  const { error } = await auth.supabase
+    .from("matches")
+    .update({ kickoff_at: live.provider_kickoff_at })
+    .eq("id", input.matchId);
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
 export async function setVoided(input: {
   matchId: string;
   voided: boolean;
