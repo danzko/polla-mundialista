@@ -144,7 +144,9 @@ export function LivePanel({ items, sync }: { items: LiveItem[]; sync: SyncState 
 
           {toConfirm.length > 0 && (
             <div className="space-y-1.5">
-              <div className="text-xs font-bold text-muted-foreground">Finales por confirmar</div>
+              <div className="text-xs font-bold text-muted-foreground">
+                Finales recientes — se confirman solos ~5 min después del pitazo
+              </div>
               {toConfirm.map((i) => (
                 <div key={i.matchId} className="flex items-center justify-between gap-2 text-sm">
                   <span className="min-w-0 truncate">

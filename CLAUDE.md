@@ -23,10 +23,14 @@ pg_cron job `live-scores-sync-2min` + pg_net, staging into `live_scores` +
 `live_sync_state` heartbeat (migration 0008) -- NEVER directly into
 match_results. Mapping: stored ESPN event id -> FIFA-code pair (ESPN
 abbreviations == our 48 codes exactly) -> unique-kickoff fallback for TBD
-knockouts; scores stored oriented to OUR home/away. /admin shows the panel:
-live scores, one-tap "Confirmar" of ESPN finals into match_results, alerts
-when our recorded result differs, kickoff-drift alerts with one-tap fix (ET
-times). Admin actions: `confirmLiveResult`, `applyProviderKickoff`.
+knockouts; scores stored oriented to OUR home/away. AUTO-CONFIRM (owner
+decision June 12): finals flow into match_results (source 'espn-auto',
+recorded_by null, migration 0009) once stable ~5 min past full time, via
+ON CONFLICT DO NOTHING -- a human-entered result is NEVER overwritten.
+/admin shows the panel: live scores, finals in their settling window
+(instant-confirm button), alerts when our recorded result differs from
+ESPN, kickoff-drift alerts with one-tap fix (ET times). Admin actions:
+`confirmLiveResult` (source 'espn'), `applyProviderKickoff`.
 
 **Read `docs/HANDOFF-MYTHOS.md` first** -- it corrects this file where they disagree and records decisions already made.
 

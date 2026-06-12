@@ -1,7 +1,8 @@
 /**
  * live-scores-sync — polls ESPN's public World Cup scoreboard and stages
- * what it reports into public.live_scores (NEVER into match_results;
- * the superadmin confirms staged results from /admin).
+ * what it reports into public.live_scores; stable finals then
+ * auto-confirm into match_results (see AUTO-CONFIRM below). Existing
+ * results are never touched — overrides stay human, from /admin.
  *
  * Deployed on Supabase Edge Functions, invoked every 2 minutes by pg_cron
  * via net.http_post with the project anon key (verify_jwt is on).
@@ -18,6 +19,12 @@
  * live_scores.home_score/away_score are oriented to OUR home/away
  * columns; scores are swapped if ESPN lists the fixture reversed.
  * kickoff_drift_seconds = ESPN kickoff - ours (drives admin alerts).
+ *
+ * AUTO-CONFIRM (owner decision June 12): a final flows into
+ * match_results (source 'espn-auto', recorded_by null) once its score
+ * has been stable for STABLE_MS past full time. Inserted with
+ * ON CONFLICT DO NOTHING — a human-entered or corrected result is
+ * never overwritten; corrections go through the admin mismatch alert.
  */
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
@@ -25,6 +32,10 @@ const ESPN_BASE =
   "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard";
 
 const DAY_MS = 86_400_000;
+
+// A final must hold this long (score + status unchanged) before it
+// auto-confirms — catches last-second corrections at the whistle.
+const STABLE_MS = 5 * 60_000;
 
 function ymd(d: Date): string {
   return d.toISOString().slice(0, 10).replaceAll("-", "");
@@ -86,7 +97,7 @@ Deno.serve(async (_req) => {
     const { data: matches, error: mErr } = await supabase
       .from("matches")
       .select(
-        "id, match_number, kickoff_at, stage, home:teams!matches_home_team_id_fkey(code), away:teams!matches_away_team_id_fkey(code)",
+        "id, match_number, kickoff_at, stage, is_voided, home:teams!matches_home_team_id_fkey(code), away:teams!matches_away_team_id_fkey(code)",
       );
     if (mErr) return await finish(false, { events_seen: events.length }, `db matches: ${mErr.message}`);
 
@@ -225,6 +236,49 @@ Deno.serve(async (_req) => {
       }
     }
 
+    // AUTO-CONFIRM stable finals into match_results.
+    const notes: string[] = [];
+    const matchById = new Map((matches ?? []).map((m) => [m.id as string, m]));
+    const candidates = rows.filter((r) => {
+      if (r.status !== "post" || !r.completed) return false;
+      if (r.home_score === null || r.away_score === null) return false;
+      const m = matchById.get(r.match_id as string);
+      if (!m || m.is_voided) return false;
+      if (!codeOf(m.home) || !codeOf(m.away)) return false;
+      // null changed_at only on pre-heuristic rows: treat as ancient/stable
+      const changedMs = r.changed_at ? new Date(r.changed_at as string).getTime() : 0;
+      return Date.now() - changedMs >= STABLE_MS;
+    });
+    if (candidates.length > 0) {
+      const { data: inserted, error: acErr } = await supabase
+        .from("match_results")
+        .upsert(
+          candidates.map((r) => ({
+            match_id: r.match_id,
+            home_score: r.home_score,
+            away_score: r.away_score,
+            recorded_by: null,
+            recorded_at: new Date().toISOString(),
+            source: "espn-auto",
+          })),
+          { onConflict: "match_id", ignoreDuplicates: true },
+        )
+        .select("match_id");
+      if (acErr) {
+        notes.push(`auto-confirm error: ${acErr.message}`);
+      } else if (inserted && inserted.length > 0) {
+        const label = (id: string) => {
+          const m = matchById.get(id);
+          const r = rows.find((x) => x.match_id === id);
+          return m && r
+            ? `${codeOf(m.home)} ${r.home_score}-${r.away_score} ${codeOf(m.away)}`
+            : id;
+        };
+        notes.push(`auto: ${inserted.map((i) => label(i.match_id as string)).join(", ")}`);
+      }
+    }
+    if (unmatched.length > 0) notes.push(`unmatched: ${unmatched.join(", ")}`);
+
     return await finish(
       true,
       {
@@ -233,7 +287,7 @@ Deno.serve(async (_req) => {
         unmatched: unmatched.length,
         drift_count: driftCount,
       },
-      unmatched.length > 0 ? `unmatched: ${unmatched.join(", ")}`.slice(0, 300) : null,
+      notes.length > 0 ? notes.join(" | ").slice(0, 300) : null,
     );
   } catch (e) {
     return await finish(false, {}, String(e).slice(0, 300));

@@ -43,6 +43,7 @@ export async function recordResult(input: {
     away_score: a,
     recorded_by: auth.user!.id,
     recorded_at: new Date().toISOString(),
+    source: "admin",
   });
   if (error) return { ok: false, error: error.message };
   return { ok: true };
@@ -62,7 +63,8 @@ export async function clearResult(input: { matchId: string }): Promise<ActionRes
 
 /**
  * Copies the ESPN-staged final score for a match into match_results.
- * The sync never writes match_results itself — this is the human confirm.
+ * Stable finals auto-confirm via the sync (source 'espn-auto'); this
+ * human path covers the settling window and mismatch overrides.
  */
 export async function confirmLiveResult(input: { matchId: string }): Promise<ActionResult> {
   const auth = await requireSuperadmin();
@@ -85,6 +87,7 @@ export async function confirmLiveResult(input: { matchId: string }): Promise<Act
     away_score: live.away_score,
     recorded_by: auth.user!.id,
     recorded_at: new Date().toISOString(),
+    source: "espn",
   });
   if (error) return { ok: false, error: error.message };
   return { ok: true };
