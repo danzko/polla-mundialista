@@ -12,7 +12,7 @@ import {
   inviteCodeSchema, scoreSchema, bonusPredictionsSchema
 } from "./validation";
 import { calculateMatchPoints } from "./scoring/calculate-points";
-import { TOURNAMENT_START_ISO } from "./tournament";
+import { TOURNAMENT_START_ISO, LOCK_BEFORE_KICKOFF_MS } from "./tournament";
 
 // ==========================================
 // READS
@@ -336,10 +336,13 @@ export async function getMatches(
         : null;
 
       const kickoffDate = new Date(m.kickoff_at);
+      // Group picks close 15 min before each kickoff and never reopen.
+      // Knockout score entry stays closed (advancement-based bracket
+      // picks have their own window before June 28).
       const locked =
         m.is_voided ||
-        kickoffDate <= now ||
-        (m.stage === "group" && now >= new Date(TOURNAMENT_START_ISO));
+        m.stage !== "group" ||
+        now.getTime() >= kickoffDate.getTime() - LOCK_BEFORE_KICKOFF_MS;
 
       const pred = predictionsMap.get(m.id);
       const myPrediction = pred
@@ -778,11 +781,10 @@ export async function submitPrediction(
       return { ok: false, error: "Partido no encontrado / Match not found" };
     }
 
-    const startedTournament = new Date() >= new Date(TOURNAMENT_START_ISO);
     if (
       match.is_voided ||
-      new Date(match.kickoff_at) <= new Date() ||
-      (match.stage === "group" && startedTournament)
+      match.stage !== "group" ||
+      Date.now() >= new Date(match.kickoff_at).getTime() - LOCK_BEFORE_KICKOFF_MS
     ) {
       return {
         ok: false,
@@ -1034,14 +1036,13 @@ export async function submitPredictions(
       .in("id", ids);
 
     const now = Date.now();
-    const tournamentStarted = now >= new Date(TOURNAMENT_START_ISO).getTime();
     const openIds = new Set(
       (matches ?? [])
         .filter(
           (m) =>
             !m.is_voided &&
-            new Date(m.kickoff_at).getTime() > now &&
-            !(m.stage === "group" && tournamentStarted)
+            m.stage === "group" &&
+            now < new Date(m.kickoff_at).getTime() - LOCK_BEFORE_KICKOFF_MS
         )
         .map((m) => m.id)
     );

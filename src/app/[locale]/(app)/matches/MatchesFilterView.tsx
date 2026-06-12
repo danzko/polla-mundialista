@@ -6,7 +6,6 @@ import { useTranslations } from 'next-intl';
 import { MatchCard } from '@/components/predictions/MatchCard';
 import { Button } from '@/components/ui/button';
 import { submitPredictions } from '@/lib/api';
-import { TOURNAMENT_START_ISO } from '@/lib/tournament';
 import type { MatchView, MatchStage, Locale } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -50,7 +49,10 @@ export function MatchesFilterView({ initialMatches, locale }: MatchesFilterViewP
     setMounted(true);
   }, []);
 
-  const groupStageLocked = mounted && Date.now() >= new Date(TOURNAMENT_START_ISO).getTime();
+  // True once every group match has passed its own lock (15 min before
+  // kickoff) — i.e. the group phase is effectively over for entries.
+  const allGroupLocked =
+    mounted && matches.every(m => m.stage !== 'group' || m.locked || m.isVoided);
 
   // UI state
   const [showConfirmModal, setShowConfirmModal] = React.useState(false);
@@ -90,7 +92,7 @@ export function MatchesFilterView({ initialMatches, locale }: MatchesFilterViewP
   }, [matches, selectedStage, selectedDate]);
 
   // Partition matches: editable group matches, locked-but-upcoming group
-  // matches (entries closed at tournament start), already-played group
+  // matches (each closes 15 min before its kickoff), already-played group
   // matches, and knockout matches (locked until the bracket phase opens)
   const { editableMatches, lockedUpcomingMatches, playedMatches, knockoutMatches } = React.useMemo(() => {
     const editable: MatchView[] = [];
@@ -565,7 +567,7 @@ export function MatchesFilterView({ initialMatches, locale }: MatchesFilterViewP
                 <>
                   <span className="hidden sm:inline text-xs text-muted-foreground">•</span>
                   <span className="text-[10px] sm:text-xs font-bold text-emerald-400">
-                    {groupStageLocked
+                    {allGroupLocked
                       ? t('matches.lockedUpcoming')
                       : locale === 'es' ? 'Todo guardado' : 'All saved'}
                   </span>

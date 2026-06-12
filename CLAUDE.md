@@ -71,10 +71,12 @@ Group stage (per match):
 - Wrong result: 0 pts
 
 Knockout stage (advancement-based -- knockout SCORES earn nothing; only teams advancing count).
-ENTRY MODEL (owner decision June 10, lock rule tightened June 12): two entry
-events. (1) Group scores, ALL locked at the tournament's first kickoff
-(June 11 19:00 UTC) -- no entries or edits after the opening whistle (enforced
-in RLS migration 0007 + app). (2) ONE knockout entry window after the last group match
+ENTRY MODEL (owner decision June 10; lock rule per community vote June 12,
+supersedes the brief lock-all-at-start rule): two entry events. (1) Group
+scores lock PER MATCH, 15 minutes before each kickoff -- a match whose lock
+moment passed never reopens (no retroactive entries; enforced in RLS
+migration 0010 + server actions + UI; kickoff_at auto-heals from ESPN so the
+window tracks the real kickoff). (2) ONE knockout entry window after the last group match
 and before the first R32 kickoff (June 27 -> June 28 02:00/19:00 UTC): players
 fill the ENTIRE real bracket (R32 winners through champion + third-place game)
 in one sitting on the REAL qualified teams. No per-user predicted brackets.
