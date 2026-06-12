@@ -16,6 +16,18 @@ Production: https://polla-mundialista-puce.vercel.app (Vercel auto-deploys from 
 
 Working end to end: magic-link auth, onboarding, create/join leagues (join uses the `lookup_league_by_invite_code` SECURITY DEFINER RPC), group-stage batch prediction entry (default 0-0, explicit save), bonus picks (podium + 4 semifinalists + 3 ranked top scorers + 3 ranked best players, locking June 11 19:00 UTC), superadmin result entry at `/[locale]/admin`, leaderboards via `leaderboard_view`.
 
+Live scores (June 12): ESPN's public scoreboard is the external source of
+truth. The `live-scores-sync` Supabase Edge Function (source mirrored in
+`supabase/functions/live-scores-sync/index.ts`) polls it every 2 minutes via
+pg_cron job `live-scores-sync-2min` + pg_net, staging into `live_scores` +
+`live_sync_state` heartbeat (migration 0008) -- NEVER directly into
+match_results. Mapping: stored ESPN event id -> FIFA-code pair (ESPN
+abbreviations == our 48 codes exactly) -> unique-kickoff fallback for TBD
+knockouts; scores stored oriented to OUR home/away. /admin shows the panel:
+live scores, one-tap "Confirmar" of ESPN finals into match_results, alerts
+when our recorded result differs, kickoff-drift alerts with one-tap fix (ET
+times). Admin actions: `confirmLiveResult`, `applyProviderKickoff`.
+
 **Read `docs/HANDOFF-MYTHOS.md` first** -- it corrects this file where they disagree and records decisions already made.
 
 What's next (before June 28, when knockouts start):
