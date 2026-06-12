@@ -54,6 +54,10 @@ export const users = pgTable("users", {
   displayName: text("display_name").notNull(),
   preferredLanguage: languageEnum("preferred_language").default("es").notNull(),
   isSuperadmin: boolean("is_superadmin").default(false).notNull(),
+  // Owner-granted window to (re)enter tournament picks after the global
+  // lock; null for everyone else. Column writes are revoked from
+  // authenticated (migration 0011) — superadmin tooling only.
+  bonusUnlockUntil: timestamp("bonus_unlock_until", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

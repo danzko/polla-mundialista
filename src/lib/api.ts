@@ -400,8 +400,8 @@ export async function getMatches(
 }
 
 export async function getBonuses(): Promise<BonusView> {
-  const lockAt = "2026-06-11T19:00:00Z";
-  const locked = new Date() >= new Date(lockAt);
+  let lockAt = TOURNAMENT_START_ISO;
+  let locked = new Date() >= new Date(lockAt);
 
   try {
     const supabase = await createClient();
@@ -418,6 +418,21 @@ export async function getBonuses(): Promise<BonusView> {
         locked,
         lockAt,
       };
+    }
+
+    // Owner-granted re-open window: while it lasts, the form unlocks
+    // and the countdown points at the personal deadline instead.
+    const { data: profile } = await supabase
+      .from("users")
+      .select("bonus_unlock_until")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (
+      profile?.bonus_unlock_until &&
+      new Date(profile.bonus_unlock_until) > new Date()
+    ) {
+      lockAt = profile.bonus_unlock_until;
+      locked = false;
     }
 
     const { data: pred, error } = await supabase
@@ -828,11 +843,6 @@ export async function submitBonuses(
     };
   }
 
-  const lockAt = "2026-06-11T19:00:00Z";
-  if (new Date() >= new Date(lockAt)) {
-    return { ok: false, error: "Los bonos ya están bloqueados / Bonuses are already locked" };
-  }
-
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -843,6 +853,20 @@ export async function submitBonuses(
     const hasProfile = await checkUserProfile(supabase, user.id);
     if (!hasProfile) {
       return { ok: false, error: "Debes completar tu perfil antes de continuar / Please complete onboarding first" };
+    }
+
+    // Locked since tournament start unless the owner granted this user
+    // a personal re-open window (users.bonus_unlock_until, RLS-mirrored).
+    const { data: profile } = await supabase
+      .from("users")
+      .select("bonus_unlock_until")
+      .eq("id", user.id)
+      .maybeSingle();
+    const unlockActive =
+      !!profile?.bonus_unlock_until &&
+      new Date(profile.bonus_unlock_until) > new Date();
+    if (new Date() >= new Date(TOURNAMENT_START_ISO) && !unlockActive) {
+      return { ok: false, error: "Los bonos ya están bloqueados / Bonuses are already locked" };
     }
 
     const picks = validation.data;
