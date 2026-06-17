@@ -58,6 +58,9 @@ export const users = pgTable("users", {
   // lock; null for everyone else. Column writes are revoked from
   // authenticated (migration 0011) — superadmin tooling only.
   bonusUnlockUntil: timestamp("bonus_unlock_until", { withTimezone: true }),
+  // When the user used their one-time display-name change (null = unused).
+  // Enforced by the change_display_name RPC (migration 0013).
+  nameChangedAt: timestamp("name_changed_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

@@ -38,6 +38,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
         preferredLanguage: "es",
         isSuperadmin: false,
         onboarded: false,
+        nameChangeUsed: false,
       };
     }
 
@@ -47,6 +48,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
       preferredLanguage: profile.preferred_language as Locale,
       isSuperadmin: profile.is_superadmin,
       onboarded: true,
+      nameChangeUsed: profile.name_changed_at !== null,
     };
   } catch (err) {
     console.error("Error in getSessionUser:", err);
@@ -520,6 +522,36 @@ export async function getLiveScores(): Promise<LiveScoresPayload> {
   }
 }
 
+/**
+ * One-time display-name change. Routes through the change_display_name
+ * RPC, which enforces the one-time rule at the DB regardless of caller.
+ */
+export async function changeDisplayName(input: { name: string }): Promise<ActionResult> {
+  const parsed = displayNameSchema.safeParse(input.name);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message || "Nombre inválido / Invalid name" };
+  }
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { ok: false, error: "No autenticado / Not authenticated" };
+
+    const { error } = await supabase.rpc("change_display_name", { p_name: parsed.data });
+    if (error) {
+      const already = error.message.includes("already changed");
+      return {
+        ok: false,
+        error: already
+          ? "Ya usaste tu único cambio de nombre / You already used your one name change"
+          : error.message,
+      };
+    }
+    return { ok: true, data: undefined };
+  } catch (err: any) {
+    return { ok: false, error: err.message || "Error al cambiar el nombre / Error changing name" };
+  }
+}
+
 export async function getBonuses(): Promise<BonusView> {
   let lockAt = TOURNAMENT_START_ISO;
   let locked = new Date() >= new Date(lockAt);
@@ -706,6 +738,7 @@ export async function completeOnboarding(
         preferredLanguage: input.preferredLanguage,
         isSuperadmin: false,
         onboarded: true,
+        nameChangeUsed: false,
       },
     };
   } catch (err: any) {

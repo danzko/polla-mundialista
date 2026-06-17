@@ -6,9 +6,10 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Trophy, Calendar, Home, LogOut, Menu, X } from 'lucide-react';
 import { LanguageToggle } from './LanguageToggle';
+import { NameChangeMenu } from './NameChangeMenu';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import type { SessionUser } from '@/lib/types';
+import type { SessionUser, Locale } from '@/lib/types';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -97,15 +98,22 @@ export function AppShell({ children, user, onLogout }: AppShellProps) {
             <LanguageToggle />
 
             {user && (
-              <div className="hidden md:flex items-center gap-4 border-l border-border pl-4">
+              <div className="hidden md:flex items-center gap-2 border-l border-border pl-4">
                 <span className="text-sm font-medium text-muted-foreground">
                   {user.displayName}
                 </span>
+                <NameChangeMenu
+                  locale={currentLocale as Locale}
+                  displayName={user.displayName}
+                  used={user.nameChangeUsed}
+                  variant="icon"
+                />
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={handleLogout}
                   title={t('common.logout')}
+                  className="ml-2"
                 >
                   <LogOut className="h-4 w-4 text-muted-foreground hover:text-destructive" />
                 </Button>
@@ -174,6 +182,15 @@ export function AppShell({ children, user, onLogout }: AppShellProps) {
                 <span className="text-sm font-medium text-muted-foreground">
                   {user.displayName}
                 </span>
+              </div>
+              <div className="px-4">
+                <NameChangeMenu
+                  locale={currentLocale as Locale}
+                  displayName={user.displayName}
+                  used={user.nameChangeUsed}
+                  variant="row"
+                  onDone={() => setMobileMenuOpen(false)}
+                />
               </div>
               <Button
                 variant="destructive"

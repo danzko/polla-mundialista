@@ -8,6 +8,7 @@ export interface SessionUser {
   preferredLanguage: Locale;
   isSuperadmin: boolean;
   onboarded: boolean;
+  nameChangeUsed: boolean; // true once the one-time rename has been used
 }
 
 export interface Team {
