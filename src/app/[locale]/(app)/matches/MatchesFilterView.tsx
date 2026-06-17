@@ -149,28 +149,36 @@ export function MatchesFilterView({
     }
   }, [mounted, focusDayKey, centerChips]);
 
-  // Scroll-spy: highlight the day chip currently in view.
+  // Scroll-spy: the active day is the last day header that has scrolled
+  // above a line just under the sticky bars — i.e. the day you're in.
   React.useEffect(() => {
     if (!mounted) return;
-    const obs = new IntersectionObserver(
-      (entries) => {
-        const visible = entries.filter(e => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-        if (visible[0]) setActiveDay(visible[0].target.getAttribute('data-day'));
-      },
-      { rootMargin: '-120px 0px -65% 0px', threshold: 0 }
-    );
-    dayRefs.current.forEach(el => obs.observe(el));
-    return () => obs.disconnect();
-  }, [mounted, dayKeys.length]);
+    let raf = 0;
+    const compute = () => {
+      const line = 150; // below the app bar (64) + chip bar (~76)
+      let current: string | null = null;
+      let bestTop = -Infinity;
+      dayRefs.current.forEach((el, key) => {
+        const top = el.getBoundingClientRect().top;
+        if (top <= line && top > bestTop) { bestTop = top; current = key; }
+      });
+      setActiveDay(current ?? dayKeys[0] ?? null);
+    };
+    const onScroll = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(compute); };
+    compute();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => { window.removeEventListener('scroll', onScroll); cancelAnimationFrame(raf); };
+  }, [mounted, dayKeys]);
 
+  // Spanish locale renders "mié, 17 de jun" — drop the "de" and commas.
+  const cleanDate = (s: string) => s.replace(/\bde\b/gi, '').replace(/[.,]/g, '').replace(/\s+/g, ' ').trim();
   const chipLabel = (key: string) => {
     const d = new Date(key + 'T12:00:00');
-    const s = d.toLocaleDateString(es ? 'es-CO' : 'en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-    return s.replace(/[.,]/g, '');
+    return cleanDate(d.toLocaleDateString(es ? 'es-CO' : 'en-US', { weekday: 'short', month: 'short', day: 'numeric' }));
   };
   const dayHeader = (key: string) => {
     const d = new Date(key + 'T12:00:00');
-    const s = d.toLocaleDateString(es ? 'es-CO' : 'en-US', { weekday: 'short', day: 'numeric', month: 'short' });
+    const s = cleanDate(d.toLocaleDateString(es ? 'es-CO' : 'en-US', { weekday: 'short', day: 'numeric', month: 'short' }));
     return s.charAt(0).toUpperCase() + s.slice(1);
   };
 
