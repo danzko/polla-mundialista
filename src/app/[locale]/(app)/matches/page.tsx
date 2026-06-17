@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { getMatches, getTeams } from '@/lib/api';
+import { getMatches, getTeams, getMatchPicks, getSessionUser } from '@/lib/api';
 import { MatchesFilterView } from './MatchesFilterView';
 
 interface MatchesPageProps {
@@ -9,10 +9,12 @@ interface MatchesPageProps {
 export default async function MatchesPage({ params }: MatchesPageProps) {
   const { locale } = await params;
   
-  // Fetch initial fixtures and teams on the server
-  const [matches, teams] = await Promise.all([
+  // Fetch initial fixtures, teams, contestant picks, and the viewer on the server
+  const [matches, teams, picksByMatch, sessionUser] = await Promise.all([
     getMatches(),
     getTeams(),
+    getMatchPicks(),
+    getSessionUser(),
   ]);
 
   return (
@@ -30,7 +32,12 @@ export default async function MatchesPage({ params }: MatchesPageProps) {
       </div>
 
       {/* Filter and Cards view */}
-      <MatchesFilterView initialMatches={matches} locale={locale as any} />
+      <MatchesFilterView
+        initialMatches={matches}
+        locale={locale as any}
+        picksByMatch={picksByMatch}
+        myUserId={sessionUser?.id}
+      />
     </div>
   );
 }

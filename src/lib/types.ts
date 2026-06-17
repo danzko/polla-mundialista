@@ -41,6 +41,20 @@ export interface MatchView {
   pointsEarned: number | null;      // null until scored
 }
 
+/**
+ * One contestant's pick for a started/past match, shown in the per-card
+ * picks strip. points/outcome are null+'pending' until a final result
+ * exists (owner choice: neutral until final).
+ */
+export interface MatchPickRow {
+  userId: string;
+  displayName: string;
+  homeScore: number;
+  awayScore: number;
+  points: number | null;
+  outcome: 'exact' | 'result' | 'wrong' | 'pending';
+}
+
 export interface LeagueSummary {
   id: string;
   name: string;

@@ -4,9 +4,10 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { MatchCard } from '@/components/predictions/MatchCard';
+import { PicksStrip } from '@/components/predictions/PicksStrip';
 import { Button } from '@/components/ui/button';
 import { submitPredictions } from '@/lib/api';
-import type { MatchView, MatchStage, Locale } from '@/lib/types';
+import type { MatchView, MatchStage, Locale, MatchPickRow } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 // Local-timezone day key (YYYY-MM-DD). Grouping by UTC day put every
@@ -17,9 +18,11 @@ import { Calendar as CalendarIcon, Filter, HelpCircle, CheckCircle2, AlertTriang
 interface MatchesFilterViewProps {
   initialMatches: MatchView[];
   locale: Locale;
+  picksByMatch?: Record<string, MatchPickRow[]>;
+  myUserId?: string;
 }
 
-export function MatchesFilterView({ initialMatches, locale }: MatchesFilterViewProps) {
+export function MatchesFilterView({ initialMatches, locale, picksByMatch = {}, myUserId }: MatchesFilterViewProps) {
   const t = useTranslations();
   const basePath = `/${locale}`;
 
@@ -488,13 +491,21 @@ export function MatchesFilterView({ initialMatches, locale }: MatchesFilterViewP
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {groupedPlayed[dateKey]!.map(match => (
-                    <MatchCard
-                      key={match.id}
-                      match={match}
-                      locale={locale}
-                      homeScore={match.myPrediction?.homeScore ?? 0}
-                      awayScore={match.myPrediction?.awayScore ?? 0}
-                    />
+                    <div key={match.id}>
+                      <MatchCard
+                        match={match}
+                        locale={locale}
+                        homeScore={match.myPrediction?.homeScore ?? 0}
+                        awayScore={match.myPrediction?.awayScore ?? 0}
+                      />
+                      {match.stage === 'group' && (
+                        <PicksStrip
+                          picks={picksByMatch[match.id] ?? []}
+                          locale={locale}
+                          myUserId={myUserId}
+                        />
+                      )}
+                    </div>
                   ))}
                 </div>
               </div>
