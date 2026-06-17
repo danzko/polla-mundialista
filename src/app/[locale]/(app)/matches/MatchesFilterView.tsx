@@ -1,600 +1,379 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { MatchCard } from '@/components/predictions/MatchCard';
-import { PicksStrip } from '@/components/predictions/PicksStrip';
+import { FeedMatchCard } from '@/components/predictions/FeedMatchCard';
 import { Button } from '@/components/ui/button';
-import { submitPredictions } from '@/lib/api';
-import type { MatchView, MatchStage, Locale, MatchPickRow } from '@/lib/types';
+import { submitPredictions, getLiveScores } from '@/lib/api';
+import { LOCK_BEFORE_KICKOFF_MS } from '@/lib/tournament';
+import type { MatchView, Locale, MatchPickRow, LiveScoresPayload } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { HelpCircle, CheckCircle2, AlertTriangle, X, ArrowDownToLine, Trophy, ChevronDown } from 'lucide-react';
 
 // Local-timezone day key (YYYY-MM-DD). Grouping by UTC day put every
 // Colombian evening match under the next day's header.
 const localDayKey = (iso: string) => new Date(iso).toLocaleDateString('en-CA');
-import { Calendar as CalendarIcon, Filter, HelpCircle, CheckCircle2, AlertTriangle, X, Trophy } from 'lucide-react';
 
 interface MatchesFilterViewProps {
   initialMatches: MatchView[];
   locale: Locale;
   picksByMatch?: Record<string, MatchPickRow[]>;
   myUserId?: string;
+  initialLive?: LiveScoresPayload;
 }
 
-export function MatchesFilterView({ initialMatches, locale, picksByMatch = {}, myUserId }: MatchesFilterViewProps) {
+export function MatchesFilterView({
+  initialMatches, locale, picksByMatch = {}, myUserId,
+  initialLive = { scores: {}, lastRunAt: null },
+}: MatchesFilterViewProps) {
   const t = useTranslations();
-  const basePath = `/${locale}`;
+  const es = locale === 'es';
 
-  // Local state for matches
   const [matches, setMatches] = React.useState<MatchView[]>(initialMatches);
-  const [selectedStage, setSelectedStage] = React.useState<MatchStage | 'all'>('all');
-  const [selectedDate, setSelectedDate] = React.useState<string | 'all'>('all');
+  const [live, setLive] = React.useState<LiveScoresPayload>(initialLive);
+  const [now, setNow] = React.useState(() => Date.now());
+  const [mounted, setMounted] = React.useState(false);
+  const [activeDay, setActiveDay] = React.useState<string | null>(null);
+  const [showKnockouts, setShowKnockouts] = React.useState(false);
 
-  // Form edits state
   const [edits, setEdits] = React.useState<Record<string, { homeScore: number; awayScore: number }>>(() => {
-    const initialEdits: Record<string, { homeScore: number; awayScore: number }> = {};
+    const init: Record<string, { homeScore: number; awayScore: number }> = {};
     initialMatches.forEach(m => {
       if (m.stage === 'group' && !m.locked) {
-        initialEdits[m.id] = {
-          homeScore: m.myPrediction?.homeScore ?? 0,
-          awayScore: m.myPrediction?.awayScore ?? 0,
-        };
+        init[m.id] = { homeScore: m.myPrediction?.homeScore ?? 0, awayScore: m.myPrediction?.awayScore ?? 0 };
       }
     });
-    return initialEdits;
+    return init;
   });
 
-  // Date grouping depends on the viewer's timezone, which the server cannot
-  // know — render the date-grouped sections only after mount.
-  const [mounted, setMounted] = React.useState(false);
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // True once every group match has passed its own lock (15 min before
-  // kickoff) — i.e. the group phase is effectively over for entries.
-  const allGroupLocked =
-    mounted && matches.every(m => m.stage !== 'group' || m.locked || m.isVoided);
-
-  // UI state
   const [showConfirmModal, setShowConfirmModal] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [toast, setToast] = React.useState<{
-    show: boolean;
-    message: string;
-    type: 'success' | 'warning' | 'error';
-    skippedCount: number;
-    skippedNames?: string[];
-  } | null>(null);
+  const [toast, setToast] = React.useState<{ show: boolean; message: string; type: 'success' | 'warning' | 'error'; skippedCount: number; skippedNames?: string[] } | null>(null);
 
-  // Extract unique kickoff dates from matches (local YYYY-MM-DD)
-  const uniqueDates = React.useMemo(() => {
-    const datesSet = new Set<string>();
-    initialMatches.forEach(m => {
-      datesSet.add(localDayKey(m.kickoffAt));
-    });
-    return Array.from(datesSet).sort();
-  }, [initialMatches]);
+  const cardRefs = React.useRef<Map<string, HTMLDivElement>>(new Map());
+  const dayRefs = React.useRef<Map<string, HTMLElement>>(new Map());
+  const didAutoScroll = React.useRef(false);
 
-  // Handle score change
-  const handleScoreChange = (matchId: string, homeScore: number, awayScore: number) => {
-    setEdits(prev => ({
-      ...prev,
-      [matchId]: { homeScore, awayScore },
-    }));
+  React.useEffect(() => { setMounted(true); }, []);
+
+  // Tick the clock so lock windows / relative times stay fresh.
+  React.useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 15000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Poll live scores every 30s while the tab is visible.
+  React.useEffect(() => {
+    let alive = true;
+    const poll = async () => {
+      const p = await getLiveScores();
+      if (alive) setLive(p);
+    };
+    const id = setInterval(() => { if (document.visibilityState === 'visible') poll(); }, 30000);
+    const onVis = () => { if (document.visibilityState === 'visible') poll(); };
+    document.addEventListener('visibilitychange', onVis);
+    return () => { alive = false; clearInterval(id); document.removeEventListener('visibilitychange', onVis); };
+  }, []);
+
+  const isEditable = React.useCallback(
+    (m: MatchView) => m.stage === 'group' && !m.isVoided && now < new Date(m.kickoffAt).getTime() - LOCK_BEFORE_KICKOFF_MS,
+    [now]
+  );
+
+  // Chronological group feed grouped by local day.
+  const { dayKeys, matchesByDay, groupMatches } = React.useMemo(() => {
+    const group = matches
+      .filter(m => m.stage === 'group')
+      .sort((a, b) => new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime());
+    const byDay: Record<string, MatchView[]> = {};
+    for (const m of group) {
+      const k = localDayKey(m.kickoffAt);
+      (byDay[k] ??= []).push(m);
+    }
+    return { dayKeys: Object.keys(byDay).sort(), matchesByDay: byDay, groupMatches: group };
+  }, [matches]);
+
+  const knockoutMatches = React.useMemo(
+    () => matches.filter(m => m.stage !== 'group').sort((a, b) => new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime()),
+    [matches]
+  );
+
+  const todayKey = mounted ? localDayKey(new Date().toISOString()) : null;
+
+  // The "now" anchor: first live match, else first upcoming, else last.
+  const nowMatchId = React.useMemo(() => {
+    const liveOne = groupMatches.find(m => live.scores[m.id]?.status === 'in');
+    if (liveOne) return liveOne.id;
+    const next = groupMatches.find(m => new Date(m.kickoffAt).getTime() > now);
+    return next?.id ?? groupMatches[groupMatches.length - 1]?.id ?? null;
+  }, [groupMatches, live, now]);
+
+  const scrollToNow = React.useCallback(() => {
+    if (!nowMatchId) return;
+    cardRefs.current.get(nowMatchId)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [nowMatchId]);
+
+  // Auto-scroll to "now" once after first mount.
+  React.useEffect(() => {
+    if (mounted && !didAutoScroll.current && nowMatchId) {
+      didAutoScroll.current = true;
+      requestAnimationFrame(() => {
+        cardRefs.current.get(nowMatchId)?.scrollIntoView({ block: 'center' });
+      });
+    }
+  }, [mounted, nowMatchId]);
+
+  // Scroll-spy: highlight the day chip currently in view.
+  React.useEffect(() => {
+    if (!mounted) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter(e => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        if (visible[0]) setActiveDay(visible[0].target.getAttribute('data-day'));
+      },
+      { rootMargin: '-120px 0px -65% 0px', threshold: 0 }
+    );
+    dayRefs.current.forEach(el => obs.observe(el));
+    return () => obs.disconnect();
+  }, [mounted, dayKeys.length]);
+
+  const chipLabel = (key: string) => {
+    const d = new Date(key + 'T12:00:00');
+    const s = d.toLocaleDateString(es ? 'es-CO' : 'en-US', { weekday: 'short', day: 'numeric' });
+    return s.replace('.', '');
+  };
+  const dayHeader = (key: string) => {
+    const d = new Date(key + 'T12:00:00');
+    const s = d.toLocaleDateString(es ? 'es-CO' : 'en-US', { weekday: 'short', day: 'numeric', month: 'short' });
+    return s.charAt(0).toUpperCase() + s.slice(1);
   };
 
-  // Filter matches based on selections
-  const filteredMatches = React.useMemo(() => {
-    return matches.filter(m => {
-      const matchesStage = selectedStage === 'all' ? true : m.stage === selectedStage;
-      const matchesDate = selectedDate === 'all' ? true : localDayKey(m.kickoffAt) === selectedDate;
-      return matchesStage && matchesDate;
-    });
-  }, [matches, selectedStage, selectedDate]);
+  const jumpToDay = (key: string) => {
+    dayRefs.current.get(key)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
-  // Partition matches: editable group matches, locked-but-upcoming group
-  // matches (each closes 15 min before its kickoff), already-played group
-  // matches, and knockout matches (locked until the bracket phase opens)
-  const { editableMatches, lockedUpcomingMatches, playedMatches, knockoutMatches } = React.useMemo(() => {
-    const editable: MatchView[] = [];
-    const lockedUpcoming: MatchView[] = [];
-    const played: MatchView[] = [];
-    const knockout: MatchView[] = [];
-    const now = Date.now();
-    filteredMatches.forEach(m => {
-      if (m.stage !== 'group') {
-        knockout.push(m);
-      } else if (!m.locked && !m.isVoided) {
-        editable.push(m);
-      } else if (!m.isVoided && new Date(m.kickoffAt).getTime() > now) {
-        lockedUpcoming.push(m);
-      } else {
-        played.push(m);
-      }
-    });
-    return {
-      editableMatches: editable,
-      lockedUpcomingMatches: lockedUpcoming,
-      playedMatches: played,
-      knockoutMatches: knockout,
-    };
-  }, [filteredMatches]);
+  const handleScoreChange = (matchId: string, homeScore: number, awayScore: number) => {
+    setEdits(prev => ({ ...prev, [matchId]: { homeScore, awayScore } }));
+  };
 
-  // Track unsaved changes (only for open group matches)
   const unsavedMatches = React.useMemo(() => {
     return matches.filter(m => {
-      if (m.stage !== 'group' || m.locked || m.isVoided) return false;
+      if (!isEditable(m)) return false;
       const edit = edits[m.id];
       if (!edit) return false;
       if (m.myPrediction === null) return true;
       return m.myPrediction.homeScore !== edit.homeScore || m.myPrediction.awayScore !== edit.awayScore;
     });
-  }, [matches, edits]);
-
+  }, [matches, edits, isEditable]);
   const unsavedCount = unsavedMatches.length;
 
-  // Calculate saved group predictions count (out of 72)
-  const savedGroupCount = React.useMemo(() => {
-    return matches.filter(m => m.stage === 'group' && m.myPrediction !== null).length;
-  }, [matches]);
+  const savedGroupCount = React.useMemo(
+    () => matches.filter(m => m.stage === 'group' && m.myPrediction !== null).length,
+    [matches]
+  );
 
-  // Group matches by local date
-  const groupMatchesByDate = (matchList: MatchView[]) => {
-    const groups: Record<string, MatchView[]> = {};
-    matchList.forEach(m => {
-      const dateKey = localDayKey(m.kickoffAt);
-      if (!groups[dateKey]) groups[dateKey] = [];
-      groups[dateKey].push(m);
-    });
-    return Object.keys(groups).sort().reduce<Record<string, MatchView[]>>((acc, key) => {
-      acc[key] = groups[key].sort((a, b) => new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime());
-      return acc;
-    }, {});
-  };
-
-  const groupedEditable = React.useMemo(() => groupMatchesByDate(editableMatches), [editableMatches]);
-  const groupedLockedUpcoming = React.useMemo(() => groupMatchesByDate(lockedUpcomingMatches), [lockedUpcomingMatches]);
-  const groupedPlayed = React.useMemo(() => groupMatchesByDate(playedMatches), [playedMatches]);
-  const groupedKnockout = React.useMemo(() => groupMatchesByDate(knockoutMatches), [knockoutMatches]);
-
-  // Format date headers nicely
-  const formatDateHeader = (dateStr: string) => {
-    const date = new Date(dateStr + 'T00:00:00');
-    const options: Intl.DateTimeFormatOptions = {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    };
-    const formatted = date.toLocaleDateString(locale === 'es' ? 'es-ES' : 'en-US', options);
-    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
-  };
-
-  // Helper for team name display in confirmations
   const getMatchDisplayName = (match: MatchView) => {
-    const homeName = match.homeTeam 
-      ? (locale === 'es' ? match.homeTeam.nameEs : match.homeTeam.nameEn)
-      : 'TBD';
-    const awayName = match.awayTeam 
-      ? (locale === 'es' ? match.awayTeam.nameEs : match.awayTeam.nameEn)
-      : 'TBD';
-    return `${homeName} vs ${awayName}`;
+    const h = match.homeTeam ? (es ? match.homeTeam.nameEs : match.homeTeam.nameEn) : 'TBD';
+    const a = match.awayTeam ? (es ? match.awayTeam.nameEs : match.awayTeam.nameEn) : 'TBD';
+    return `${h} vs ${a}`;
   };
 
-  // Handle batch save
+  const agoLabel = (iso: string | null) => {
+    if (!iso) return '';
+    const s = Math.max(0, Math.round((now - new Date(iso).getTime()) / 1000));
+    return s < 90 ? (es ? `hace ${s} s` : `${s}s ago`) : (es ? `hace ${Math.round(s / 60)} min` : `${Math.round(s / 60)}m ago`);
+  };
+
+  const liveCount = groupMatches.filter(m => live.scores[m.id]?.status === 'in').length;
+  const syncStale = mounted && live.lastRunAt ? now - new Date(live.lastRunAt).getTime() > 6 * 60000 : false;
+
   const handleSave = async () => {
     setIsSubmitting(true);
     try {
-      const payload = unsavedMatches.map(m => ({
-        matchId: m.id,
-        homeScore: edits[m.id].homeScore,
-        awayScore: edits[m.id].awayScore,
-      }));
-
+      const payload = unsavedMatches.map(m => ({ matchId: m.id, homeScore: edits[m.id].homeScore, awayScore: edits[m.id].awayScore }));
       const res = await submitPredictions({ predictions: payload });
       if (!res.ok) {
-        setToast({
-          show: true,
-          message: res.error || (locale === 'es' ? 'Error al guardar los pronósticos' : 'Error saving predictions'),
-          type: 'error',
-          skippedCount: 0
-        });
+        setToast({ show: true, message: res.error || (es ? 'Error al guardar los pronósticos' : 'Error saving predictions'), type: 'error', skippedCount: 0 });
         setIsSubmitting(false);
         return;
       }
-
       const { saved, skipped } = res.data;
-
-      // Update local matches state
-      setMatches(prevMatches => 
-        prevMatches.map(m => {
-          const savedPred = payload.find(sp => sp.matchId === m.id && !skipped.includes(m.id));
-          if (savedPred) {
-            return {
-              ...m,
-              myPrediction: {
-                homeScore: savedPred.homeScore,
-                awayScore: savedPred.awayScore
-              }
-            };
-          }
-          if (skipped.includes(m.id)) {
-            return {
-              ...m,
-              locked: true
-            };
-          }
-          return m;
-        })
-      );
-
-      // Show toast notifications
+      setMatches(prev => prev.map(m => {
+        const sp = payload.find(p => p.matchId === m.id && !skipped.includes(m.id));
+        if (sp) return { ...m, myPrediction: { homeScore: sp.homeScore, awayScore: sp.awayScore } };
+        if (skipped.includes(m.id)) return { ...m, locked: true };
+        return m;
+      }));
       if (skipped.length > 0) {
-        const skippedNames: string[] = [];
-        skipped.forEach(sId => {
-          const match = matches.find(m => m.id === sId);
-          if (match) {
-            skippedNames.push(getMatchDisplayName(match));
-          }
-        });
-
-        setToast({
-          show: true,
-          message: locale === 'es' 
-            ? `Se guardaron ${saved} pronósticos.`
-            : `Saved ${saved} predictions.`,
-          type: 'warning',
-          skippedCount: skipped.length,
-          skippedNames
-        });
+        const skippedNames = skipped.map(sId => { const m = matches.find(x => x.id === sId); return m ? getMatchDisplayName(m) : ''; }).filter(Boolean);
+        setToast({ show: true, message: es ? `Se guardaron ${saved} pronósticos.` : `Saved ${saved} predictions.`, type: 'warning', skippedCount: skipped.length, skippedNames });
       } else {
-        setToast({
-          show: true,
-          message: t('matches.toastSuccess'),
-          type: 'success',
-          skippedCount: 0
-        });
+        setToast({ show: true, message: t('matches.toastSuccess'), type: 'success', skippedCount: 0 });
       }
-
       setShowConfirmModal(false);
     } catch (err: any) {
-      setToast({
-        show: true,
-        message: err.message || (locale === 'es' ? 'Ocurrió un error inesperado' : 'An unexpected error occurred'),
-        type: 'error',
-        skippedCount: 0
-      });
+      setToast({ show: true, message: err.message || (es ? 'Ocurrió un error inesperado' : 'An unexpected error occurred'), type: 'error', skippedCount: 0 });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Auto-close Toast
   React.useEffect(() => {
-    if (toast && toast.show) {
-      const timer = setTimeout(() => {
-        setToast(prev => prev ? { ...prev, show: false } : null);
-      }, 6500);
+    if (toast?.show) {
+      const timer = setTimeout(() => setToast(prev => prev ? { ...prev, show: false } : null), 6500);
       return () => clearTimeout(timer);
     }
   }, [toast]);
 
-  // List of stages for segment filter
-  const stagesList: { value: MatchStage | 'all'; labelEs: string; labelEn: string }[] = [
-    { value: 'all', labelEs: 'Todos', labelEn: 'All' },
-    { value: 'group', labelEs: 'Grupos', labelEn: 'Groups' },
-    { value: 'r32', labelEs: '1/16', labelEn: 'R32' },
-    { value: 'r16', labelEs: 'Octavos', labelEn: 'R16' },
-    { value: 'qf', labelEs: 'Cuartos', labelEn: 'QF' },
-    { value: 'sf', labelEs: 'Semis', labelEn: 'SF' },
-    { value: 'final', labelEs: 'Final', labelEn: 'Final' },
-  ];
-
   return (
-    <div className="space-y-6 pb-20">
-      {/* A. PHASE PROGRESS HEADER */}
-      <div className="glass-card p-5 rounded-2xl border border-border/60 shadow-lg space-y-4 select-none">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-extrabold uppercase tracking-wider text-primary">
-            {t('matches.phaseHeaderTitle')}
-          </h2>
-          <div className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-primary glow-green" />
-            {savedGroupCount === 72 
-              ? t('matches.completed')
-              : t('matches.savedCount', { count: savedGroupCount })}
-          </div>
+    <div className="pb-24">
+      {/* STICKY HEADER: status + date chips (sits below the app's top bar) */}
+      <div className="sticky top-16 z-20 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-2 pb-2 bg-background/90 backdrop-blur-md border-b border-border/40">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs font-bold text-muted-foreground">
+            {savedGroupCount === 72 ? t('matches.completed') : t('matches.savedCount', { count: savedGroupCount })}
+          </span>
+          <span className="flex items-center gap-1.5 text-[11px]">
+            {liveCount > 0 && (
+              <span className="inline-flex items-center gap-1 font-bold text-red-400">
+                <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+                {liveCount} {es ? 'en vivo' : 'live'}
+              </span>
+            )}
+            {mounted && live.lastRunAt && (
+              <span className={cn('text-muted-foreground', syncStale && 'text-amber-500')}>
+                {liveCount > 0 ? '· ' : ''}{es ? 'act.' : 'upd.'} {agoLabel(live.lastRunAt)}
+              </span>
+            )}
+          </span>
         </div>
-
-        {/* Progress Bar */}
-        <div className="w-full bg-slate-950/40 rounded-full h-2.5 overflow-hidden border border-border/20">
-          <div 
-            className="bg-gradient-to-r from-primary to-emerald-400 h-full rounded-full transition-all duration-500 ease-out glow-green"
-            style={{ width: `${(savedGroupCount / 72) * 100}%` }}
-          />
-        </div>
-
-        {/* Phase Nodes */}
-        <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border/25">
-          {/* Groups Phase */}
-          <div className="flex flex-col space-y-1 p-2 rounded-xl bg-primary/10 border border-primary/20">
-            <div className="flex items-center gap-1.5 text-xs font-extrabold text-primary">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px]">1</span>
-              {t('matches.phaseGroups')}
-            </div>
-            <span className="text-[10px] font-bold text-muted-foreground pl-6">
-              {savedGroupCount}/72 {locale === 'es' ? 'guardados' : 'saved'}
-            </span>
-          </div>
-
-          {/* Bonuses Phase */}
-          <Link 
-            href={`${basePath}/bonuses`}
-            className="flex flex-col space-y-1 p-2 rounded-xl hover:bg-secondary/40 border border-transparent hover:border-border/40 transition-all group"
+        <div className="flex gap-1.5 overflow-x-auto scrollbar-none -mx-1 px-1">
+          <button
+            type="button"
+            onClick={scrollToNow}
+            className="flex-shrink-0 inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-bold bg-primary text-primary-foreground active:scale-95 transition-transform"
           >
-            <div className="flex items-center gap-1.5 text-xs font-extrabold text-foreground group-hover:text-primary transition-colors">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-800 text-muted-foreground text-[10px] group-hover:bg-primary group-hover:text-primary-foreground transition-all">2</span>
-              {t('matches.phaseBonuses')}
-            </div>
-            <span className="text-[10px] font-semibold text-primary pl-6 flex items-center gap-0.5 group-hover:underline">
-              {locale === 'es' ? 'Ir a Bonos' : 'Go to Bonuses'} &rarr;
-            </span>
-          </Link>
-
-          {/* Knockouts Phase */}
-          <div className="flex flex-col space-y-1 p-2 rounded-xl opacity-50 cursor-not-allowed">
-            <div className="flex items-center gap-1.5 text-xs font-extrabold text-muted-foreground">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-800 text-muted-foreground text-[10px]">3</span>
-              {t('matches.phaseKnockouts')}
-            </div>
-            <span className="text-[10px] font-extrabold text-amber-500 pl-6 uppercase tracking-wider scale-90 origin-left">
-              {t('matches.comingSoon')}
-            </span>
-          </div>
+            <ArrowDownToLine className="h-3 w-3" />
+            {es ? 'Hoy' : 'Today'}
+          </button>
+          {dayKeys.map(key => {
+            const isActive = activeDay === key;
+            const isToday = key === todayKey;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => jumpToDay(key)}
+                className={cn(
+                  'flex-shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-colors border',
+                  isActive
+                    ? 'bg-foreground text-background border-foreground'
+                    : isToday
+                      ? 'bg-primary/10 text-primary border-primary/40'
+                      : 'bg-card/50 text-muted-foreground border-border/40 hover:text-foreground'
+                )}
+              >
+                {chipLabel(key)}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* FILTERS CONTAINER */}
-      <div className="glass-card p-4 rounded-2xl border border-border/65 space-y-4 shadow-md select-none">
-        {/* Stage tag filters */}
-        <div className="space-y-1.5">
-          <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
-            <Filter className="h-3 w-3" />
-            {t('matches.stageFilter')}
-          </label>
-          <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-2 px-2 scrollbar-none snap-x">
-            {stagesList.map(stage => {
-              const active = selectedStage === stage.value;
-              return (
-                <button
-                  key={stage.value}
-                  type="button"
-                  onClick={() => setSelectedStage(stage.value)}
-                  className={cn(
-                    "px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap snap-align-start cursor-pointer",
-                    active
-                      ? "bg-primary text-primary-foreground shadow-sm shadow-primary/15"
-                      : "bg-secondary/40 border border-border/40 text-muted-foreground hover:text-foreground hover:bg-secondary/75"
-                  )}
-                >
-                  {locale === 'es' ? stage.labelEs : stage.labelEn}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Date dropdown filter */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-          <div className="space-y-1.5">
-            <label htmlFor="date-filter" className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
-              <CalendarIcon className="h-3 w-3" />
-              {t('matches.dateFilter')}
-            </label>
-            <select
-              id="date-filter"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200 focus-visible:border-primary/50 font-semibold cursor-pointer"
+      {/* FEED */}
+      {!mounted ? (
+        <div className="p-12 text-center text-muted-foreground font-light animate-pulse">{t('common.loading')}</div>
+      ) : (
+        <div className="space-y-5 pt-4">
+          {dayKeys.map(key => (
+            <section
+              key={key}
+              data-day={key}
+              ref={(el) => { if (el) dayRefs.current.set(key, el); else dayRefs.current.delete(key); }}
+              className="scroll-mt-[150px] space-y-2"
             >
-              <option value="all">
-                📅 {locale === 'es' ? 'Todas las fechas' : 'All dates'}
-              </option>
-              {uniqueDates.map(d => (
-                <option key={d} value={d}>
-                  📅 {formatDateHeader(d)}
-                </option>
+              <h3 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/90 py-1 flex items-center gap-2">
+                {dayHeader(key)}
+                {key === todayKey && (
+                  <span className="rounded-full bg-primary/15 text-primary px-1.5 py-0.5 text-[9px] font-bold normal-case tracking-normal">
+                    {es ? 'hoy' : 'today'}
+                  </span>
+                )}
+              </h3>
+              {matchesByDay[key].map(m => (
+                <div key={m.id} ref={(el) => { if (el) cardRefs.current.set(m.id, el); else cardRefs.current.delete(m.id); }}>
+                  <FeedMatchCard
+                    match={m}
+                    locale={locale}
+                    live={live.scores[m.id] ?? null}
+                    editable={isEditable(m)}
+                    homeScore={edits[m.id]?.homeScore ?? m.myPrediction?.homeScore ?? 0}
+                    awayScore={edits[m.id]?.awayScore ?? m.myPrediction?.awayScore ?? 0}
+                    onChange={handleScoreChange}
+                    picks={picksByMatch[m.id]}
+                    myUserId={myUserId}
+                  />
+                </div>
               ))}
-            </select>
-          </div>
-        </div>
-      </div>
+            </section>
+          ))}
 
-      {/* B. MATCH SECTIONS (grouped by the viewer's local day — client-only) */}
-      <div className="space-y-12">
-        {!mounted && (
-          <div className="p-12 text-center text-muted-foreground font-light glass-card border border-border/40 rounded-3xl animate-pulse">
-            {t('common.loading')}
-          </div>
-        )}
-
-        {/* SECTION 1: ACTIVE / EDITABLE MATCHES */}
-        {mounted && Object.keys(groupedEditable).length > 0 && (
-          <div className="space-y-6">
-            {Object.keys(groupedEditable).map(dateKey => (
-              <div key={dateKey} className="space-y-4">
-                <h3 className="text-sm font-extrabold text-primary tracking-wider uppercase pl-1 select-none border-l-2 border-primary/60 ml-0.5">
-                  {formatDateHeader(dateKey)}
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {groupedEditable[dateKey]!.map(match => (
-                    <MatchCard
-                      key={match.id}
-                      match={match}
+          {/* KNOCKOUTS — collapsed block at the bottom */}
+          {knockoutMatches.length > 0 && (
+            <div className="pt-3 border-t border-border/30">
+              <button
+                type="button"
+                onClick={() => setShowKnockouts(v => !v)}
+                className="w-full flex items-center justify-between rounded-xl border border-amber-500/30 bg-amber-500/[0.06] px-3 py-2.5"
+              >
+                <span className="flex items-center gap-2 text-xs font-bold text-amber-500">
+                  <Trophy className="h-3.5 w-3.5" />
+                  {t('matches.knockoutSection')}
+                  <span className="font-medium text-muted-foreground normal-case">· {t('matches.knockoutSectionNote')}</span>
+                </span>
+                <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', showKnockouts && 'rotate-180')} />
+              </button>
+              {showKnockouts && (
+                <div className="mt-2 space-y-2">
+                  {knockoutMatches.map(m => (
+                    <FeedMatchCard
+                      key={m.id}
+                      match={m}
                       locale={locale}
-                      homeScore={edits[match.id]?.homeScore ?? 0}
-                      awayScore={edits[match.id]?.awayScore ?? 0}
-                      onChange={handleScoreChange}
+                      live={live.scores[m.id] ?? null}
+                      editable={false}
+                      homeScore={0}
+                      awayScore={0}
                     />
                   ))}
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* SECTION 1.5: LOCKED BUT NOT YET PLAYED (entries closed at tournament start) */}
-        {mounted && Object.keys(groupedLockedUpcoming).length > 0 && (
-          <div className="space-y-6 pt-6 border-t border-border/20">
-            <h2 className="text-base font-extrabold tracking-wider text-muted-foreground uppercase pl-1 select-none flex items-center gap-2">
-              <span>🔒 {t('matches.lockedUpcoming')}</span>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-500 normal-case tracking-normal">
-                {t('matches.lockedUpcomingNote')}
-              </span>
-            </h2>
-            {Object.keys(groupedLockedUpcoming).map(dateKey => (
-              <div key={dateKey} className="space-y-4">
-                <h3 className="text-sm font-extrabold text-muted-foreground/80 tracking-wider uppercase pl-1 select-none border-l-2 border-muted/50 ml-0.5">
-                  {formatDateHeader(dateKey)}
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {groupedLockedUpcoming[dateKey]!.map(match => (
-                    <MatchCard
-                      key={match.id}
-                      match={match}
-                      locale={locale}
-                      homeScore={match.myPrediction?.homeScore ?? 0}
-                      awayScore={match.myPrediction?.awayScore ?? 0}
-                    />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* SECTION 2: YA JUGADOS (played group matches) */}
-        {mounted && Object.keys(groupedPlayed).length > 0 && (
-          <div className="space-y-6 pt-6 border-t border-border/20 opacity-90">
-            <h2 className="text-base font-extrabold tracking-wider text-muted-foreground uppercase pl-1 select-none flex items-center gap-2">
-              <span>⚽️ {t('matches.alreadyPlayed')}</span>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-950/60 border border-border/40 text-muted-foreground">
-                {playedMatches.length}
-              </span>
-            </h2>
-            {Object.keys(groupedPlayed).map(dateKey => (
-              <div key={dateKey} className="space-y-4">
-                <h3 className="text-sm font-extrabold text-muted-foreground/80 tracking-wider uppercase pl-1 select-none border-l-2 border-muted/50 ml-0.5">
-                  {formatDateHeader(dateKey)}
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {groupedPlayed[dateKey]!.map(match => (
-                    <div key={match.id}>
-                      <MatchCard
-                        match={match}
-                        locale={locale}
-                        homeScore={match.myPrediction?.homeScore ?? 0}
-                        awayScore={match.myPrediction?.awayScore ?? 0}
-                      />
-                      {match.stage === 'group' && (
-                        <PicksStrip
-                          picks={picksByMatch[match.id] ?? []}
-                          locale={locale}
-                          myUserId={myUserId}
-                        />
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* SECTION 3: KNOCKOUT STAGE (locked until the bracket phase opens) */}
-        {mounted && Object.keys(groupedKnockout).length > 0 && (
-          <div className="space-y-6 pt-6 border-t border-border/20 opacity-90">
-            <h2 className="text-base font-extrabold tracking-wider text-muted-foreground uppercase pl-1 select-none flex items-center gap-2">
-              <span>🏆 {t('matches.knockoutSection')}</span>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-500">
-                {t('matches.knockoutSectionNote')}
-              </span>
-            </h2>
-            {Object.keys(groupedKnockout).map(dateKey => (
-              <div key={dateKey} className="space-y-4">
-                <h3 className="text-sm font-extrabold text-muted-foreground/80 tracking-wider uppercase pl-1 select-none border-l-2 border-muted/50 ml-0.5">
-                  {formatDateHeader(dateKey)}
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {groupedKnockout[dateKey]!.map(match => (
-                    <MatchCard
-                      key={match.id}
-                      match={match}
-                      locale={locale}
-                      homeScore={match.myPrediction?.homeScore ?? 0}
-                      awayScore={match.myPrediction?.awayScore ?? 0}
-                    />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* EMPTY STATE */}
-        {mounted &&
-          Object.keys(groupedEditable).length === 0 &&
-          Object.keys(groupedLockedUpcoming).length === 0 &&
-          Object.keys(groupedPlayed).length === 0 &&
-          Object.keys(groupedKnockout).length === 0 && (
-          <div className="p-12 text-center text-muted-foreground font-light glass-card border border-border/40 rounded-3xl">
-            {t('matches.noMatches')}
-          </div>
-        )}
-      </div>
-
-      {/* C. STICKY FOOTER BAR */}
-      <div className="fixed bottom-[57px] md:bottom-0 left-0 w-full z-30 border-t border-border bg-card/90 backdrop-blur-md shadow-2xl transition-all duration-300">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <span className={cn(
-              "h-2 w-2 rounded-full transition-all duration-300",
-              unsavedCount > 0 ? "bg-amber-500 animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.7)]" : "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.7)]"
-            )} />
-            <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2">
-              <span className="text-xs sm:text-sm font-extrabold text-foreground">
-                72 {t('nav.matches').toLowerCase()}
-              </span>
-              {unsavedCount > 0 ? (
-                <>
-                  <span className="hidden sm:inline text-xs text-muted-foreground">•</span>
-                  <span className="text-[10px] sm:text-xs font-bold text-amber-500 animate-pulse">
-                    {t('matches.unsavedChanges', { count: unsavedCount })}
-                  </span>
-                </>
-              ) : (
-                <>
-                  <span className="hidden sm:inline text-xs text-muted-foreground">•</span>
-                  <span className="text-[10px] sm:text-xs font-bold text-emerald-400">
-                    {allGroupLocked
-                      ? t('matches.lockedUpcoming')
-                      : locale === 'es' ? 'Todo guardado' : 'All saved'}
-                  </span>
-                </>
               )}
             </div>
-          </div>
+          )}
 
+          {groupMatches.length === 0 && knockoutMatches.length === 0 && (
+            <div className="p-12 text-center text-muted-foreground font-light">{t('matches.noMatches')}</div>
+          )}
+        </div>
+      )}
+
+      {/* SAVE BAR */}
+      <div className="fixed bottom-[57px] md:bottom-0 left-0 w-full z-30 border-t border-border bg-card/90 backdrop-blur-md shadow-2xl">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <span className={cn('h-2 w-2 rounded-full', unsavedCount > 0 ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500')} />
+            <span className="text-[11px] sm:text-xs font-bold text-foreground">
+              {unsavedCount > 0
+                ? t('matches.unsavedChanges', { count: unsavedCount })
+                : (es ? 'Todo guardado' : 'All saved')}
+            </span>
+          </div>
           <Button
             onClick={() => setShowConfirmModal(true)}
             disabled={unsavedCount === 0 || isSubmitting}
             className={cn(
-              "rounded-xl px-4 py-2 font-extrabold text-xs sm:text-sm transition-all duration-200 active:scale-95 shadow-md flex items-center gap-1.5",
-              unsavedCount > 0 
-                ? "bg-gradient-to-r from-primary to-emerald-500 hover:from-primary/95 hover:to-emerald-500/95 text-primary-foreground cursor-pointer"
-                : "bg-secondary text-muted-foreground cursor-not-allowed"
+              'rounded-xl px-4 py-2 font-extrabold text-xs sm:text-sm active:scale-95 transition-transform flex items-center gap-1.5',
+              unsavedCount > 0 ? 'bg-gradient-to-r from-primary to-emerald-500 text-primary-foreground' : 'bg-secondary text-muted-foreground cursor-not-allowed'
             )}
           >
             {t('matches.saveBtnCount', { count: unsavedCount })}
@@ -602,124 +381,60 @@ export function MatchesFilterView({ initialMatches, locale, picksByMatch = {}, m
         </div>
       </div>
 
-      {/* D. CONFIRMATION MODAL */}
+      {/* CONFIRM MODAL */}
       {showConfirmModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div 
-            className="glass-card border border-border/80 rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl animate-in fade-in-50 zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="glass-card border border-border/80 rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b border-border/30 pb-3">
               <div className="flex items-center gap-2 text-primary">
                 <HelpCircle className="h-5 w-5" />
-                <h3 className="text-base font-extrabold">
-                  {t('matches.saveConfirmTitle')}
-                </h3>
+                <h3 className="text-base font-extrabold">{t('matches.saveConfirmTitle')}</h3>
               </div>
-              <button 
-                type="button" 
-                onClick={() => setShowConfirmModal(false)}
-                className="text-muted-foreground hover:text-foreground rounded-lg p-1 transition-colors"
-              >
+              <button type="button" onClick={() => setShowConfirmModal(false)} className="text-muted-foreground hover:text-foreground rounded-lg p-1">
                 <X className="h-4 w-4" />
               </button>
             </div>
-
-            <div className="space-y-4">
-              <p className="text-xs text-muted-foreground font-medium leading-relaxed">
-                {t('matches.saveConfirmDesc', { count: unsavedCount })}
-              </p>
-
-              {/* Scrollable list of modifications */}
-              <div className="bg-slate-950/50 rounded-xl border border-border/50 max-h-36 overflow-y-auto p-3 space-y-2 text-[11px] scrollbar-thin">
-                {unsavedMatches.map(m => {
-                  const edit = edits[m.id];
-                  return (
-                    <div key={m.id} className="flex justify-between items-center text-muted-foreground border-b border-border/10 pb-1.5 last:border-0 last:pb-0">
-                      <span className="font-semibold text-foreground text-left line-clamp-1 max-w-[260px]">
-                        {getMatchDisplayName(m)}
-                      </span>
-                      <span className="font-extrabold text-primary bg-primary/5 px-2 py-0.5 rounded border border-primary/25 whitespace-nowrap">
-                        {edit.homeScore} - {edit.awayScore}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
+            <p className="text-xs text-muted-foreground font-medium leading-relaxed">{t('matches.saveConfirmDesc', { count: unsavedCount })}</p>
+            <div className="bg-slate-950/50 rounded-xl border border-border/50 max-h-36 overflow-y-auto p-3 space-y-2 text-[11px]">
+              {unsavedMatches.map(m => (
+                <div key={m.id} className="flex justify-between items-center text-muted-foreground border-b border-border/10 pb-1.5 last:border-0 last:pb-0">
+                  <span className="font-semibold text-foreground text-left line-clamp-1 max-w-[260px]">{getMatchDisplayName(m)}</span>
+                  <span className="font-extrabold text-primary bg-primary/5 px-2 py-0.5 rounded border border-primary/25 whitespace-nowrap">{edits[m.id].homeScore} - {edits[m.id].awayScore}</span>
+                </div>
+              ))}
             </div>
-
             <div className="flex items-center justify-end gap-3 pt-2">
-              <Button
-                variant="ghost"
-                onClick={() => setShowConfirmModal(false)}
-                disabled={isSubmitting}
-                className="rounded-xl text-xs font-bold text-muted-foreground hover:text-foreground border border-border/40 hover:bg-secondary/40 cursor-pointer"
-              >
-                {t('common.cancel')}
-              </Button>
-              <Button
-                onClick={handleSave}
-                disabled={isSubmitting}
-                className="rounded-xl text-xs font-extrabold bg-gradient-to-r from-primary to-emerald-500 hover:from-primary/95 hover:to-emerald-500/95 text-primary-foreground cursor-pointer shadow-md"
-              >
-                {isSubmitting ? t('common.saving') : t('matches.saveConfirmBtn')}
-              </Button>
+              <Button variant="ghost" onClick={() => setShowConfirmModal(false)} disabled={isSubmitting} className="rounded-xl text-xs font-bold text-muted-foreground border border-border/40">{t('common.cancel')}</Button>
+              <Button onClick={handleSave} disabled={isSubmitting} className="rounded-xl text-xs font-extrabold bg-gradient-to-r from-primary to-emerald-500 text-primary-foreground">{isSubmitting ? t('common.saving') : t('matches.saveConfirmBtn')}</Button>
             </div>
           </div>
         </div>
       )}
 
-      {/* E. FLOATING SUCCESS / WARNING / ERROR TOAST */}
-      {toast && toast.show && (
-        <div className="fixed top-20 right-4 z-50 max-w-sm w-full bg-card/95 border border-border/80 rounded-2xl shadow-2xl p-4 backdrop-blur-md animate-in slide-in-from-top-12 duration-300 select-none">
+      {/* TOAST */}
+      {toast?.show && (
+        <div className="fixed top-20 right-4 z-50 max-w-sm w-full bg-card/95 border border-border/80 rounded-2xl shadow-2xl p-4 backdrop-blur-md">
           <div className="flex items-start gap-3">
-            {toast.type === 'success' && (
-              <div className="rounded-full bg-emerald-500/10 p-1.5 text-emerald-400 border border-emerald-500/20">
-                <CheckCircle2 className="h-5 w-5" />
-              </div>
+            {toast.type === 'success' ? (
+              <div className="rounded-full bg-emerald-500/10 p-1.5 text-emerald-400 border border-emerald-500/20"><CheckCircle2 className="h-5 w-5" /></div>
+            ) : (
+              <div className={cn('rounded-full p-1.5 border', toast.type === 'error' ? 'bg-destructive/10 text-destructive border-destructive/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20')}><AlertTriangle className="h-5 w-5" /></div>
             )}
-            {(toast.type === 'warning' || toast.type === 'error') && (
-              <div className={cn(
-                "rounded-full p-1.5 border",
-                toast.type === 'error' ? "bg-destructive/10 text-destructive border-destructive/20" : "bg-amber-500/10 text-amber-400 border-amber-500/20"
-              )}>
-                <AlertTriangle className="h-5 w-5" />
-              </div>
-            )}
-
             <div className="flex-1 space-y-1.5">
               <h4 className="text-xs font-bold text-foreground">
-                {toast.type === 'success' 
-                  ? (locale === 'es' ? '¡Guardado!' : 'Saved!') 
-                  : toast.type === 'error' 
-                    ? (locale === 'es' ? 'Error al guardar' : 'Error saving')
-                    : (locale === 'es' ? 'Advertencia' : 'Warning')}
+                {toast.type === 'success' ? (es ? '¡Guardado!' : 'Saved!') : toast.type === 'error' ? (es ? 'Error al guardar' : 'Error saving') : (es ? 'Advertencia' : 'Warning')}
               </h4>
-              <p className="text-[11px] text-muted-foreground font-medium leading-normal">
-                {toast.message}
-              </p>
-              
+              <p className="text-[11px] text-muted-foreground font-medium leading-normal">{toast.message}</p>
               {toast.skippedCount > 0 && toast.skippedNames && (
                 <div className="pt-1 space-y-1">
-                  <span className="text-[10px] font-bold text-amber-500 uppercase tracking-wider block">
-                    {locale === 'es' ? 'Partidos cerrados omitidos:' : 'Skipped closed matches:'}
-                  </span>
+                  <span className="text-[10px] font-bold text-amber-500 uppercase tracking-wider block">{es ? 'Partidos cerrados omitidos:' : 'Skipped closed matches:'}</span>
                   <ul className="text-[9px] text-muted-foreground list-disc pl-3 space-y-0.5 font-semibold">
-                    {toast.skippedNames.map((name, i) => (
-                      <li key={i}>{name}</li>
-                    ))}
+                    {toast.skippedNames.map((n, i) => <li key={i}>{n}</li>)}
                   </ul>
                 </div>
               )}
             </div>
-
-            <button 
-              type="button" 
-              onClick={() => setToast(prev => prev ? { ...prev, show: false } : null)}
-              className="text-muted-foreground hover:text-foreground rounded-lg p-0.5 transition-colors self-start"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
+            <button type="button" onClick={() => setToast(prev => prev ? { ...prev, show: false } : null)} className="text-muted-foreground hover:text-foreground rounded-lg p-0.5 self-start"><X className="h-3.5 w-3.5" /></button>
           </div>
         </div>
       )}

@@ -55,6 +55,20 @@ export interface MatchPickRow {
   outcome: 'exact' | 'result' | 'wrong' | 'pending';
 }
 
+/** Real-time score for one match, mirrored from the live_scores table. */
+export interface LiveScore {
+  status: 'pre' | 'in' | 'post';
+  homeScore: number | null;
+  awayScore: number | null;
+  displayClock: string | null;
+  completed: boolean;
+}
+
+export interface LiveScoresPayload {
+  scores: Record<string, LiveScore>;
+  lastRunAt: string | null; // heartbeat: when the ESPN sync last ran
+}
+
 export interface LeagueSummary {
   id: string;
   name: string;

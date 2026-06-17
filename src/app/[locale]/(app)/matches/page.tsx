@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { getMatches, getTeams, getMatchPicks, getSessionUser } from '@/lib/api';
+import { getMatches, getTeams, getMatchPicks, getSessionUser, getLiveScores } from '@/lib/api';
 import { MatchesFilterView } from './MatchesFilterView';
 
 interface MatchesPageProps {
@@ -9,34 +9,23 @@ interface MatchesPageProps {
 export default async function MatchesPage({ params }: MatchesPageProps) {
   const { locale } = await params;
   
-  // Fetch initial fixtures, teams, contestant picks, and the viewer on the server
-  const [matches, teams, picksByMatch, sessionUser] = await Promise.all([
+  // Fetch initial fixtures, teams, contestant picks, live scores, and the viewer
+  const [matches, teams, picksByMatch, live, sessionUser] = await Promise.all([
     getMatches(),
     getTeams(),
     getMatchPicks(),
+    getLiveScores(),
     getSessionUser(),
   ]);
 
   return (
-    <div className="space-y-6 py-4">
-      {/* Page Title */}
-      <div>
-        <h1 className="text-3xl font-extrabold tracking-tight text-foreground select-none">
-          ⚽️ {locale === 'es' ? 'Calendario de Partidos' : 'Match Schedule'}
-        </h1>
-        <p className="text-xs text-muted-foreground font-light mt-1">
-          {locale === 'es'
-            ? 'Predice marcadores exactos y haz seguimiento a los partidos del Mundial.'
-            : 'Predict exact scores and follow matches throughout the World Cup.'}
-        </p>
-      </div>
-
-      {/* Filter and Cards view */}
+    <div className="py-2">
       <MatchesFilterView
         initialMatches={matches}
         locale={locale as any}
         picksByMatch={picksByMatch}
         myUserId={sessionUser?.id}
+        initialLive={live}
       />
     </div>
   );

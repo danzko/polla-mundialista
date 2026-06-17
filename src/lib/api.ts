@@ -5,7 +5,7 @@ import { createClient } from "./supabase/server";
 import type {
   SessionUser, Team, MatchView, LeagueSummary, LeagueDetail,
   BonusView, ActionResult, Locale, MatchStage, LeaderboardRow,
-  LeagueMemberView, MatchPickRow,
+  LeagueMemberView, MatchPickRow, LiveScore, LiveScoresPayload,
 } from "./types";
 import {
   displayNameSchema, emailSchema, leagueNameSchema,
@@ -486,6 +486,37 @@ export async function getMatchPicks(): Promise<Record<string, MatchPickRow[]>> {
   } catch (err) {
     console.error("Error in getMatchPicks:", err);
     return {};
+  }
+}
+
+/**
+ * Real-time scores for the live feed. Reads the live_scores staging table
+ * (filled by the ESPN sync every 2 min) + the heartbeat. Cheap enough to
+ * poll from the client every ~30s. Authenticated read (RLS).
+ */
+export async function getLiveScores(): Promise<LiveScoresPayload> {
+  try {
+    const supabase = await createClient();
+    const [{ data: rows }, { data: state }] = await Promise.all([
+      supabase
+        .from("live_scores")
+        .select("match_id, status, home_score, away_score, display_clock, completed"),
+      supabase.from("live_sync_state").select("last_run_at").eq("id", 1).maybeSingle(),
+    ]);
+    const scores: Record<string, LiveScore> = {};
+    for (const r of rows ?? []) {
+      scores[r.match_id] = {
+        status: (r.status as LiveScore["status"]) ?? "pre",
+        homeScore: r.home_score,
+        awayScore: r.away_score,
+        displayClock: r.display_clock,
+        completed: !!r.completed,
+      };
+    }
+    return { scores, lastRunAt: state?.last_run_at ?? null };
+  } catch (err) {
+    console.error("Error in getLiveScores:", err);
+    return { scores: {}, lastRunAt: null };
   }
 }
 
