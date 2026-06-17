@@ -99,12 +99,23 @@ export function FeedMatchCard({
       </span>
     );
 
+  // Time-gradient styling: past recedes, present pops, future neutral.
+  const inPlay = !isLive && !isFinal && started && !match.isVoided;
+  const isPast = isFinal && !match.isVoided;
+  const phaseClass = isLive
+    ? 'border-red-500/70 bg-red-500/[0.05]'
+    : inPlay
+      ? 'border-foreground/25 bg-foreground/[0.03]'
+      : isPast
+        ? 'border-border/25 bg-muted/10 opacity-[0.93]'
+        : 'border-border/55 bg-card/50'; // future / neutral
+
   return (
     <div>
       <div className={cn(
-        'rounded-xl border bg-card/60 px-2.5 py-2 transition-colors',
-        isLive ? 'border-red-500/70 bg-red-500/[0.04]' : 'border-border/45',
-        match.isVoided && 'opacity-55'
+        'rounded-xl border px-2.5 py-2 transition-colors',
+        phaseClass,
+        match.isVoided && 'opacity-60'
       )}>
         {/* meta row */}
         <div className="mb-1 flex items-center justify-between">

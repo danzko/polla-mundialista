@@ -52,7 +52,10 @@ export function MatchesFilterView({
 
   const cardRefs = React.useRef<Map<string, HTMLDivElement>>(new Map());
   const dayRefs = React.useRef<Map<string, HTMLElement>>(new Map());
+  const chipRefs = React.useRef<Map<string, HTMLButtonElement>>(new Map());
+  const chipScrollRef = React.useRef<HTMLDivElement | null>(null);
   const didAutoScroll = React.useRef(false);
+  const didCenterChips = React.useRef(false);
 
   React.useEffect(() => { setMounted(true); }, []);
 
@@ -108,10 +111,25 @@ export function MatchesFilterView({
     return next?.id ?? groupMatches[groupMatches.length - 1]?.id ?? null;
   }, [groupMatches, live, now]);
 
+  // The day the chip row should center on: today if it has games, else
+  // the day of the live/next match.
+  const focusDayKey = React.useMemo(() => {
+    if (todayKey && dayKeys.includes(todayKey)) return todayKey;
+    const m = groupMatches.find(x => x.id === nowMatchId);
+    return m ? localDayKey(m.kickoffAt) : dayKeys[0] ?? null;
+  }, [todayKey, dayKeys, groupMatches, nowMatchId]);
+
+  const centerChips = React.useCallback((smooth = false) => {
+    const key = focusDayKey;
+    if (!key) return;
+    const chip = chipRefs.current.get(key);
+    chip?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: smooth ? 'smooth' : 'auto' });
+  }, [focusDayKey]);
+
   const scrollToNow = React.useCallback(() => {
-    if (!nowMatchId) return;
-    cardRefs.current.get(nowMatchId)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }, [nowMatchId]);
+    if (nowMatchId) cardRefs.current.get(nowMatchId)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    centerChips(true);
+  }, [nowMatchId, centerChips]);
 
   // Auto-scroll to "now" once after first mount.
   React.useEffect(() => {
@@ -122,6 +140,14 @@ export function MatchesFilterView({
       });
     }
   }, [mounted, nowMatchId]);
+
+  // Center the date-chip row on today (separate from the vertical scroll).
+  React.useEffect(() => {
+    if (mounted && !didCenterChips.current && focusDayKey) {
+      didCenterChips.current = true;
+      requestAnimationFrame(() => centerChips(false));
+    }
+  }, [mounted, focusDayKey, centerChips]);
 
   // Scroll-spy: highlight the day chip currently in view.
   React.useEffect(() => {
@@ -139,8 +165,8 @@ export function MatchesFilterView({
 
   const chipLabel = (key: string) => {
     const d = new Date(key + 'T12:00:00');
-    const s = d.toLocaleDateString(es ? 'es-CO' : 'en-US', { weekday: 'short', day: 'numeric' });
-    return s.replace('.', '');
+    const s = d.toLocaleDateString(es ? 'es-CO' : 'en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    return s.replace(/[.,]/g, '');
   };
   const dayHeader = (key: string) => {
     const d = new Date(key + 'T12:00:00');
@@ -247,36 +273,41 @@ export function MatchesFilterView({
             )}
           </span>
         </div>
-        <div className="flex gap-1.5 overflow-x-auto scrollbar-none -mx-1 px-1">
+        <div className="flex items-center gap-2">
+          {/* Pinned, always-visible Today button */}
           <button
             type="button"
             onClick={scrollToNow}
-            className="flex-shrink-0 inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-bold bg-primary text-primary-foreground active:scale-95 transition-transform"
+            className="flex-shrink-0 inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-bold bg-primary text-primary-foreground active:scale-95 transition-transform shadow-sm"
           >
             <ArrowDownToLine className="h-3 w-3" />
             {es ? 'Hoy' : 'Today'}
           </button>
-          {dayKeys.map(key => {
-            const isActive = activeDay === key;
-            const isToday = key === todayKey;
-            return (
-              <button
-                key={key}
-                type="button"
-                onClick={() => jumpToDay(key)}
-                className={cn(
-                  'flex-shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-colors border',
-                  isActive
-                    ? 'bg-foreground text-background border-foreground'
-                    : isToday
-                      ? 'bg-primary/10 text-primary border-primary/40'
-                      : 'bg-card/50 text-muted-foreground border-border/40 hover:text-foreground'
-                )}
-              >
-                {chipLabel(key)}
-              </button>
-            );
-          })}
+          {/* Independently scrollable date chips */}
+          <div ref={chipScrollRef} className="flex gap-1.5 overflow-x-auto scrollbar-none flex-1">
+            {dayKeys.map(key => {
+              const isActive = activeDay === key;
+              const isToday = key === todayKey;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  ref={(el) => { if (el) chipRefs.current.set(key, el); else chipRefs.current.delete(key); }}
+                  onClick={() => jumpToDay(key)}
+                  className={cn(
+                    'flex-shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-colors border',
+                    isActive
+                      ? 'bg-foreground text-background border-foreground'
+                      : isToday
+                        ? 'bg-primary/10 text-primary border-primary/40'
+                        : 'bg-card/50 text-muted-foreground border-border/40 hover:text-foreground'
+                  )}
+                >
+                  {chipLabel(key)}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
