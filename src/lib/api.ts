@@ -402,13 +402,14 @@ export async function getMatches(
 }
 
 /**
- * For every started/past GROUP match, the picks of everyone the viewer
- * shares a league with — the deduped UNION of members across all the
- * viewer's leagues (includes the viewer). A person never sees picks from
- * leagues they're not in. Filtered to started matches (RLS also blocks
- * not-yet-kicked-off picks). The PicksStrip judges each pick against the
- * live-or-final score client-side, so points/outcome are left
- * null/'pending' here. Knockouts excluded. Returns matchId -> rows.
+ * For every started/past GROUP match, a row for EVERY member of the
+ * viewer's leagues — the deduped UNION across all the leagues the viewer
+ * is in (live leagues only, includes the viewer). League-mates who never
+ * entered a pick for a match still appear, with null scores, so the strip
+ * always shows the whole league, not just who bothered to play. A person
+ * never sees anyone from leagues they're not in. The PicksStrip judges
+ * each pick against the live-or-final score client-side. Knockouts
+ * excluded. Returns matchId -> rows.
  */
 export async function getMatchPicks(): Promise<Record<string, MatchPickRow[]>> {
   try {
@@ -454,15 +455,24 @@ export async function getMatchPicks(): Promise<Record<string, MatchPickRow[]>> {
       .from("users").select("id, display_name").in("id", memberIds);
     const nameById = new Map((userRows ?? []).map((u) => [u.id, u.display_name as string]));
 
-    const byMatch: Record<string, MatchPickRow[]> = {};
+    const predByKey = new Map<string, { h: number; a: number }>();
     for (const p of preds ?? []) {
-      (byMatch[p.match_id] ??= []).push({
-        userId: p.user_id,
-        displayName: nameById.get(p.user_id) ?? "—",
-        homeScore: p.home_score,
-        awayScore: p.away_score,
-        points: null,
-        outcome: "pending",
+      predByKey.set(`${p.match_id}:${p.user_id}`, { h: p.home_score, a: p.away_score });
+    }
+
+    // Every league-mate appears for every started match — pick or not.
+    const byMatch: Record<string, MatchPickRow[]> = {};
+    for (const mid of startedIds) {
+      byMatch[mid] = memberIds.map((uid) => {
+        const pk = predByKey.get(`${mid}:${uid}`);
+        return {
+          userId: uid,
+          displayName: nameById.get(uid) ?? "—",
+          homeScore: pk ? pk.h : null,
+          awayScore: pk ? pk.a : null,
+          points: null,
+          outcome: "pending" as const,
+        };
       });
     }
     return byMatch;

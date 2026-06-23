@@ -50,8 +50,8 @@ export interface MatchView {
 export interface MatchPickRow {
   userId: string;
   displayName: string;
-  homeScore: number;
-  awayScore: number;
+  homeScore: number | null; // null = this league-mate didn't enter a pick
+  awayScore: number | null;
   points: number | null;
   outcome: 'exact' | 'result' | 'wrong' | 'pending';
 }
