@@ -445,18 +445,31 @@ export async function getMatchPicks(): Promise<Record<string, MatchPickRow[]>> {
     const startedIds = (startedMatches ?? []).map((m) => m.id);
     if (startedIds.length === 0) return {};
 
-    const { data: preds } = await supabase
-      .from("predictions")
-      .select("user_id, match_id, home_score, away_score")
-      .in("match_id", startedIds)
-      .in("user_id", memberIds);
+    // Page through predictions: members × started matches can exceed the
+    // 1000-row response cap (e.g. 24 league-mates × 47 games = 1125),
+    // which would silently drop picks and show real entrants as "no pick".
+    const preds: Array<{ user_id: string; match_id: string; home_score: number; away_score: number }> = [];
+    const PAGE = 1000;
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await supabase
+        .from("predictions")
+        .select("user_id, match_id, home_score, away_score")
+        .in("match_id", startedIds)
+        .in("user_id", memberIds)
+        .order("match_id", { ascending: true })
+        .order("user_id", { ascending: true })
+        .range(from, from + PAGE - 1);
+      if (error || !data || data.length === 0) break;
+      preds.push(...data);
+      if (data.length < PAGE) break;
+    }
 
     const { data: userRows } = await supabase
       .from("users").select("id, display_name").in("id", memberIds);
     const nameById = new Map((userRows ?? []).map((u) => [u.id, u.display_name as string]));
 
     const predByKey = new Map<string, { h: number; a: number }>();
-    for (const p of preds ?? []) {
+    for (const p of preds) {
       predByKey.set(`${p.match_id}:${p.user_id}`, { h: p.home_score, a: p.away_score });
     }
 
