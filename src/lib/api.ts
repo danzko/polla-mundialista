@@ -402,12 +402,14 @@ export async function getMatches(
 }
 
 /**
- * For every started/past GROUP match, the picks of everyone the viewer
- * shares a league with (deduped, includes the viewer). RLS only returns
- * predictions for matches that have kicked off, so future matches yield
- * nothing here. Points/outcome stay null/'pending' until a final result
- * exists. Knockout matches are excluded (their score picks score 0 under
- * the official rules). Returns a map: matchId -> rows (already sorted).
+ * For every started/past GROUP match, EVERY contestant's pick across the
+ * whole pool (not just the viewer's leagues) — so people in multiple
+ * leagues see everyone. Safe because RLS already reveals predictions to
+ * any signed-in user once a match has kicked off; future matches yield
+ * nothing. The PicksStrip judges each pick against the live-or-final
+ * score client-side, so points/outcome here are left at null/'pending'
+ * (kept only for the row shape). Knockouts excluded. Returns matchId ->
+ * rows.
  */
 export async function getMatchPicks(): Promise<Record<string, MatchPickRow[]>> {
   try {
@@ -415,74 +417,38 @@ export async function getMatchPicks(): Promise<Record<string, MatchPickRow[]>> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return {};
 
-    const { data: myLeagues } = await supabase
-      .from("league_members").select("league_id").eq("user_id", user.id);
-    const leagueIds = (myLeagues ?? []).map((r) => r.league_id);
-    if (leagueIds.length === 0) return {};
-
-    const { data: memberRows } = await supabase
-      .from("league_members").select("user_id").in("league_id", leagueIds);
-    const memberIds = Array.from(new Set((memberRows ?? []).map((r) => r.user_id)));
-    if (memberIds.length === 0) return {};
-
-    const { data: userRows } = await supabase
-      .from("users").select("id, display_name").in("id", memberIds);
-    const nameById = new Map((userRows ?? []).map((u) => [u.id, u.display_name as string]));
-
     const nowIso = new Date().toISOString();
     const { data: startedMatches } = await supabase
       .from("matches")
-      .select("id, is_voided, match_results(home_score, away_score)")
+      .select("id")
       .eq("stage", "group")
       .eq("is_voided", false)
       .lte("kickoff_at", nowIso);
     const startedIds = (startedMatches ?? []).map((m) => m.id);
     if (startedIds.length === 0) return {};
 
-    const resultByMatch = new Map<string, { homeScore: number; awayScore: number }>();
-    for (const m of startedMatches ?? []) {
-      const r = Array.isArray(m.match_results) ? m.match_results[0] : m.match_results;
-      if (r) resultByMatch.set(m.id, { homeScore: r.home_score, awayScore: r.away_score });
-    }
-
     const { data: preds } = await supabase
       .from("predictions")
       .select("user_id, match_id, home_score, away_score")
-      .in("match_id", startedIds)
-      .in("user_id", memberIds);
+      .in("match_id", startedIds);
+
+    const userIds = Array.from(new Set((preds ?? []).map((p) => p.user_id)));
+    if (userIds.length === 0) return {};
+
+    const { data: userRows } = await supabase
+      .from("users").select("id, display_name").in("id", userIds);
+    const nameById = new Map((userRows ?? []).map((u) => [u.id, u.display_name as string]));
 
     const byMatch: Record<string, MatchPickRow[]> = {};
     for (const p of preds ?? []) {
-      const result = resultByMatch.get(p.match_id) ?? null;
-      let points: number | null = null;
-      let outcome: MatchPickRow["outcome"] = "pending";
-      if (result) {
-        const r = calculateMatchPoints(
-          { homeScore: p.home_score, awayScore: p.away_score },
-          result,
-          "group"
-        );
-        points = r.totalPoints;
-        outcome = r.predictionType; // 'exact' | 'result' | 'wrong'
-      }
       (byMatch[p.match_id] ??= []).push({
         userId: p.user_id,
         displayName: nameById.get(p.user_id) ?? "—",
         homeScore: p.home_score,
         awayScore: p.away_score,
-        points,
-        outcome,
+        points: null,
+        outcome: "pending",
       });
-    }
-
-    const rank = { exact: 0, result: 1, wrong: 2, pending: 3 } as const;
-    for (const id of Object.keys(byMatch)) {
-      byMatch[id].sort(
-        (a, b) =>
-          rank[a.outcome] - rank[b.outcome] ||
-          (b.points ?? -1) - (a.points ?? -1) ||
-          a.displayName.localeCompare(b.displayName)
-      );
     }
     return byMatch;
   } catch (err) {

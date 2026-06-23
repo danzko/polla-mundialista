@@ -180,7 +180,13 @@ export function FeedMatchCard({
       </div>
 
       {match.stage === 'group' && started && (
-        <PicksStrip picks={picks ?? []} locale={locale} myUserId={myUserId} />
+        <PicksStrip
+          picks={picks ?? []}
+          locale={locale}
+          myUserId={myUserId}
+          score={shownScore ? { home: shownScore.h, away: shownScore.a } : null}
+          settled={isFinal}
+        />
       )}
     </div>
   );
