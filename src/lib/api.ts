@@ -402,20 +402,30 @@ export async function getMatches(
 }
 
 /**
- * For every started/past GROUP match, EVERY contestant's pick across the
- * whole pool (not just the viewer's leagues) — so people in multiple
- * leagues see everyone. Safe because RLS already reveals predictions to
- * any signed-in user once a match has kicked off; future matches yield
- * nothing. The PicksStrip judges each pick against the live-or-final
- * score client-side, so points/outcome here are left at null/'pending'
- * (kept only for the row shape). Knockouts excluded. Returns matchId ->
- * rows.
+ * For every started/past GROUP match, the picks of everyone the viewer
+ * shares a league with — the deduped UNION of members across all the
+ * viewer's leagues (includes the viewer). A person never sees picks from
+ * leagues they're not in. Filtered to started matches (RLS also blocks
+ * not-yet-kicked-off picks). The PicksStrip judges each pick against the
+ * live-or-final score client-side, so points/outcome are left
+ * null/'pending' here. Knockouts excluded. Returns matchId -> rows.
  */
 export async function getMatchPicks(): Promise<Record<string, MatchPickRow[]>> {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return {};
+
+    // Leagues the viewer belongs to → the union of their members.
+    const { data: myLeagues } = await supabase
+      .from("league_members").select("league_id").eq("user_id", user.id);
+    const leagueIds = (myLeagues ?? []).map((r) => r.league_id);
+    if (leagueIds.length === 0) return {};
+
+    const { data: memberRows } = await supabase
+      .from("league_members").select("user_id").in("league_id", leagueIds);
+    const memberIds = Array.from(new Set((memberRows ?? []).map((r) => r.user_id)));
+    if (memberIds.length === 0) return {};
 
     const nowIso = new Date().toISOString();
     const { data: startedMatches } = await supabase
@@ -430,13 +440,11 @@ export async function getMatchPicks(): Promise<Record<string, MatchPickRow[]>> {
     const { data: preds } = await supabase
       .from("predictions")
       .select("user_id, match_id, home_score, away_score")
-      .in("match_id", startedIds);
-
-    const userIds = Array.from(new Set((preds ?? []).map((p) => p.user_id)));
-    if (userIds.length === 0) return {};
+      .in("match_id", startedIds)
+      .in("user_id", memberIds);
 
     const { data: userRows } = await supabase
-      .from("users").select("id, display_name").in("id", userIds);
+      .from("users").select("id, display_name").in("id", memberIds);
     const nameById = new Map((userRows ?? []).map((u) => [u.id, u.display_name as string]));
 
     const byMatch: Record<string, MatchPickRow[]> = {};
