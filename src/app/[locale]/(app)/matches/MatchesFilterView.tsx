@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useTranslations } from 'next-intl';
 import { FeedMatchCard } from '@/components/predictions/FeedMatchCard';
 import { Button } from '@/components/ui/button';
-import { submitPredictions, getLiveScores } from '@/lib/api';
+import { submitPredictions, getLiveScores, getMatchPicks } from '@/lib/api';
 import { LOCK_BEFORE_KICKOFF_MS } from '@/lib/tournament';
 import type { MatchView, Locale, MatchPickRow, LiveScoresPayload } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -31,6 +31,7 @@ export function MatchesFilterView({
 
   const [matches, setMatches] = React.useState<MatchView[]>(initialMatches);
   const [live, setLive] = React.useState<LiveScoresPayload>(initialLive);
+  const [picks, setPicks] = React.useState<Record<string, MatchPickRow[]>>(picksByMatch);
   const [now, setNow] = React.useState(() => Date.now());
   const [mounted, setMounted] = React.useState(false);
   const [activeDay, setActiveDay] = React.useState<string | null>(null);
@@ -69,8 +70,10 @@ export function MatchesFilterView({
   React.useEffect(() => {
     let alive = true;
     const poll = async () => {
-      const p = await getLiveScores();
-      if (alive) setLive(p);
+      const [p, pk] = await Promise.all([getLiveScores(), getMatchPicks()]);
+      if (!alive) return;
+      setLive(p);
+      setPicks(pk);
     };
     const id = setInterval(() => { if (document.visibilityState === 'visible') poll(); }, 30000);
     const onVis = () => { if (document.visibilityState === 'visible') poll(); };
@@ -349,7 +352,7 @@ export function MatchesFilterView({
                     homeScore={edits[m.id]?.homeScore ?? m.myPrediction?.homeScore ?? 0}
                     awayScore={edits[m.id]?.awayScore ?? m.myPrediction?.awayScore ?? 0}
                     onChange={handleScoreChange}
-                    picks={picksByMatch[m.id]}
+                    picks={picks[m.id]}
                     myUserId={myUserId}
                   />
                 </div>

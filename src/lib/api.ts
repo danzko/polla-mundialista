@@ -419,7 +419,14 @@ export async function getMatchPicks(): Promise<Record<string, MatchPickRow[]>> {
     // Leagues the viewer belongs to → the union of their members.
     const { data: myLeagues } = await supabase
       .from("league_members").select("league_id").eq("user_id", user.id);
-    const leagueIds = (myLeagues ?? []).map((r) => r.league_id);
+    const candidateLeagueIds = (myLeagues ?? []).map((r) => r.league_id);
+    if (candidateLeagueIds.length === 0) return {};
+
+    // Drop soft-deleted leagues (RLS only returns live ones) so a defunct
+    // league can never widen who you see.
+    const { data: liveLeagues } = await supabase
+      .from("leagues").select("id").in("id", candidateLeagueIds);
+    const leagueIds = (liveLeagues ?? []).map((l) => l.id);
     if (leagueIds.length === 0) return {};
 
     const { data: memberRows } = await supabase
