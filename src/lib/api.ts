@@ -6,6 +6,7 @@ import type {
   SessionUser, Team, MatchView, LeagueSummary, LeagueDetail,
   BonusView, ActionResult, Locale, MatchStage, LeaderboardRow,
   LeagueMemberView, MatchPickRow, LiveScore, LiveScoresPayload,
+  BracketView, BracketMatchView,
 } from "./types";
 import {
   displayNameSchema, emailSchema, leagueNameSchema,
@@ -553,6 +554,113 @@ export async function changeDisplayName(input: { name: string }): Promise<Action
     return { ok: true, data: undefined };
   } catch (err: any) {
     return { ok: false, error: err.message || "Error al cambiar el nombre / Error changing name" };
+  }
+}
+
+/**
+ * The knockout bracket: every KO match (73–104) with its real participants
+ * (once groups conclude / rounds resolve) plus the viewer's own pick, and
+ * the lock state (locks at the first R32 kickoff). The client derives
+ * later-round participants from the player's advancers via the bracket tree.
+ */
+export async function getBracket(): Promise<BracketView> {
+  const empty: BracketView = { lockAt: null, locked: false, matches: [] };
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return empty;
+
+    const { data: matchRows } = await supabase
+      .from("matches")
+      .select("id, match_number, stage, kickoff_at, home_team_id, away_team_id")
+      .neq("stage", "group")
+      .order("match_number", { ascending: true });
+
+    const { data: picks } = await supabase
+      .from("bracket_picks")
+      .select("match_id, advancer_team_id, home_score, away_score")
+      .eq("user_id", user.id);
+    const pickByMatch = new Map(
+      (picks ?? []).map((p) => [p.match_id, p])
+    );
+
+    const r32Kickoffs = (matchRows ?? [])
+      .filter((m) => m.stage === "r32")
+      .map((m) => new Date(m.kickoff_at).getTime());
+    const lockAt = r32Kickoffs.length ? new Date(Math.min(...r32Kickoffs)).toISOString() : null;
+    const locked = lockAt ? Date.now() >= new Date(lockAt).getTime() : false;
+
+    const matches: BracketMatchView[] = (matchRows ?? []).map((m) => {
+      const p = pickByMatch.get(m.id);
+      return {
+        matchId: m.id,
+        matchNumber: m.match_number,
+        stage: m.stage as MatchStage,
+        kickoffAt: m.kickoff_at,
+        homeTeamId: m.home_team_id,
+        awayTeamId: m.away_team_id,
+        myAdvancerTeamId: p?.advancer_team_id ?? null,
+        myHomeScore: p?.home_score ?? null,
+        myAwayScore: p?.away_score ?? null,
+      };
+    });
+
+    return { lockAt, locked, matches };
+  } catch (err) {
+    console.error("Error in getBracket:", err);
+    return empty;
+  }
+}
+
+/**
+ * Save the viewer's bracket. RLS enforces the one-window lock (writes only
+ * before the first R32 kickoff, knockout matches only). advancerTeamId is
+ * who they advance from each match; scores are optional precision picks.
+ */
+export async function submitBracket(input: {
+  picks: Array<{ matchId: string; advancerTeamId: string | null; homeScore: number | null; awayScore: number | null }>;
+}): Promise<ActionResult> {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { ok: false, error: "No autenticado / Not authenticated" };
+
+    const hasProfile = await checkUserProfile(supabase, user.id);
+    if (!hasProfile) {
+      return { ok: false, error: "Completa tu perfil primero / Complete onboarding first" };
+    }
+
+    for (const p of input.picks) {
+      const okScore = (v: number | null) => v === null || (Number.isInteger(v) && v >= 0 && v <= 30);
+      if (!okScore(p.homeScore) || !okScore(p.awayScore)) {
+        return { ok: false, error: "Marcador inválido / Invalid score (0-30)" };
+      }
+    }
+
+    const rows = input.picks.map((p) => ({
+      user_id: user.id,
+      match_id: p.matchId,
+      advancer_team_id: p.advancerTeamId,
+      home_score: p.homeScore,
+      away_score: p.awayScore,
+      updated_at: new Date().toISOString(),
+    }));
+
+    if (rows.length > 0) {
+      const { error } = await supabase.from("bracket_picks").upsert(rows);
+      if (error) {
+        const locked = error.message.toLowerCase().includes("policy");
+        return {
+          ok: false,
+          error: locked
+            ? "La llave ya está cerrada / The bracket is locked"
+            : error.message,
+        };
+      }
+    }
+    return { ok: true, data: undefined };
+  } catch (err: any) {
+    return { ok: false, error: err.message || "Error al guardar la llave / Error saving bracket" };
   }
 }
 

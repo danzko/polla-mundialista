@@ -70,6 +70,26 @@ export interface LiveScoresPayload {
   lastRunAt: string | null; // heartbeat: when the ESPN sync last ran
 }
 
+/** One knockout match in the bracket view: its real participants (once
+ * assigned) plus the viewer's own pick for it. */
+export interface BracketMatchView {
+  matchId: string;
+  matchNumber: number;       // 73–104
+  stage: MatchStage;
+  kickoffAt: string;
+  homeTeamId: string | null; // real team once groups conclude / round resolves
+  awayTeamId: string | null;
+  myAdvancerTeamId: string | null;
+  myHomeScore: number | null;
+  myAwayScore: number | null;
+}
+
+export interface BracketView {
+  lockAt: string | null;     // first R32 kickoff
+  locked: boolean;
+  matches: BracketMatchView[];
+}
+
 export interface LeagueSummary {
   id: string;
   name: string;

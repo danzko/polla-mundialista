@@ -123,12 +123,15 @@ export const matchResults = pgTable("match_results", {
     .references(() => matches.id, { onDelete: "cascade" }),
   homeScore: smallint("home_score").notNull(),
   awayScore: smallint("away_score").notNull(),
+  // Who actually advanced — covers penalty shootouts (a draw on the board).
+  // Null for group matches. Set for knockouts (migration 0014).
+  advancedTeamId: uuid("advanced_team_id").references(() => teams.id),
   recordedAt: timestamp("recorded_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
-  recordedBy: uuid("recorded_by")
-    .references(() => users.id)
-    .notNull(),
+  // Nullable: machine-recorded results (espn-auto) have no human (migration 0009).
+  recordedBy: uuid("recorded_by").references(() => users.id),
+  source: text("source").default("admin").notNull(),
 });
 
 /**
@@ -239,6 +242,37 @@ export const bonusPredictions = pgTable("bonus_predictions", {
     .defaultNow()
     .notNull(),
 });
+
+/**
+ * Per-user knockout bracket predictions. One row per knockout match the
+ * user fills (advancer + score). Participants of later rounds are derived
+ * from earlier advancers (bracket tree), so only the advancer + score are
+ * stored. Locked at the first R32 kickoff. See migration 0014.
+ */
+export const bracketPicks = pgTable(
+  "bracket_picks",
+  {
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    matchId: uuid("match_id")
+      .references(() => matches.id, { onDelete: "cascade" })
+      .notNull(),
+    advancerTeamId: uuid("advancer_team_id").references(() => teams.id),
+    homeScore: smallint("home_score"),
+    awayScore: smallint("away_score"),
+    submittedAt: timestamp("submitted_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.matchId] }),
+    index("bracket_picks_match_idx").on(table.matchId),
+  ]
+);
 
 // ============================================================
 // Relations (for Drizzle relational queries)
@@ -351,3 +385,5 @@ export type LeagueMember = typeof leagueMembers.$inferSelect;
 export type Prediction = typeof predictions.$inferSelect;
 export type NewPrediction = typeof predictions.$inferInsert;
 export type BonusPrediction = typeof bonusPredictions.$inferSelect;
+export type BracketPick = typeof bracketPicks.$inferSelect;
+export type NewBracketPick = typeof bracketPicks.$inferInsert;
