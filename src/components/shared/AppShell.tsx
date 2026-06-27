@@ -4,7 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Trophy, Calendar, Home, LogOut, Menu, X } from 'lucide-react';
+import { Trophy, Calendar, Home, LogOut, Menu, X, GitBranch } from 'lucide-react';
 import { LanguageToggle } from './LanguageToggle';
 import { NameChangeMenu } from './NameChangeMenu';
 import { Button } from '@/components/ui/button';
@@ -36,6 +36,11 @@ export function AppShell({ children, user, onLogout }: AppShellProps) {
       label: t('nav.matches'),
       href: `${basePath}/matches`,
       icon: Calendar,
+    },
+    {
+      label: t('nav.bracket'),
+      href: `${basePath}/bracket`,
+      icon: GitBranch,
     },
     {
       label: t('nav.bonuses'),

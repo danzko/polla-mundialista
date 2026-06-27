@@ -18,6 +18,7 @@
   "nav": {
     "dashboard": "My Leagues",
     "matches": "Matches",
+    "bracket": "Bracket",
     "bonuses": "Tournament Picks"
   },
   "landing": {
