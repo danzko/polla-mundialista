@@ -38,18 +38,22 @@ overriding a result a human entered (red mismatch alert decides).
 
 **Read `docs/HANDOFF-MYTHOS.md` first** -- it corrects this file where they disagree and records decisions already made.
 
-What's next (before June 28, when knockouts start):
-1. Bracket entry UI on the REAL Round of 32 (one-shot: pick R16 winners through
-   the final + third-place game), open only in the June 27 -> 28 window, locked
-   at first R32 kickoff. `scripts/wc2026-bracket-structure.json` has the
-   validated bracket tree; per-user predicted brackets are NOT needed anymore.
-2. Scoring rewrite in leaderboard_view: advancement points (R32 tier derived
-   from each player's locked group predictions via group tables + best-thirds
-   lookup; later tiers from bracket picks), champion/boot/ball 50/25/25 from
-   bonus_predictions, tiebreak by knockout-stage points. Drop the 6/2/0 x2
-   knockout-match scoring and the 15/10/5/3 team bonuses.
+SHIPPED for June 28 (knockouts) — all live and verified:
+1. ✅ Bracket entry UI on the REAL Round of 32 (round-by-round advancer picks
+   through the final + third-place game). Lock is PER MATCH:
+   `min(11:59pm ET deadline, kickoff − 15 min)` (migration 0017), not the old
+   one-shot first-R32-kickoff lock. `scripts/wc2026-bracket-structure.json` has
+   the validated tree; no per-user predicted brackets.
+2. ✅ Scoring rewrite in leaderboard_view (migrations 0018/0020/0022 — the live
+   authority): advancement points (R32 tier derived from each player's locked
+   group predictions; later tiers from bracket picks), champion/boot/ball
+   50/25/25 from bonus_predictions, tiebreak by knockout-stage points. The old
+   6/2/0 x2 knockout multiplier and 15/10/5/3 team bonuses are GONE — knockout
+   scorelines now score the SAME as group (6/2/0). See the "CURRENT LIVE
+   SCORING" block below.
 3. Standings race view (docs/antigravity-handoff-2.md; data ready in `leaderboard_matchday`).
-4. Admin: assign real knockout teams as groups conclude.
+4. ✅ Knockout teams auto-assign from ESPN results (edge function) and auto-
+   populate downstream bracket slots via triggers; admin can still override.
 
 ## Stack
 
@@ -123,13 +127,15 @@ Tiebreaker: total pts, then most points earned in the knockout stage.
 
 Prizes (1st 75% / 2nd 25% after 3rd gets buy-in back) are handled OUTSIDE the app -- never build payment features.
 
-IMPLEMENTATION STATUS: the live leaderboard_view + TS engine still score knockout
-matches as 6/2/0 x2 and team bonuses as 15/10/5/3 -- harmless until knockout
-results exist (June 28+). The rewrite to advancement-based scoring MUST land
-with the bracket build before June 28. R32 advancement is derivable from group
-predictions already locked at kickoff; champion + third picks are collected in
-bonus_predictions; runner-up/semifinalist picks are collected but not scored
-under the official rules.
+IMPLEMENTATION STATUS (June 28 2026 — DONE): the advancement-based rewrite
+shipped. The live `leaderboard_view` (migrations 0018/0020/0022) is the single
+source of truth and scores knockout SCORELINES as 6/2/0 (same as group, NO x2),
+advancement per round, and champion/boot/ball 50/25/25 from bonus_predictions.
+The old x2 multiplier and 15/10/5/3 team bonuses are removed. The TS
+`src/lib/scoring/calculate-points.ts` now only computes the per-match 6/2/0
+"points earned" pill (the SQL view owns everything else); `bracket-scoring.ts`
+documents the spec and is intentionally diverged from the live view. Legacy
+runner-up/semifinalist columns in bonus_predictions remain UNSCORED.
 
 ## Architecture decisions (don't revisit these)
 

@@ -1,31 +1,37 @@
 # HANDOFF — Polla Mundialista 2026 (knockout bracket build)
 
-Written for the next coding agent. Read this top to bottom before touching
-anything. It tells you what the app is, what's live, what was just built, the
-**new scoring spec that supersedes the placeholder numbers in the code**, the
-two uncommitted/undeployed things you must finish, and the gotchas that have
-bitten us repeatedly.
+> **STATUS UPDATE — June 28 2026: the four "what to do next" items below are all
+> SHIPPED and live.** The knockout bracket, the v1.1 scoring rewrite, the
+> leaderboard wiring, and the auto-assign edge function are deployed and
+> verified in production. This file is kept as a build log; §0 records what was
+> done. For the current canonical scoring, read CLAUDE.md's "CURRENT LIVE
+> SCORING (June 28)" block and `docs/wc2026_pool_scoring_spec.md` — and treat
+> the live Postgres `leaderboard_view` (migrations 0018/0020/0022) as the single
+> source of truth. The detailed §4 sections below describe the original plan and
+> are historical.
 
-Pair this with `CLAUDE.md` (project canon) and `docs/HANDOFF-MYTHOS.md` (older
-decisions). Where this file and CLAUDE.md disagree about scoring, **this file +
-`docs/wc2026_pool_scoring_spec.md` win** (the spec is newer).
+Written for the next coding agent. Pair this with `CLAUDE.md` (project canon)
+and `docs/HANDOFF-MYTHOS.md` (older decisions).
 
 ---
 
-## 0. TL;DR — what to do next (in order)
+## 0. TL;DR — what was done (all shipped June 28 2026)
 
-1. **Commit + deploy the edge-function change that's already written but NOT
-   live.** `supabase/functions/live-scores-sync/index.ts` has uncommitted
-   AUTO-ASSIGN code (real 32 teams → knockout matches + record advancers). The
-   **live deployed function is still the older version without it.** See §4.1.
-2. **Re-do bracket scoring to match the new spec** `docs/wc2026_pool_scoring_spec.md`
-   (v1.1). The numbers currently in `src/lib/bracket-scoring.ts` are
-   placeholders from before the spec and are **wrong** vs the spec. See §4.2.
-3. **Wire bracket scoring into the leaderboard** (today it isn't scored at all,
-   and group/knockout-match scoring in the live view is still the old model).
-   See §4.3.
-4. Resolve the **champion double-count question** with the owner before shipping
-   scoring. See §4.2 ⚠️.
+1. ✅ **Edge-function AUTO-ASSIGN deployed.** `live-scores-sync` (live version 4)
+   maps ESPN events, auto-assigns the real 32 teams into the knockout matches
+   (fill-only), and records advancers incl. penalty winners. Verified: 30/30
+   events matching, knockout slots populating.
+2. ✅ **Bracket scoring rewritten to spec v1.1.** Advancement R16 4 / QF 8 /
+   SF 16 / FINAL 30 / CHAMPION 55 per correct team; knockout SCORELINES score
+   the SAME as group (6/2/0) — the old x2 multiplier and special KO bonuses were
+   removed by group decision. All weights tunable in the SQL view.
+3. ✅ **Scoring wired into the leaderboard.** `leaderboard_view` is the live
+   authority (migrations 0018/0020/0022). Knockout teams auto-populate the
+   bracket deterministically via triggers (`derive_ko_advancer` +
+   `propagate_bracket`, migration 0020).
+4. ✅ **Champion double-count resolved (owner decision):** champion scores in
+   BOTH the bracket (55, via the final's advancer) AND the pre-tournament bonus
+   pick (50). Intentional. Golden Boot 25, Golden Ball 25.
 
 Everything ships by **git push to `main`** (Vercel auto-deploys). DB + edge
 functions go through the **Supabase MCP tools**, not the CLI (no CLI installed).
