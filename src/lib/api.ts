@@ -13,7 +13,7 @@ import {
   inviteCodeSchema, scoreSchema, bonusPredictionsSchema
 } from "./validation";
 import { calculateMatchPoints } from "./scoring/calculate-points";
-import { TOURNAMENT_START_ISO, LOCK_BEFORE_KICKOFF_MS } from "./tournament";
+import { TOURNAMENT_START_ISO, LOCK_BEFORE_KICKOFF_MS, BRACKET_ENTRY_DEADLINE_ISO } from "./tournament";
 
 // ==========================================
 // READS
@@ -615,11 +615,11 @@ export async function getBracket(): Promise<BracketView> {
       (picks ?? []).map((p) => [p.match_id, p])
     );
 
-    const r32Kickoffs = (matchRows ?? [])
-      .filter((m) => m.stage === "r32")
-      .map((m) => new Date(m.kickoff_at).getTime());
-    const lockAt = r32Kickoffs.length ? new Date(Math.min(...r32Kickoffs)).toISOString() : null;
-    const locked = lockAt ? Date.now() >= new Date(lockAt).getTime() : false;
+    // Per-match lock: each pick locks at min(entry deadline, its kickoff-15m).
+    // `lockAt` here is the overall entry deadline (when the whole bracket
+    // closes); the client derives each game's own lock from its kickoff.
+    const lockAt = BRACKET_ENTRY_DEADLINE_ISO;
+    const locked = Date.now() >= new Date(lockAt).getTime();
 
     const matches: BracketMatchView[] = (matchRows ?? []).map((m) => {
       const p = pickByMatch.get(m.id);
@@ -668,14 +668,38 @@ export async function submitBracket(input: {
       }
     }
 
-    const rows = input.picks.map((p) => ({
-      user_id: user.id,
-      match_id: p.matchId,
-      advancer_team_id: p.advancerTeamId,
-      home_score: p.homeScore,
-      away_score: p.awayScore,
-      updated_at: new Date().toISOString(),
-    }));
+    // Per-match lock: only persist picks for knockout games still open
+    // (now < min(entry deadline, kickoff - 15m)). Locked games (e.g. match 73
+    // once it nears kickoff) are skipped so one closed game can't fail the
+    // whole save — RLS enforces the same rule as a backstop.
+    const ids = input.picks.map((p) => p.matchId);
+    const { data: kmatches } = await supabase
+      .from("matches")
+      .select("id, kickoff_at, stage, is_voided")
+      .in("id", ids);
+    const deadlineMs = new Date(BRACKET_ENTRY_DEADLINE_ISO).getTime();
+    const nowMs = Date.now();
+    const openIds = new Set(
+      (kmatches ?? [])
+        .filter(
+          (m) =>
+            m.stage !== "group" &&
+            !m.is_voided &&
+            nowMs < Math.min(deadlineMs, new Date(m.kickoff_at).getTime() - LOCK_BEFORE_KICKOFF_MS)
+        )
+        .map((m) => m.id)
+    );
+
+    const rows = input.picks
+      .filter((p) => openIds.has(p.matchId))
+      .map((p) => ({
+        user_id: user.id,
+        match_id: p.matchId,
+        advancer_team_id: p.advancerTeamId,
+        home_score: p.homeScore,
+        away_score: p.awayScore,
+        updated_at: new Date().toISOString(),
+      }));
 
     if (rows.length > 0) {
       const { error } = await supabase.from("bracket_picks").upsert(rows);

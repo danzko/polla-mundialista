@@ -10,6 +10,7 @@ import {
   BRACKET_BY_MATCH, ROUND_ORDER, parseFeed, type KnockoutRound,
 } from '@/lib/bracket';
 import { knockoutSlotLabel } from '@/lib/bracket-slots';
+import { LOCK_BEFORE_KICKOFF_MS } from '@/lib/tournament';
 import { cn } from '@/lib/utils';
 import type { BracketView, BracketMatchView, Team, Locale } from '@/lib/types';
 
@@ -60,7 +61,28 @@ export function BracketBoard({ initialBracket, teams, locale, myUserId }: Bracke
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => { setMounted(true); }, []);
 
+  // `locked` = the whole bracket is closed (entry deadline passed). Individual
+  // games can lock earlier — a pick locks at min(deadline, its kickoff - 15m) —
+  // so a game that kicks off before the deadline (e.g. the first R32 match)
+  // closes when it starts while the rest stay open until the deadline.
   const locked = initialBracket.locked;
+  const deadlineMs = initialBracket.lockAt ? new Date(initialBracket.lockAt).getTime() : null;
+  const [now, setNow] = React.useState(() => Date.now());
+  React.useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(id);
+  }, []);
+  const matchLocked = React.useCallback(
+    (mn: number) => {
+      if (locked) return true;
+      const mv = matchByNumber.get(mn);
+      if (!mv?.kickoffAt) return false;
+      const koLock = new Date(mv.kickoffAt).getTime() - LOCK_BEFORE_KICKOFF_MS;
+      const lockMoment = deadlineMs != null ? Math.min(deadlineMs, koLock) : koLock;
+      return now >= lockMoment;
+    },
+    [locked, matchByNumber, deadlineMs, now]
+  );
 
   // Resolve which real/predicted team sits on a side of a match.
   const sideTeam = React.useCallback(
@@ -96,7 +118,7 @@ export function BracketBoard({ initialBracket, teams, locale, myUserId }: Bracke
   // After changing an advancer, clear any downstream pick whose advancer is
   // no longer one of that match's (re-derived) participants.
   const setAdvancer = (matchNumber: number, teamId: string) => {
-    if (locked) return;
+    if (matchLocked(matchNumber)) return;
     setPicks((prev) => {
       const next = { ...prev, [matchNumber]: { ...prev[matchNumber], advancerTeamId: teamId } };
       let changed = true;
@@ -233,8 +255,8 @@ export function BracketBoard({ initialBracket, teams, locale, myUserId }: Bracke
           {!locked && (
             <div className="mb-3 rounded-lg border border-border/40 bg-secondary/30 px-2.5 py-1.5 text-[10.5px] leading-relaxed text-muted-foreground">
               {es
-                ? 'Aquí eliges solo quién avanza (los puntos grandes). Los marcadores exactos se predicen ronda por ronda en la pestaña Partidos.'
-                : 'Here you pick only who advances (the big points). Exact scorelines are predicted round-by-round in the Matches tab.'}
+                ? 'Aquí eliges solo quién avanza (los puntos grandes). Los marcadores exactos se predicen ronda por ronda en la pestaña Partidos. Tienes hasta el cierre de hoy para toda la llave — salvo un partido que ya empiece, que se cierra a su hora de inicio.'
+                : 'Here you pick only who advances (the big points). Exact scorelines are predicted round-by-round in the Matches tab. You have until tonight’s deadline for the whole bracket — except a game that kicks off sooner, which closes at its start.'}
             </div>
           )}
 
@@ -245,11 +267,17 @@ export function BracketBoard({ initialBracket, teams, locale, myUserId }: Bracke
               const awayId = sideTeam(mn, 'away');
               const p = picks[mn] ?? { advancerTeamId: null, homeScore: null, awayScore: null };
               const ready = !!homeId && !!awayId;
+              const mLocked = matchLocked(mn);
               return (
                 <div key={mn} className="rounded-xl border border-border/45 bg-card/50 overflow-hidden">
-                  <div className="px-2.5 py-1 text-[10px] text-muted-foreground/80 bg-secondary/40">
-                    {es ? 'Partido' : 'Match'} {mn}
+                  <div className="px-2.5 py-1 text-[10px] text-muted-foreground/80 bg-secondary/40 flex items-center">
+                    <span>{es ? 'Partido' : 'Match'} {mn}</span>
                     {!ready && <span className="ml-1.5">· {es ? 'esperando equipos' : 'awaiting teams'}</span>}
+                    {ready && mLocked && (
+                      <span className="ml-auto inline-flex items-center gap-1 text-amber-500 font-semibold">
+                        <Lock className="h-2.5 w-2.5" /> {es ? 'cerrado' : 'locked'}
+                      </span>
+                    )}
                   </div>
                   {(['home', 'away'] as const).map((side, idx) => {
                     const teamId = side === 'home' ? homeId : awayId;
@@ -264,15 +292,15 @@ export function BracketBoard({ initialBracket, teams, locale, myUserId }: Bracke
                         )}
                       >
                         <button
-                          disabled={!ready || locked}
+                          disabled={!ready || mLocked}
                           onClick={() => teamId && setAdvancer(mn, teamId)}
                           className={cn(
                             'flex items-center gap-2 min-w-0 text-[13px] text-left',
                             isWinner ? 'font-bold text-emerald-300' : 'text-foreground',
-                            (!ready || locked) && 'cursor-default'
+                            (!ready || mLocked) && 'cursor-default'
                           )}
                         >
-                          {ready && !locked && (
+                          {ready && !mLocked && (
                             <span className={cn('shrink-0', isWinner ? 'text-emerald-400' : 'text-muted-foreground/40')}>
                               <Check className="h-3.5 w-3.5" />
                             </span>
