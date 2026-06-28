@@ -120,6 +120,36 @@ export default async function RulesPage({ params }: RulesPageProps) {
         </ul>
       </section>
 
+      {/* BONUS PICKS (pre-tournament) */}
+      <section className="mt-4 rounded-2xl border border-border/50 bg-card/50 p-4">
+        <h2 className="font-bold flex items-center gap-2">
+          <Trophy className="h-4 w-4 text-amber-500" />
+          {es ? 'Picks de bonos (pre-torneo)' : 'Bonus picks (pre-tournament)'}
+        </h2>
+        <ul className="mt-3 space-y-2 text-[13px]">
+          <li className="flex gap-2">
+            <span className="font-bold text-amber-400 shrink-0">+50</span>
+            <span className="text-muted-foreground">
+              {es
+                ? 'Campeón: tu pick de campeón pre-torneo paga 50. El campeón también paga 55 en la Llave — así que acertarlo suma en los dos lados.'
+                : 'Champion: your pre-tournament champion pick pays 50. The champion also pays 55 in the Bracket — so nailing it scores on both sides.'}
+            </span>
+          </li>
+          <li className="flex gap-2">
+            <span className="font-bold text-amber-400 shrink-0">+25</span>
+            <span className="text-muted-foreground">
+              {es ? 'Bota de Oro (goleador del torneo).' : 'Golden Boot (tournament top scorer).'}
+            </span>
+          </li>
+          <li className="flex gap-2">
+            <span className="font-bold text-amber-400 shrink-0">+25</span>
+            <span className="text-muted-foreground">
+              {es ? 'Balón de Oro (mejor jugador).' : 'Golden Ball (best player).'}
+            </span>
+          </li>
+        </ul>
+      </section>
+
       {/* TIEBREAKER */}
       <section className="mt-4 rounded-2xl border border-border/50 bg-card/50 p-4">
         <h2 className="font-bold">{es ? 'Desempate' : 'Tiebreaker'}</h2>
