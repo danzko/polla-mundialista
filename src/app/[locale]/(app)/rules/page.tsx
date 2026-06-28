@@ -54,19 +54,26 @@ export default async function RulesPage({ params }: RulesPageProps) {
             ? 'Eliges quién avanza: qué equipos llegan a cada ronda. Ganas los puntos de la ronda por cada equipo que aciertes, y se acumula ronda a ronda.'
             : 'You pick who advances: which teams reach each round. You earn that round’s points for every team you get right, and it stacks round by round.'}
         </p>
-        <ul className="mt-3 divide-y divide-border/40 rounded-xl border border-border/40 overflow-hidden">
+        {/* Bar graph: points escalate sharply by round (per correct team). */}
+        <div className="mt-3 space-y-1.5">
           {advancement.map((r) => (
-            <li key={r.en} className="flex items-center justify-between px-3 py-2 text-sm">
-              <span>{es ? r.es : r.en}</span>
-              <span className="font-extrabold text-primary">
+            <div key={r.en} className="flex items-center gap-2 text-[12px]">
+              <span className="w-24 shrink-0 text-muted-foreground">{es ? r.es : r.en}</span>
+              <div className="flex-1 h-5 rounded bg-secondary/40 overflow-hidden">
+                <div
+                  className="h-full rounded bg-gradient-to-r from-primary to-emerald-400"
+                  style={{ width: `${(r.pts / 55) * 100}%` }}
+                />
+              </div>
+              <span className="w-16 text-right font-extrabold text-primary">
                 +{r.pts}{' '}
-                <span className="text-[11px] font-medium text-muted-foreground">
-                  {es ? 'por equipo' : 'per team'}
+                <span className="text-[10px] font-medium text-muted-foreground">
+                  {es ? '/equipo' : '/team'}
                 </span>
               </span>
-            </li>
+            </div>
           ))}
-        </ul>
+        </div>
         <div className="mt-3 rounded-xl border border-amber-500/40 bg-amber-500/[0.08] p-3 text-[13px] leading-relaxed">
           {es ? (
             <>Un equipo que pones campeón y gana suma <strong>4+8+16+30+55 = 113 pts</strong> él solo. Solo importan los equipos, no el camino que dibujes.</>
@@ -117,6 +124,23 @@ export default async function RulesPage({ params }: RulesPageProps) {
             ? 'Quién avanza por penales no afecta este marcador — eso se premia en la Llave.'
             : 'Who advances on penalties doesn’t affect this scoreline — that’s rewarded in the Bracket.'}
         </p>
+        {/* Worked example: you predicted Brazil 2–1. */}
+        <div className="mt-3 rounded-xl border border-border/40 overflow-hidden text-[12px]">
+          <div className="bg-secondary/40 px-3 py-1.5 font-semibold">
+            {es ? 'Ejemplo: predijiste 🇧🇷 Brasil 2–1' : 'Example: you predicted 🇧🇷 Brazil 2–1'}
+          </div>
+          {[
+            { r: es ? 'Termina 2–1' : 'Ends 2–1', n: '+6', c: 'text-emerald-400', why: es ? 'marcador exacto' : 'exact score' },
+            { r: es ? 'Termina 3–1' : 'Ends 3–1', n: '+2', c: 'text-emerald-400', why: es ? 'ganó Brasil, marcador distinto' : 'Brazil still won, wrong score' },
+            { r: es ? 'Termina 1–2' : 'Ends 1–2', n: '0', c: 'text-muted-foreground', why: es ? 'Brasil perdió' : 'Brazil lost' },
+          ].map((row) => (
+            <div key={row.r} className="flex items-center justify-between gap-2 border-t border-border/30 px-3 py-1.5">
+              <span className="w-24 shrink-0">{row.r}</span>
+              <span className="flex-1 text-muted-foreground">{row.why}</span>
+              <span className={`font-extrabold ${row.c}`}>{row.n}</span>
+            </div>
+          ))}
+        </div>
       </section>
 
       {/* BONUS PICKS (pre-tournament) */}
@@ -147,6 +171,37 @@ export default async function RulesPage({ params }: RulesPageProps) {
             </span>
           </li>
         </ul>
+      </section>
+
+      {/* WORKED EXAMPLE */}
+      <section className="mt-4 rounded-2xl border border-primary/30 bg-primary/[0.05] p-4">
+        <h2 className="font-bold flex items-center gap-2">
+          🧮 {es ? 'Ejemplo completo: cómo suma Carlos' : 'Full example: how Carlos adds up'}
+        </h2>
+        <div className="mt-3 rounded-xl border border-border/40 overflow-hidden text-[12px]">
+          {[
+            { what: es ? '🇫🇷 Francia → Campeón (y gana)' : '🇫🇷 France → Champion (and wins)', detail: '4+8+16+30+55', pts: 113 },
+            { what: es ? '🇫🇷 Francia, su pick de Campeón pre-torneo' : '🇫🇷 France, his pre-tournament Champion pick', detail: '', pts: 50 },
+            { what: es ? '🇧🇷 Brasil → Final (pierde la final)' : '🇧🇷 Brazil → Final (loses the final)', detail: '4+8+16+30', pts: 58 },
+            { what: es ? '3 marcadores exactos en eliminatorias' : '3 knockout scorelines exact', detail: '3 × 6', pts: 18 },
+            { what: es ? 'Bota de Oro acertada' : 'Golden Boot correct', detail: '', pts: 25 },
+          ].map((row) => (
+            <div key={row.what} className="flex items-center justify-between gap-2 border-b border-border/30 px-3 py-1.5">
+              <span className="flex-1">{row.what}</span>
+              {row.detail && <span className="text-muted-foreground/70 hidden sm:inline">{row.detail}</span>}
+              <span className="w-12 text-right font-extrabold text-primary">+{row.pts}</span>
+            </div>
+          ))}
+          <div className="flex items-center justify-between gap-2 px-3 py-2 bg-secondary/40 font-extrabold">
+            <span>{es ? 'Total' : 'Total'}</span>
+            <span className="text-emerald-400">264</span>
+          </div>
+        </div>
+        <p className="text-[11px] text-muted-foreground/70 mt-2 leading-relaxed">
+          {es
+            ? 'Fíjate: Francia le pagó en cada ronda (se acumula) y otra vez por su pick de campeón. Una buena lectura del torneo vale mucho más que un marcador suelto.'
+            : 'Notice: France paid him in every round (it stacks) and again via his champion pick. Reading the tournament right is worth far more than a lucky scoreline.'}
+        </p>
       </section>
 
       {/* TIEBREAKER */}
