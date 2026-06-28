@@ -4,7 +4,6 @@ import * as React from 'react';
 import { useTranslations } from 'next-intl';
 import { Lock, Trophy, Check, LayoutList, GitBranch } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ScoreStepper } from '@/components/predictions/ScoreStepper';
 import { submitBracket } from '@/lib/api';
 import {
   BRACKET_BY_MATCH, ROUND_ORDER, parseFeed, type KnockoutRound,
@@ -117,18 +116,6 @@ export function BracketBoard({ initialBracket, teams, locale, myUserId }: Bracke
     });
   };
 
-  const setScore = (matchNumber: number, side: 'home' | 'away', value: number) => {
-    if (locked) return;
-    setPicks((prev) => ({
-      ...prev,
-      [matchNumber]: {
-        ...prev[matchNumber],
-        homeScore: side === 'home' ? value : prev[matchNumber]?.homeScore ?? 0,
-        awayScore: side === 'away' ? value : prev[matchNumber]?.awayScore ?? 0,
-      },
-    }));
-  };
-
   const round = ROUND_ORDER[roundIdx];
   const roundGames = round.matches;
   const chosenInRound = roundGames.filter((m) => picks[m]?.advancerTeamId).length;
@@ -141,8 +128,9 @@ export function BracketBoard({ initialBracket, teams, locale, myUserId }: Bracke
     const payload = initialBracket.matches
       .map((m) => {
         const p = picks[m.matchNumber];
-        return p && (p.advancerTeamId || p.homeScore != null || p.awayScore != null)
-          ? { matchId: m.matchId, advancerTeamId: p.advancerTeamId, homeScore: p.homeScore, awayScore: p.awayScore }
+        // Advancer-only: scorelines are predicted per round in the Matches tab.
+        return p && p.advancerTeamId
+          ? { matchId: m.matchId, advancerTeamId: p.advancerTeamId, homeScore: null, awayScore: null }
           : null;
       })
       .filter(Boolean) as Array<{ matchId: string; advancerTeamId: string | null; homeScore: number | null; awayScore: number | null }>;
@@ -234,6 +222,13 @@ export function BracketBoard({ initialBracket, teams, locale, myUserId }: Bracke
               ? (es ? 'Llave cerrada — solo lectura' : 'Bracket locked — read only')
               : (es ? `Toca quién avanza · ${chosenInRound}/${roundGames.length} listos` : `Tap who advances · ${chosenInRound}/${roundGames.length} set`)}
           </div>
+          {!locked && (
+            <div className="mb-3 rounded-lg border border-border/40 bg-secondary/30 px-2.5 py-1.5 text-[10.5px] leading-relaxed text-muted-foreground">
+              {es
+                ? 'Aquí eliges solo quién avanza (los puntos grandes). Los marcadores exactos se predicen ronda por ronda en la pestaña Partidos.'
+                : 'Here you pick only who advances (the big points). Exact scorelines are predicted round-by-round in the Matches tab.'}
+            </div>
+          )}
 
           {/* GAMES IN ROUND */}
           <div className="space-y-2.5">
@@ -276,13 +271,6 @@ export function BracketBoard({ initialBracket, teams, locale, myUserId }: Bracke
                           )}
                           <span className="truncate">{labelFor(mn, side, teamId)}</span>
                         </button>
-                        <div className="shrink-0 scale-90 origin-right">
-                          <ScoreStepper
-                            value={(side === 'home' ? p.homeScore : p.awayScore) ?? 0}
-                            onChange={(v) => setScore(mn, side, v)}
-                            disabled={!ready || locked}
-                          />
-                        </div>
                       </div>
                     );
                   })}
