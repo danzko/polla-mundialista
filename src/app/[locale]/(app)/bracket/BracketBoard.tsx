@@ -282,32 +282,41 @@ export function BracketBoard({ initialBracket, teams, locale, myUserId }: Bracke
                   {(['home', 'away'] as const).map((side, idx) => {
                     const teamId = side === 'home' ? homeId : awayId;
                     const isWinner = !!teamId && p.advancerTeamId === teamId;
+                    const selectable = ready && !mLocked;
                     return (
-                      <div
+                      <button
                         key={side}
+                        type="button"
+                        disabled={!selectable}
+                        onClick={() => teamId && setAdvancer(mn, teamId)}
                         className={cn(
-                          'flex items-center justify-between gap-2 px-2.5 py-2',
+                          // Whole row is the click target (clear, large hit area).
+                          'w-full flex items-center justify-between gap-2 px-2.5 py-2.5 text-[13px] text-left transition-colors',
                           idx === 0 && 'border-b border-border/30',
-                          isWinner && 'bg-emerald-500/12'
+                          isWinner ? 'bg-emerald-500/15 font-bold text-emerald-300' : 'text-foreground',
+                          selectable && !isWinner && 'hover:bg-secondary/60 cursor-pointer',
+                          !selectable && 'cursor-default'
                         )}
                       >
-                        <button
-                          disabled={!ready || mLocked}
-                          onClick={() => teamId && setAdvancer(mn, teamId)}
-                          className={cn(
-                            'flex items-center gap-2 min-w-0 text-[13px] text-left',
-                            isWinner ? 'font-bold text-emerald-300' : 'text-foreground',
-                            (!ready || mLocked) && 'cursor-default'
-                          )}
-                        >
-                          {ready && !mLocked && (
-                            <span className={cn('shrink-0', isWinner ? 'text-emerald-400' : 'text-muted-foreground/40')}>
-                              <Check className="h-3.5 w-3.5" />
-                            </span>
-                          )}
+                        <span className="flex items-center gap-2 min-w-0">
+                          <span
+                            className={cn(
+                              'shrink-0 flex h-4 w-4 items-center justify-center rounded-full border transition-colors',
+                              isWinner
+                                ? 'border-emerald-400 bg-emerald-400 text-background'
+                                : selectable ? 'border-muted-foreground/50' : 'border-transparent'
+                            )}
+                          >
+                            {isWinner && <Check className="h-3 w-3" />}
+                          </span>
                           <span className="truncate">{labelFor(mn, side, teamId)}</span>
-                        </button>
-                      </div>
+                        </span>
+                        {selectable && !isWinner && (
+                          <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-primary/70">
+                            {es ? 'elegir' : 'pick'}
+                          </span>
+                        )}
+                      </button>
                     );
                   })}
                 </div>
