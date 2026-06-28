@@ -1,0 +1,13 @@
+-- ============================================================
+-- 0019 Remove the special knockout match-bonus layer (June 28, 2026)
+-- Applied live via Supabase MCP as: 0019_remove_knockout_match_bonuses
+--
+-- Group/owner decision: drop the knockout-only bonuses (R32 exact +2, later
+-- exact +1, winner +3 after R32). SUPERSEDED the same day by migration 0022,
+-- which restores knockout match scoring as plain 6/2/0 (same as the group
+-- stage) — 0019 had briefly made knockout scorelines score nothing, which was
+-- not the intent. See 0022 for the final leaderboard_view definition.
+-- (This file is kept for migration-history continuity; 0022 is authoritative.)
+-- ============================================================
+-- No-op placeholder: the operative change is in 0022_knockout_scored_like_group_6_2_0.sql.
+select 1;

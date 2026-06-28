@@ -27,6 +27,13 @@ export async function recordResult(input: {
   matchId: string;
   homeScore: number;
   awayScore: number;
+  /**
+   * Knockout only: the team that advanced (incl. penalty-shootout winner).
+   * For a decisive score a DB trigger auto-derives it, so this is only
+   * required when a knockout ends level and is decided on penalties.
+   * Omit (undefined) to leave the existing advancer untouched on update.
+   */
+  advancedTeamId?: string | null;
 }): Promise<ActionResult> {
   const auth = await requireSuperadmin();
   if (!auth.ok) return { ok: false, error: auth.error };
@@ -37,14 +44,19 @@ export async function recordResult(input: {
     return { ok: false, error: "Marcador invalido (0-30)" };
   }
 
-  const { error } = await auth.supabase.from("match_results").upsert({
+  const row: Record<string, unknown> = {
     match_id: input.matchId,
     home_score: h,
     away_score: a,
     recorded_by: auth.user!.id,
     recorded_at: new Date().toISOString(),
     source: "admin",
-  });
+  };
+  // Only touch advanced_team_id when explicitly provided; otherwise the
+  // before-trigger derives it for decisive scores and existing values stay.
+  if (input.advancedTeamId !== undefined) row.advanced_team_id = input.advancedTeamId;
+
+  const { error } = await auth.supabase.from("match_results").upsert(row);
   if (error) return { ok: false, error: error.message };
   return { ok: true };
 }

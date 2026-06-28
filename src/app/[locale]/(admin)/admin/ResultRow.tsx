@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { recordResult, clearResult, setVoided } from "./actions";
 
 interface Team {
+  id: string;
   code: string;
   nameEs: string;
   flagEmoji: string;
@@ -19,22 +20,36 @@ export interface RowMatch {
   isVoided: boolean;
   homeTeam: Team | null;
   awayTeam: Team | null;
-  result: { homeScore: number; awayScore: number } | null;
+  result: { homeScore: number; awayScore: number; advancedTeamId: string | null } | null;
 }
 
 export function ResultRow({ match, locale }: { match: RowMatch; locale: string }) {
   const router = useRouter();
   const [home, setHome] = React.useState(match.result ? String(match.result.homeScore) : "");
   const [away, setAway] = React.useState(match.result ? String(match.result.awayScore) : "");
+  const [advancer, setAdvancer] = React.useState<string | null>(match.result?.advancedTeamId ?? null);
   const [status, setStatus] = React.useState<"idle" | "saving" | "saved" | "error">("idle");
   const [msg, setMsg] = React.useState("");
 
   const hasTeams = Boolean(match.homeTeam && match.awayTeam);
+  const isKnockout = match.stage !== "group";
+  const isDraw = home !== "" && away !== "" && Number(home) === Number(away);
+  // Who advances: explicit pick, else the higher score, else none.
+  const effectiveAdvancer =
+    advancer ?? (home !== "" && away !== "" && Number(home) !== Number(away)
+      ? (Number(home) > Number(away) ? match.homeTeam?.id : match.awayTeam?.id) ?? null
+      : null);
 
   const save = async () => {
     if (home === "" || away === "") {
       setStatus("error");
       setMsg("Completa ambos marcadores");
+      return;
+    }
+    // A knockout can't end level: a draw needs the penalty-shootout advancer.
+    if (isKnockout && isDraw && !advancer) {
+      setStatus("error");
+      setMsg("Empate: elige quién avanza (penales)");
       return;
     }
     setStatus("saving");
@@ -43,6 +58,8 @@ export function ResultRow({ match, locale }: { match: RowMatch; locale: string }
       matchId: match.id,
       homeScore: Number(home),
       awayScore: Number(away),
+      // Send the advancer for knockout games so it's never left unset.
+      ...(isKnockout ? { advancedTeamId: effectiveAdvancer } : {}),
     });
     if (res.ok) {
       setStatus("saved");
@@ -130,6 +147,29 @@ export function ResultRow({ match, locale }: { match: RowMatch; locale: string }
           {match.awayTeam ? `${match.awayTeam.nameEs} ${match.awayTeam.flagEmoji}` : "TBD"}
         </div>
       </div>
+
+      {isKnockout && hasTeams && !match.isVoided && (
+        <div className="mt-2 flex items-center gap-2 text-xs">
+          <span className="text-muted-foreground">Avanza{isDraw ? " (penales)" : ""}:</span>
+          {[match.homeTeam!, match.awayTeam!].map((tm) => {
+            const sel = effectiveAdvancer === tm.id;
+            return (
+              <button
+                key={tm.id}
+                type="button"
+                onClick={() => setAdvancer(tm.id)}
+                className={`rounded-lg border px-2 py-1 font-semibold ${
+                  sel
+                    ? "border-emerald-400 bg-emerald-500/15 text-emerald-300"
+                    : "border-border text-muted-foreground"
+                }`}
+              >
+                {tm.flagEmoji} {tm.code}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       <div className="mt-2 flex items-center justify-between">
         <div className="flex gap-2">

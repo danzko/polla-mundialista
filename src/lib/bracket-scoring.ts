@@ -1,8 +1,18 @@
 /**
- * Knockout scoring — faithful implementation of
- * `docs/wc2026_pool_scoring_spec.md` (v1.1). ALL weights live in
- * BRACKET_SCORING so the owner can tune them; the Postgres leaderboard view
- * mirrors these exact numbers (keep them in sync).
+ * Knockout scoring — reference implementation of
+ * `docs/wc2026_pool_scoring_spec.md` (v1.1).
+ *
+ * ⚠️ NOT the live authority anymore. The Postgres `leaderboard_view`
+ * (migrations 0022/0020/0018) is what production scores, and it has
+ * intentionally diverged from this file by owner decision (June 28):
+ *   • knockout MATCH bonuses (R32 +2 / later +1 exact, +3 winner) were REMOVED
+ *     — knockout matches now score plain 6/2/0 like the group stage;
+ *   • champion is scored in TWO places (bracket 55 + pre-tournament bonus 50).
+ * This file still encodes the original spec (advancement + match bonuses, 403
+ * perfect entry) and its tests assert that model. Keep it as the spec
+ * reference for the BRACKET ADVANCEMENT values (R16 4 / QF 8 / SF 16 / FINAL 30
+ * / CHAMPION 55), which the view still matches; do not treat its match-bonus or
+ * total numbers as live. Tune live weights in the SQL view.
  *
  * Two distinct keyings (see spec §1):
  *   • Bracket advancement is scored on the round a team REACHES

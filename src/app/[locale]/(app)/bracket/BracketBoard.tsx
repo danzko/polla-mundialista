@@ -150,11 +150,15 @@ export function BracketBoard({ initialBracket, teams, locale, myUserId }: Bracke
     setToast(null);
     const payload = initialBracket.matches
       .map((m) => {
-        const p = picks[m.matchNumber];
-        // Advancer-only: scorelines are predicted per round in the Matches tab.
-        return p && p.advancerTeamId
-          ? { matchId: m.matchId, advancerTeamId: p.advancerTeamId, homeScore: null, awayScore: null }
-          : null;
+        const cur = picks[m.matchNumber]?.advancerTeamId ?? null;
+        const had = m.myAdvancerTeamId ?? null;
+        // Send a row when there's a current pick OR a previously-saved pick to
+        // clear (changing an earlier winner clears downstream picks — those
+        // cleared matches must be persisted as null, not silently dropped, or
+        // the stale rows survive and still score). Advancer-only; scorelines
+        // are predicted per round in the Matches tab.
+        if (cur === null && had === null) return null;
+        return { matchId: m.matchId, advancerTeamId: cur, homeScore: null, awayScore: null };
       })
       .filter(Boolean) as Array<{ matchId: string; advancerTeamId: string | null; homeScore: number | null; awayScore: number | null }>;
     const res = await submitBracket({ picks: payload });

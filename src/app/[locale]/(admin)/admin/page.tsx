@@ -38,6 +38,7 @@ export default async function AdminResultsPage({
       isVoided: m.is_voided,
       homeTeam: m.home_team
         ? {
+            id: m.home_team.id,
             code: m.home_team.code,
             nameEs: m.home_team.name_es,
             flagEmoji: m.home_team.flag_emoji,
@@ -45,12 +46,15 @@ export default async function AdminResultsPage({
         : null,
       awayTeam: m.away_team
         ? {
+            id: m.away_team.id,
             code: m.away_team.code,
             nameEs: m.away_team.name_es,
             flagEmoji: m.away_team.flag_emoji,
           }
         : null,
-      result: r ? { homeScore: r.home_score, awayScore: r.away_score } : null,
+      result: r
+        ? { homeScore: r.home_score, awayScore: r.away_score, advancedTeamId: r.advanced_team_id ?? null }
+        : null,
     };
   });
 

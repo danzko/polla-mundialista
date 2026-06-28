@@ -375,27 +375,10 @@ export async function getMatches(
 
       let pointsEarned: number | null = null;
       if (myPrediction && result) {
-        if (m.stage === "group") {
-          pointsEarned = calculateMatchPoints(myPrediction, result, "group").totalPoints;
-        } else {
-          // Knockout MATCH bonus (spec §3.2/§3.3): exact score (R32=2, else 1)
-          // + correct result (+3, excluded in R32). Advancement is scored
-          // separately in the bracket. Result winner uses advanced_team_id
-          // (penalty-safe); a predicted draw earns no result bonus.
-          const exact =
-            myPrediction.homeScore === result.homeScore &&
-            myPrediction.awayScore === result.awayScore
-              ? m.stage === "r32" ? 2 : 1
-              : 0;
-          const adv = m.match_results.advanced_team_id as string | null;
-          const predWinner =
-            myPrediction.homeScore > myPrediction.awayScore ? m.home_team_id
-            : myPrediction.awayScore > myPrediction.homeScore ? m.away_team_id
-            : null;
-          const resultBonus =
-            m.stage !== "r32" && adv && predWinner && predWinner === adv ? 3 : 0;
-          pointsEarned = exact + resultBonus;
-        }
+        // Every match (group + knockout) scores 6/2/0 on the scoreline — no
+        // knockout multiplier and no special bonus (owner decision). The
+        // "group" stage arg keeps the multiplier at 1 for all stages.
+        pointsEarned = calculateMatchPoints(myPrediction, result, "group").totalPoints;
       }
 
       return {

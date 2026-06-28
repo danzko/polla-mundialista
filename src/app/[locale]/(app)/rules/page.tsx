@@ -1,6 +1,6 @@
 import * as React from 'react';
 import Link from 'next/link';
-import { Trophy, GitBranch, Calendar, Medal, ArrowLeft } from 'lucide-react';
+import { Trophy, GitBranch, Calendar, ArrowLeft } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,8 +39,8 @@ export default async function RulesPage({ params }: RulesPageProps) {
       </h1>
       <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
         {es
-          ? 'En la fase eliminatoria hay dos formas de sumar, y se acumulan: la Llave (los puntos grandes) y los marcadores de cada partido (un bono pequeño).'
-          : 'In the knockout stage there are two ways to score, and they stack: the Bracket (the big points) and each match scoreline (a small bonus).'}
+          ? 'En eliminatorias sumas de dos formas, y se acumulan: la Llave (los puntos grandes, por quién avanza) y el marcador de cada partido (6/2/0, igual que en grupos).'
+          : 'In the knockouts you score two ways, and they stack: the Bracket (the big points, for who advances) and each match scoreline (6/2/0, same as the group stage).'}
       </p>
 
       {/* 1 — THE BRACKET */}
@@ -76,8 +76,8 @@ export default async function RulesPage({ params }: RulesPageProps) {
         </div>
         <p className="text-[12px] text-amber-500 font-semibold mt-2">
           ⏰ {es
-            ? 'La Llave se cierra al primer partido de 32avos (3:00pm ET, 28 jun).'
-            : 'The Bracket locks at the first Round-of-32 kickoff (3:00pm ET, Jun 28).'}
+            ? 'Tienes hasta el cierre de hoy (11:59pm ET) para toda la Llave; un partido que empiece antes se cierra a su hora de inicio (el primero, Sudáfrica–Canadá, a las 2:45pm ET).'
+            : 'You have until tonight (11:59pm ET) for the whole Bracket; a game that kicks off sooner closes at its start (the first, South Africa–Canada, at 2:45pm ET).'}
         </p>
       </section>
 
@@ -85,39 +85,38 @@ export default async function RulesPage({ params }: RulesPageProps) {
       <section className="mt-4 rounded-2xl border border-border/50 bg-card/50 p-4">
         <h2 className="font-bold flex items-center gap-2">
           <Calendar className="h-4 w-4 text-primary" />
-          {es ? '2. Marcadores — bono pequeño' : '2. Match scores — small bonus'}
+          {es ? '2. Marcadores — igual que en grupos' : '2. Match scores — same as the group stage'}
         </h2>
         <p className="text-[13px] text-muted-foreground mt-1.5 leading-relaxed">
           {es
-            ? 'En la pestaña Partidos predices el marcador de cada partido eliminatorio, ronda por ronda, a medida que se conocen los equipos. Cada partido se cierra 15 min antes del pitazo, igual que en la fase de grupos.'
-            : 'In the Matches tab you predict each knockout game’s scoreline, round by round, as the teams become known. Each game locks 15 min before kickoff, just like the group stage.'}
+            ? 'En la pestaña Partidos predices el marcador de cada partido eliminatorio, ronda por ronda, a medida que se conocen los equipos. Cada partido se cierra 15 min antes del pitazo. Puntúa exactamente igual que la fase de grupos:'
+            : 'In the Matches tab you predict each knockout game’s scoreline, round by round, as the teams become known. Each game locks 15 min before kickoff. It scores exactly like the group stage:'}
         </p>
         <ul className="mt-3 space-y-2 text-[13px]">
           <li className="flex gap-2">
-            <span className="font-bold text-emerald-400 shrink-0">+2 / +1</span>
+            <span className="font-bold text-emerald-400 shrink-0">+6</span>
             <span className="text-muted-foreground">
-              {es
-                ? 'Marcador exacto: +2 en 32avos, +1 en las rondas siguientes.'
-                : 'Exact score: +2 in the Round of 32, +1 in every later round.'}
+              {es ? 'Marcador exacto.' : 'Exact score.'}
             </span>
           </li>
           <li className="flex gap-2">
-            <span className="font-bold text-emerald-400 shrink-0">+3</span>
+            <span className="font-bold text-emerald-400 shrink-0">+2</span>
             <span className="text-muted-foreground">
-              {es
-                ? 'Ganador correcto — excepto en 32avos (ahí acertar al ganador ya se paga con los 4 pts de avance). El ganador por penales cuenta.'
-                : 'Correct winner — except in the Round of 32 (there, the winner is already paid by the 4-pt advancement). Penalty-shootout winners count.'}
+              {es ? 'Resultado correcto (ganador/empate, marcador equivocado).' : 'Correct result (right winner/draw, wrong score).'}
             </span>
           </li>
           <li className="flex gap-2">
-            <Medal className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+            <span className="font-bold text-muted-foreground shrink-0">0</span>
             <span className="text-muted-foreground">
-              {es
-                ? 'El partido por el 3er puesto puntúa como uno normal (ganador +3, exacto +1).'
-                : 'The third-place game scores like a normal match (winner +3, exact +1).'}
+              {es ? 'Resultado equivocado.' : 'Wrong result.'}
             </span>
           </li>
         </ul>
+        <p className="text-[12px] text-muted-foreground/70 mt-2">
+          {es
+            ? 'Quién avanza por penales no afecta este marcador — eso se premia en la Llave.'
+            : 'Who advances on penalties doesn’t affect this scoreline — that’s rewarded in the Bracket.'}
+        </p>
       </section>
 
       {/* BONUS PICKS (pre-tournament) */}

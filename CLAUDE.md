@@ -65,6 +65,24 @@ What's next (before June 28, when knockouts start):
 
 ## Scoring rules (OFFICIAL pool rules from the owner, June 10 2026 -- supersede all earlier versions)
 
+> **CURRENT LIVE SCORING (June 28 2026 — supersedes the per-match knockout
+> notes below). The Postgres `leaderboard_view` (migrations 0022/0020/0018) is
+> the single source of truth; `docs/wc2026_pool_scoring_spec.md` and the TS
+> `bracket-scoring.ts` describe the original spec and have intentionally
+> diverged. As actually scored today:**
+> - **Every match (group AND knockout): 6 exact / 2 correct result / 0 wrong.**
+>   No knockout multiplier, no special knockout match bonus (the old R32 +2 /
+>   later +1 exact / +3 winner were removed by group request, migration 0019→0022).
+> - **Knockout advancement (bracket):** reach R16 4 / QF 8 / SF 16 / FINAL 30 /
+>   CHAMPION 55 per correct team (stacks; set-based). Bracket lock is per-match:
+>   `min(11:59pm ET deadline, kickoff − 15 min)`.
+> - **Bonus picks:** Champion **50** (pre-tournament pick) AND **55** via the
+>   bracket final — champion is scored in BOTH places by owner decision.
+>   Golden Boot 25, Golden Ball 25.
+> - **Knockout teams auto-populate** the bracket deterministically from results
+>   via triggers (migration 0020: `derive_ko_advancer` + `propagate_bracket`).
+> - Tiebreaker: total points, then knockout-stage points.
+
 Group stage (per match):
 - Exact score: 6 pts
 - Correct result, wrong score: 2 pts
