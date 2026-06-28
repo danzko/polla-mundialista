@@ -179,7 +179,7 @@ export function FeedMatchCard({
         )}
       </div>
 
-      {match.stage === 'group' && started && (
+      {started && (
         <PicksStrip
           picks={picks ?? []}
           locale={locale}

@@ -451,10 +451,12 @@ export async function getMatchPicks(): Promise<Record<string, MatchPickRow[]>> {
     if (memberIds.length === 0) return {};
 
     const nowIso = new Date().toISOString();
+    // Reveal picks for ANY started match, group OR knockout — knockout
+    // scorelines live in the same `predictions` table and are scored 6/2/0
+    // like group games, so the strips must show them too once kickoff passes.
     const { data: startedMatches } = await supabase
       .from("matches")
       .select("id")
-      .eq("stage", "group")
       .eq("is_voided", false)
       .lte("kickoff_at", nowIso);
     const startedIds = (startedMatches ?? []).map((m) => m.id);
