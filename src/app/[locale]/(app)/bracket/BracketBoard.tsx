@@ -255,8 +255,11 @@ export function BracketBoard({ initialBracket, teams, locale, myUserId }: Bracke
           {!locked && (
             <div className="mb-3 rounded-lg border border-border/40 bg-secondary/30 px-2.5 py-1.5 text-[10.5px] leading-relaxed text-muted-foreground">
               {es
-                ? 'Aquí eliges solo quién avanza (los puntos grandes). Los marcadores exactos se predicen ronda por ronda en la pestaña Partidos. Tienes hasta el cierre de hoy para toda la llave — salvo un partido que ya empiece, que se cierra a su hora de inicio.'
-                : 'Here you pick only who advances (the big points). Exact scorelines are predicted round-by-round in the Matches tab. You have until tonight’s deadline for the whole bracket — except a game that kicks off sooner, which closes at its start.'}
+                ? 'Aquí eliges solo quién avanza (los puntos grandes). Tienes hasta el cierre de hoy para toda la llave — salvo un partido que ya empiece, que se cierra a su hora de inicio. '
+                : 'Here you pick only who advances (the big points). You have until tonight’s deadline for the whole bracket — except a game that kicks off sooner, which closes at its start. '}
+              <Link href={`/${locale}/matches`} className="font-semibold text-primary">
+                {es ? 'Los marcadores se predicen en Partidos →' : 'Predict scorelines in Matches →'}
+              </Link>
             </div>
           )}
 

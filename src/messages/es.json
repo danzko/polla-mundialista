@@ -16,10 +16,10 @@
     "tipJar": "Invítanos un café ☕️"
   },
   "nav": {
-    "dashboard": "Mis Ligas",
+    "dashboard": "Ligas",
     "matches": "Partidos",
     "bracket": "Llave",
-    "bonuses": "Bonos del Torneo"
+    "bonuses": "Bonos"
   },
   "landing": {
     "heroTitle": "La polla mundialista para tu grupo de amigos",
@@ -129,8 +129,9 @@
     "alreadyPlayed": "Ya jugados",
     "lockedUpcoming": "Pronósticos cerrados",
     "lockedUpcomingNote": "Se cierran 15 minutos antes del kickoff",
-    "knockoutSection": "Eliminatorias",
-    "knockoutSectionNote": "Se habilitan al terminar la fase de grupos",
+    "knockoutSection": "Próximas rondas de eliminatorias",
+    "knockoutSectionNote": "Los equipos se definen al terminar los partidos previos",
+    "knockoutBanner": "Eliminatorias: aquí predices el marcador. Elige quién avanza en la pestaña Llave →",
     "resultLabel": "Resultado",
     "phaseHeaderTitle": "Fases de la Polla",
     "phaseGroups": "Grupos",

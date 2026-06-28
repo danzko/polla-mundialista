@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { FeedMatchCard } from '@/components/predictions/FeedMatchCard';
 import { Button } from '@/components/ui/button';
@@ -8,7 +9,7 @@ import { submitPredictions, getLiveScores, getMatchPicks } from '@/lib/api';
 import { LOCK_BEFORE_KICKOFF_MS } from '@/lib/tournament';
 import type { MatchView, Locale, MatchPickRow, LiveScoresPayload } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { HelpCircle, CheckCircle2, AlertTriangle, X, ArrowDownToLine, Trophy, ChevronDown } from 'lucide-react';
+import { HelpCircle, CheckCircle2, AlertTriangle, X, ArrowDownToLine, Trophy, ChevronDown, GitBranch } from 'lucide-react';
 
 // Local-timezone day key (YYYY-MM-DD). Grouping by UTC day put every
 // Colombian evening match under the next day's header.
@@ -335,6 +336,16 @@ export function MatchesFilterView({
         <div className="p-12 text-center text-muted-foreground font-light animate-pulse">{t('common.loading')}</div>
       ) : (
         <div className="space-y-5 pt-4">
+          {/* Cross-link: knockout scores live here; advancers live in the Bracket. */}
+          {matches.some(m => m.stage !== 'group') && (
+            <Link
+              href={`/${locale}/bracket`}
+              className="flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/[0.06] px-3 py-2.5 text-[12px] text-foreground"
+            >
+              <GitBranch className="h-3.5 w-3.5 text-primary shrink-0" />
+              <span>{t('matches.knockoutBanner')}</span>
+            </Link>
+          )}
           {dayKeys.map(key => (
             <section
               key={key}

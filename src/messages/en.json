@@ -16,10 +16,10 @@
     "tipJar": "Buy us a coffee ☕️"
   },
   "nav": {
-    "dashboard": "My Leagues",
+    "dashboard": "Leagues",
     "matches": "Matches",
     "bracket": "Bracket",
-    "bonuses": "Tournament Picks"
+    "bonuses": "Bonus Picks"
   },
   "landing": {
     "heroTitle": "The World Cup prediction pool for your friends",
@@ -129,8 +129,9 @@
     "alreadyPlayed": "Already played",
     "lockedUpcoming": "Predictions locked",
     "lockedUpcomingNote": "Each match locks 15 minutes before kickoff",
-    "knockoutSection": "Knockout stage",
-    "knockoutSectionNote": "Opens when the group stage ends",
+    "knockoutSection": "Upcoming knockout rounds",
+    "knockoutSectionNote": "Teams are set as earlier games finish",
+    "knockoutBanner": "Knockout games: predict the scoreline here. Pick who advances in the Bracket tab →",
     "resultLabel": "Result",
     "phaseHeaderTitle": "Pool Phases",
     "phaseGroups": "Groups",
