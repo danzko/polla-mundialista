@@ -40,7 +40,8 @@ export function MatchesFilterView({
   const [edits, setEdits] = React.useState<Record<string, { homeScore: number; awayScore: number }>>(() => {
     const init: Record<string, { homeScore: number; awayScore: number }> = {};
     initialMatches.forEach(m => {
-      if (m.stage === 'group' && !m.locked) {
+      // Any open match (group or a resolved knockout fixture) is editable.
+      if (!m.locked) {
         init[m.id] = { homeScore: m.myPrediction?.homeScore ?? 0, awayScore: m.myPrediction?.awayScore ?? 0 };
       }
     });
@@ -82,25 +83,32 @@ export function MatchesFilterView({
   }, []);
 
   const isEditable = React.useCallback(
-    (m: MatchView) => m.stage === 'group' && !m.isVoided && now < new Date(m.kickoffAt).getTime() - LOCK_BEFORE_KICKOFF_MS,
+    (m: MatchView) =>
+      !m.isVoided && !!m.homeTeam && !!m.awayTeam &&
+      now < new Date(m.kickoffAt).getTime() - LOCK_BEFORE_KICKOFF_MS,
     [now]
   );
 
-  // Chronological group feed grouped by local day.
+  // Chronological feed grouped by local day: every fixture whose teams are
+  // known — all group games plus knockout rounds whose matchups have resolved.
   const { dayKeys, matchesByDay, groupMatches } = React.useMemo(() => {
-    const group = matches
-      .filter(m => m.stage === 'group')
+    const feed = matches
+      .filter(m => m.homeTeam && m.awayTeam)
       .sort((a, b) => new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime());
     const byDay: Record<string, MatchView[]> = {};
-    for (const m of group) {
+    for (const m of feed) {
       const k = localDayKey(m.kickoffAt);
       (byDay[k] ??= []).push(m);
     }
-    return { dayKeys: Object.keys(byDay).sort(), matchesByDay: byDay, groupMatches: group };
+    return { dayKeys: Object.keys(byDay).sort(), matchesByDay: byDay, groupMatches: feed };
   }, [matches]);
 
+  // Knockout fixtures whose teams aren't set yet (future rounds) — shown
+  // read-only in the collapsed block until their matchups resolve.
   const knockoutMatches = React.useMemo(
-    () => matches.filter(m => m.stage !== 'group').sort((a, b) => new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime()),
+    () => matches
+      .filter(m => m.stage !== 'group' && (!m.homeTeam || !m.awayTeam))
+      .sort((a, b) => new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime()),
     [matches]
   );
 

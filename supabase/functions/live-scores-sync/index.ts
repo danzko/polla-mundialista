@@ -30,6 +30,12 @@
  * not-yet-started matches adopts ESPN's time automatically, but only
  * while BOTH clocks put kickoff >30 min away — anything closer stays
  * an admin alert. Self-correcting: if ESPN reverts, so do we.
+ *
+ * AUTO-ASSIGN (June 26): as groups conclude, the real 32 teams populate
+ * the knockout matches (73–104) automatically — fill-only, never
+ * overwriting an assigned matchup — and each completed knockout game's
+ * advancer (incl. penalty winner) is recorded to match_results
+ * .advanced_team_id for bracket scoring.
  */
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
@@ -121,6 +127,12 @@ Deno.serve(async (_req) => {
 
     const used = new Set<string>();
     const rows: Record<string, unknown>[] = [];
+    // Knockout matches matched this run: used to auto-assign the real 32
+    // teams and record advancers (incl. penalty winners) once known.
+    const matched: Array<{
+      matchId: string; stage: string; bothUnassigned: boolean;
+      homeAb: string; awayAb: string; winnerAb: string | null; completed: boolean;
+    }> = [];
     const unmatched: string[] = [];
     let driftCount = 0;
 
@@ -196,6 +208,21 @@ Deno.serve(async (_req) => {
       const st = comp.status ?? ev.status;
       const state: string = st?.type?.state ?? "pre";
       const completed = Boolean(st?.type?.completed);
+
+      // Who advanced (ESPN flags the winner, incl. penalty shootouts).
+      let winnerAb: string | null =
+        homeC.winner === true ? homeAb : awayC.winner === true ? awayAb : null;
+      if (!winnerAb && completed && hs !== null && as_ !== null && hs !== as_) {
+        winnerAb = hs > as_ ? homeAb : awayAb;
+      }
+      if (match.stage !== "group") {
+        matched.push({
+          matchId: match.id,
+          stage: match.stage,
+          bothUnassigned: codeOf(match.home) === null && codeOf(match.away) === null,
+          homeAb, awayAb, winnerAb, completed,
+        });
+      }
 
       const drift = match.kickoff_at
         ? Math.round((evKick.getTime() - new Date(match.kickoff_at).getTime()) / 1000)
@@ -304,6 +331,41 @@ Deno.serve(async (_req) => {
       healed.push(`#${m.match_number} -> ${r.provider_kickoff_at}`);
     }
     if (healed.length > 0) notes.push(`hora auto: ${healed.join(", ")}`);
+
+    // AUTO-ASSIGN real knockout teams + record advancers (fill-only).
+    // ESPN abbreviations == our FIFA codes. We only fill TBD slots (never
+    // overwrite an assigned matchup) and only stamp an advancer once.
+    if (matched.length > 0) {
+      const { data: teamRows } = await supabase.from("teams").select("id, code");
+      const codeToId = new Map((teamRows ?? []).map((t) => [t.code as string, t.id as string]));
+      let teamsAssigned = 0;
+      let advancersSet = 0;
+      for (const km of matched) {
+        const hId = codeToId.get(km.homeAb);
+        const aId = codeToId.get(km.awayAb);
+        if (km.bothUnassigned && hId && aId) {
+          const { error } = await supabase
+            .from("matches")
+            .update({ home_team_id: hId, away_team_id: aId })
+            .eq("id", km.matchId)
+            .is("home_team_id", null);
+          if (!error) teamsAssigned++;
+        }
+        if (km.completed && km.winnerAb) {
+          const wId = codeToId.get(km.winnerAb);
+          if (wId) {
+            const { error } = await supabase
+              .from("match_results")
+              .update({ advanced_team_id: wId })
+              .eq("match_id", km.matchId)
+              .is("advanced_team_id", null);
+            if (!error) advancersSet++;
+          }
+        }
+      }
+      if (teamsAssigned > 0) notes.push(`KO teams assigned: ${teamsAssigned}`);
+      if (advancersSet > 0) notes.push(`KO advancers: ${advancersSet}`);
+    }
 
     if (unmatched.length > 0) notes.push(`unmatched: ${unmatched.join(", ")}`);
 

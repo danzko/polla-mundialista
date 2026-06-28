@@ -110,6 +110,7 @@ export async function getDashboard(): Promise<LeagueSummary[]> {
         return {
           userId: mId,
           totalPoints: score?.total_points ?? 0,
+          knockoutPoints: score?.knockout_points ?? 0,
           exactCount: score?.exact_count ?? 0,
           resultCount: score?.result_count ?? 0,
           firstPredictionAt: score?.first_prediction_at
@@ -118,9 +119,11 @@ export async function getDashboard(): Promise<LeagueSummary[]> {
         };
       });
 
-      // Sort according to tiebreaker rules: points DESC, exact DESC, result DESC, first pred ASC
+      // Tiebreakers (official rules): total DESC, then knockout-stage points
+      // DESC, then exact DESC, result DESC, earliest first prediction ASC.
       standings.sort((a, b) => {
         if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
+        if (b.knockoutPoints !== a.knockoutPoints) return b.knockoutPoints - a.knockoutPoints;
         if (b.exactCount !== a.exactCount) return b.exactCount - a.exactCount;
         if (b.resultCount !== a.resultCount) return b.resultCount - a.resultCount;
         return a.firstPredictionAt - b.firstPredictionAt;
@@ -208,9 +211,15 @@ export async function getLeague(leagueId: string): Promise<LeagueDetail | null> 
         s.first_prediction_at ? new Date(s.first_prediction_at).getTime() : Infinity,
       ]) ?? []
     );
+    const knockoutMap = new Map(scores?.map((s) => [s.user_id, s.knockout_points ?? 0]) ?? []);
 
+    // Tiebreakers (official rules): total DESC, then knockout-stage points DESC,
+    // then exact DESC, result DESC, earliest first prediction ASC.
     leaderboard.sort((a, b) => {
       if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
+      const kA = knockoutMap.get(a.userId) ?? 0;
+      const kB = knockoutMap.get(b.userId) ?? 0;
+      if (kB !== kA) return kB - kA;
       if (b.exactCount !== a.exactCount) return b.exactCount - a.exactCount;
       if (b.resultCount !== a.resultCount) return b.resultCount - a.resultCount;
       const tA = firstPredMap.get(a.userId) ?? Infinity;
@@ -339,12 +348,14 @@ export async function getMatches(
         : null;
 
       const kickoffDate = new Date(m.kickoff_at);
-      // Group picks close 15 min before each kickoff and never reopen.
-      // Knockout score entry stays closed (advancement-based bracket
-      // picks have their own window before June 28).
+      // Picks close 15 min before each kickoff and never reopen. This applies
+      // to EVERY stage now: knockout SCORELINES are predicted per round on the
+      // real fixtures (the big advancement points live in the bracket). A
+      // knockout match only opens once both its teams are assigned.
+      const teamsAssigned = !!homeTeam && !!awayTeam;
       const locked =
         m.is_voided ||
-        m.stage !== "group" ||
+        !teamsAssigned ||
         now.getTime() >= kickoffDate.getTime() - LOCK_BEFORE_KICKOFF_MS;
 
       const pred = predictionsMap.get(m.id);
@@ -364,7 +375,27 @@ export async function getMatches(
 
       let pointsEarned: number | null = null;
       if (myPrediction && result) {
-        pointsEarned = calculateMatchPoints(myPrediction, result, m.stage as any).totalPoints;
+        if (m.stage === "group") {
+          pointsEarned = calculateMatchPoints(myPrediction, result, "group").totalPoints;
+        } else {
+          // Knockout MATCH bonus (spec §3.2/§3.3): exact score (R32=2, else 1)
+          // + correct result (+3, excluded in R32). Advancement is scored
+          // separately in the bracket. Result winner uses advanced_team_id
+          // (penalty-safe); a predicted draw earns no result bonus.
+          const exact =
+            myPrediction.homeScore === result.homeScore &&
+            myPrediction.awayScore === result.awayScore
+              ? m.stage === "r32" ? 2 : 1
+              : 0;
+          const adv = m.match_results.advanced_team_id as string | null;
+          const predWinner =
+            myPrediction.homeScore > myPrediction.awayScore ? m.home_team_id
+            : myPrediction.awayScore > myPrediction.homeScore ? m.away_team_id
+            : null;
+          const resultBonus =
+            m.stage !== "r32" && adv && predWinner && predWinner === adv ? 3 : 0;
+          pointsEarned = exact + resultBonus;
+        }
       }
 
       return {
@@ -1064,7 +1095,8 @@ export async function submitPrediction(
 
     if (
       match.is_voided ||
-      match.stage !== "group" ||
+      !match.home_team_id ||
+      !match.away_team_id ||
       Date.now() >= new Date(match.kickoff_at).getTime() - LOCK_BEFORE_KICKOFF_MS
     ) {
       return {
@@ -1322,7 +1354,7 @@ export async function submitPredictions(
     const ids = input.predictions.map((p) => p.matchId);
     const { data: matches } = await supabase
       .from("matches")
-      .select("id, kickoff_at, is_voided, stage")
+      .select("id, kickoff_at, is_voided, stage, home_team_id, away_team_id")
       .in("id", ids);
 
     const now = Date.now();
@@ -1331,7 +1363,8 @@ export async function submitPredictions(
         .filter(
           (m) =>
             !m.is_voided &&
-            m.stage === "group" &&
+            m.home_team_id &&
+            m.away_team_id &&
             now < new Date(m.kickoff_at).getTime() - LOCK_BEFORE_KICKOFF_MS
         )
         .map((m) => m.id)
