@@ -376,9 +376,8 @@ export async function getMatches(
       let pointsEarned: number | null = null;
       if (myPrediction && result) {
         // Every match (group + knockout) scores 6/2/0 on the scoreline — no
-        // knockout multiplier and no special bonus (owner decision). The
-        // "group" stage arg keeps the multiplier at 1 for all stages.
-        pointsEarned = calculateMatchPoints(myPrediction, result, "group").totalPoints;
+        // knockout multiplier and no special bonus (owner decision).
+        pointsEarned = calculateMatchPoints(myPrediction, result).totalPoints;
       }
 
       return {
