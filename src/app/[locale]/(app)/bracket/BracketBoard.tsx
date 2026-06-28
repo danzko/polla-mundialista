@@ -1,8 +1,9 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { Lock, Trophy, Check, LayoutList, GitBranch } from 'lucide-react';
+import { Lock, Trophy, Check, LayoutList, GitBranch, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { submitBracket } from '@/lib/api';
 import {
@@ -166,6 +167,13 @@ export function BracketBoard({ initialBracket, teams, locale, myUserId }: Bracke
               <>{es ? 'Se cierra' : 'Locks'} {fmtLockDate}</>
             ) : (es ? 'Eliminatorias' : 'Knockouts')}
           </p>
+          <Link
+            href={`/${locale}/rules`}
+            className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-primary"
+          >
+            <HelpCircle className="h-3 w-3" />
+            {es ? 'Cómo se puntúa' : 'How scoring works'}
+          </Link>
         </div>
         <button
           onClick={() => setView((v) => (v === 'fill' ? 'ladder' : 'fill'))}
