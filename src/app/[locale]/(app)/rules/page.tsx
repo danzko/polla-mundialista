@@ -176,7 +176,7 @@ export default async function RulesPage({ params }: RulesPageProps) {
       {/* WORKED EXAMPLE */}
       <section className="mt-4 rounded-2xl border border-primary/30 bg-primary/[0.05] p-4">
         <h2 className="font-bold flex items-center gap-2">
-          🧮 {es ? 'Ejemplo completo: cómo suma Carlos' : 'Full example: how Carlos adds up'}
+          🧮 {es ? 'Ejemplo completo: cómo se suman los puntos' : 'Full example: how the points add up'}
         </h2>
         <div className="mt-3 rounded-xl border border-border/40 overflow-hidden text-[12px]">
           {[

@@ -4,7 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Trophy, Calendar, Home, LogOut, Menu, X, GitBranch } from 'lucide-react';
+import { Trophy, Calendar, Home, LogOut, Menu, X, GitBranch, HelpCircle } from 'lucide-react';
 import { LanguageToggle } from './LanguageToggle';
 import { NameChangeMenu } from './NameChangeMenu';
 import { Button } from '@/components/ui/button';
@@ -96,6 +96,20 @@ export function AppShell({ children, user, onLogout }: AppShellProps) {
                   </Link>
                 );
               })}
+              {user && (
+                <Link
+                  href={`${basePath}/rules`}
+                  className={cn(
+                    "flex items-center gap-2 text-sm font-semibold transition-colors py-2 px-1 border-b-2",
+                    isActive(`${basePath}/rules`)
+                      ? "border-primary text-primary"
+                      : "border-transparent text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <HelpCircle className="h-4 w-4" />
+                  {t('nav.rules')}
+                </Link>
+              )}
             </nav>
           </div>
 
@@ -125,7 +139,16 @@ export function AppShell({ children, user, onLogout }: AppShellProps) {
               </div>
             )}
 
-            {/* Mobile menu toggle */}
+            {/* Mobile: quick Rules link + menu toggle */}
+            {user && (
+              <Link
+                href={`${basePath}/rules`}
+                title={t('nav.rules')}
+                className="inline-flex items-center justify-center p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary md:hidden"
+              >
+                <HelpCircle className="h-6 w-6" />
+              </Link>
+            )}
             {user && (
               <button
                 type="button"
@@ -179,6 +202,19 @@ export function AppShell({ children, user, onLogout }: AppShellProps) {
                     </Link>
                   );
                 })}
+                <Link
+                  href={`${basePath}/rules`}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={cn(
+                    "flex items-center gap-3 py-3 px-4 rounded-xl text-base font-semibold transition-all duration-200",
+                    isActive(`${basePath}/rules`)
+                      ? "bg-accent text-accent-foreground glow-green"
+                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  )}
+                >
+                  <HelpCircle className="h-5 w-5" />
+                  {t('nav.rules')}
+                </Link>
               </div>
             </div>
 
@@ -224,7 +260,7 @@ export function AppShell({ children, user, onLogout }: AppShellProps) {
 
       {/* MOBILE BOTTOM NAVIGATION BAR */}
       {user && (
-        <nav className="fixed bottom-0 left-0 z-40 w-full border-t border-border bg-card/90 backdrop-blur-md md:hidden px-6 py-2 shadow-lg flex justify-around">
+        <nav className="fixed bottom-0 left-0 z-40 w-full border-t border-border bg-card/90 backdrop-blur-md md:hidden px-2 py-1.5 shadow-lg flex justify-around">
           {navItems.map((item) => {
             const active = isActive(item.href);
             return (

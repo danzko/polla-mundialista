@@ -19,7 +19,8 @@
     "dashboard": "Ligas",
     "matches": "Partidos",
     "bracket": "Llave",
-    "bonuses": "Bonos"
+    "bonuses": "Bonos",
+    "rules": "Reglas"
   },
   "landing": {
     "heroTitle": "La polla mundialista para tu grupo de amigos",

@@ -11,6 +11,7 @@ import {
 } from '@/lib/bracket';
 import { knockoutSlotLabel } from '@/lib/bracket-slots';
 import { LOCK_BEFORE_KICKOFF_MS } from '@/lib/tournament';
+import { Flag } from '@/components/shared/Flag';
 import { cn } from '@/lib/utils';
 import type { BracketView, BracketMatchView, Team, Locale } from '@/lib/types';
 
@@ -107,10 +108,16 @@ export function BracketBoard({ initialBracket, teams, locale, myUserId }: Bracke
     [picks, matchByNumber]
   );
 
-  const labelFor = (matchNumber: number, side: 'home' | 'away', teamId: string | null) => {
+  const labelFor = (matchNumber: number, side: 'home' | 'away', teamId: string | null): React.ReactNode => {
     if (teamId) {
       const tm = teamById.get(teamId);
-      return tm ? `${tm.flagEmoji} ${es ? tm.nameEs : tm.nameEn}` : '—';
+      if (!tm) return '—';
+      return (
+        <span className="inline-flex items-center gap-1.5 min-w-0 align-middle">
+          <Flag code={tm.code} emoji={tm.flagEmoji} className="inline-block h-3 w-auto rounded-[2px] shrink-0 shadow-sm" />
+          <span className="truncate">{es ? tm.nameEs : tm.nameEn}</span>
+        </span>
+      );
     }
     return knockoutSlotLabel(matchNumber, side, locale) ?? (es ? 'Por definir' : 'TBD');
   };
@@ -388,7 +395,7 @@ function LadderView({
 }: {
   rounds: typeof ROUND_ORDER;
   sideTeam: (m: number, s: 'home' | 'away') => string | null;
-  labelFor: (m: number, s: 'home' | 'away', id: string | null) => string;
+  labelFor: (m: number, s: 'home' | 'away', id: string | null) => React.ReactNode;
   picks: Record<number, Pick>;
   championId: string | null;
   es: boolean;

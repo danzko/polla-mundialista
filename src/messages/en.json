@@ -17,9 +17,10 @@
   },
   "nav": {
     "dashboard": "Leagues",
-    "matches": "Matches",
+    "matches": "Games",
     "bracket": "Bracket",
-    "bonuses": "Bonus Picks"
+    "bonuses": "Bonus",
+    "rules": "Rules"
   },
   "landing": {
     "heroTitle": "The World Cup prediction pool for your friends",
