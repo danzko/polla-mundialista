@@ -3,26 +3,29 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { Lock, Trophy, Check, LayoutList, GitBranch, HelpCircle } from 'lucide-react';
+import { Lock, Trophy, Check, LayoutList, GitBranch, HelpCircle, Users, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { submitBracket } from '@/lib/api';
 import {
-  BRACKET_BY_MATCH, ROUND_ORDER, parseFeed, type KnockoutRound,
+  BRACKET_BY_MATCH, ROUND_ORDER, parseFeed, ADVANCEMENT_POINTS_BY_MATCH,
+  type KnockoutRound,
 } from '@/lib/bracket';
 import { knockoutSlotLabel } from '@/lib/bracket-slots';
 import { LOCK_BEFORE_KICKOFF_MS } from '@/lib/tournament';
 import { Flag } from '@/components/shared/Flag';
 import { cn } from '@/lib/utils';
-import type { BracketView, BracketMatchView, Team, Locale } from '@/lib/types';
+import type { BracketView, Team, Locale, BracketComparison, BracketPeer } from '@/lib/types';
 
 interface BracketBoardProps {
   initialBracket: BracketView;
+  comparison?: BracketComparison;
   teams: Team[];
   locale: Locale;
   myUserId?: string;
 }
 
 type Pick = { advancerTeamId: string | null; homeScore: number | null; awayScore: number | null };
+type PickStatus = 'earned' | 'dead' | 'pending' | null;
 
 const ROUND_LABEL: Record<KnockoutRound, { es: string; en: string }> = {
   r32: { es: '32avos', en: 'Round of 32' },
@@ -33,9 +36,86 @@ const ROUND_LABEL: Record<KnockoutRound, { es: string; en: string }> = {
   third_place: { es: '3er Puesto', en: 'Third place' },
 };
 
-export function BracketBoard({ initialBracket, teams, locale, myUserId }: BracketBoardProps) {
+// Coloring for an advancer chip once results exist: green = paying off,
+// red = pick is dead, amber = still in play.
+const STATUS_ROW: Record<'earned' | 'dead' | 'pending', string> = {
+  earned: 'bg-emerald-500/15 text-emerald-300 font-bold',
+  dead: 'bg-rose-500/10 text-rose-300/55 line-through',
+  pending: 'bg-amber-500/10 text-amber-200 font-semibold',
+};
+const STATUS_DOT: Record<'earned' | 'dead' | 'pending', string> = {
+  earned: 'border-emerald-400 bg-emerald-400 text-background',
+  dead: 'border-rose-400/50 bg-transparent text-rose-300/60',
+  pending: 'border-amber-400/70 bg-transparent text-amber-300',
+};
+
+// Small "+N" pill showing what a correct pick in this match is worth.
+function PointsPill({ mn, earned }: { mn: number; earned?: boolean }) {
+  const pts = ADVANCEMENT_POINTS_BY_MATCH[mn];
+  if (!pts) return null;
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center rounded-full px-1.5 py-px text-[9px] font-bold tabular-nums',
+        earned ? 'bg-emerald-500/20 text-emerald-300' : 'bg-primary/10 text-primary/80'
+      )}
+      title={mn === 104 ? 'Champion' : `+${pts} if correct`}
+    >
+      +{pts}{mn === 104 ? '👑' : ''}
+    </span>
+  );
+}
+
+export function BracketBoard({ initialBracket, comparison, teams, locale, myUserId }: BracketBoardProps) {
   const t = useTranslations();
   const es = locale === 'es';
+
+  // Post-deadline comparison data (real results so far + every league-mate's
+  // bracket). Drives the points-per-pick pills, the green/red/grey coloring,
+  // browsing other people's brackets, and the bracket standings.
+  const compareReady = !!comparison?.available && comparison.peers.length > 0;
+  const earnedSet = React.useMemo(() => {
+    const s = new Set<string>();
+    if (!comparison) return s;
+    for (const [mn, team] of Object.entries(comparison.actualAdvancers)) {
+      const w = ADVANCEMENT_POINTS_BY_MATCH[Number(mn)];
+      if (w) s.add(`${w}:${team}`);
+    }
+    return s;
+  }, [comparison]);
+  const eliminatedSet = React.useMemo(
+    () => new Set(comparison?.eliminatedTeamIds ?? []),
+    [comparison]
+  );
+  const statusOf = React.useCallback(
+    (matchNumber: number, teamId: string | null): PickStatus => {
+      if (!teamId || !comparison?.available) return null;
+      const w = ADVANCEMENT_POINTS_BY_MATCH[matchNumber];
+      if (w && earnedSet.has(`${w}:${teamId}`)) return 'earned';
+      const actual = comparison.actualAdvancers[matchNumber];
+      if (actual !== undefined && actual !== teamId) return 'dead';
+      if (eliminatedSet.has(teamId)) return 'dead';
+      return 'pending';
+    },
+    [comparison, earnedSet, eliminatedSet]
+  );
+
+  // Which bracket is on screen: your own, or a league-mate's (post-deadline).
+  const [peerId, setPeerId] = React.useState<string | null>(null);
+  const [showStandings, setShowStandings] = React.useState(false);
+  const peerById = React.useMemo(
+    () => new Map((comparison?.peers ?? []).map((p) => [p.userId, p])),
+    [comparison]
+  );
+  const viewingPeer = peerId ? peerById.get(peerId) ?? null : null;
+  const peerPicks = React.useMemo<Record<number, Pick>>(() => {
+    if (!viewingPeer) return {};
+    const rec: Record<number, Pick> = {};
+    for (const [mn, team] of Object.entries(viewingPeer.advancers)) {
+      rec[Number(mn)] = { advancerTeamId: team, homeScore: null, awayScore: null };
+    }
+    return rec;
+  }, [viewingPeer]);
 
   const teamById = React.useMemo(() => new Map(teams.map((t) => [t.id, t])), [teams]);
   const matchByNumber = React.useMemo(
@@ -150,7 +230,9 @@ export function BracketBoard({ initialBracket, teams, locale, myUserId }: Bracke
   const roundGames = round.matches;
   const chosenInRound = roundGames.filter((m) => picks[m]?.advancerTeamId).length;
 
-  const championId = picks[104]?.advancerTeamId ?? null;
+  // Whose picks are on screen (own while filling/own ladder; a peer's when browsing).
+  const displayPicks = viewingPeer ? peerPicks : picks;
+  const championId = displayPicks[104]?.advancerTeamId ?? null;
 
   const handleSave = async () => {
     setSaving(true);
@@ -208,14 +290,60 @@ export function BracketBoard({ initialBracket, teams, locale, myUserId }: Bracke
             {es ? 'Cómo se puntúa' : 'How scoring works'}
           </Link>
         </div>
-        <button
-          onClick={() => setView((v) => (v === 'fill' ? 'ladder' : 'fill'))}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border/50 bg-card/60 px-3 py-1.5 text-xs font-semibold text-muted-foreground"
-        >
-          {view === 'fill' ? <GitBranch className="h-3.5 w-3.5" /> : <LayoutList className="h-3.5 w-3.5" />}
-          {view === 'fill' ? (es ? 'Ver llave' : 'View bracket') : (es ? 'Llenar' : 'Fill in')}
-        </button>
+        <div className="flex items-center gap-1.5">
+          {compareReady && (
+            <button
+              onClick={() => { setShowStandings((s) => !s); setPeerId(null); }}
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold',
+                showStandings ? 'border-primary/60 bg-primary/10 text-primary' : 'border-border/50 bg-card/60 text-muted-foreground'
+              )}
+            >
+              <Users className="h-3.5 w-3.5" />
+              {es ? 'Tabla' : 'Standings'}
+            </button>
+          )}
+          {!showStandings && !viewingPeer && (
+            <button
+              onClick={() => setView((v) => (v === 'fill' ? 'ladder' : 'fill'))}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border/50 bg-card/60 px-3 py-1.5 text-xs font-semibold text-muted-foreground"
+            >
+              {view === 'fill' ? <GitBranch className="h-3.5 w-3.5" /> : <LayoutList className="h-3.5 w-3.5" />}
+              {view === 'fill' ? (es ? 'Ver llave' : 'View bracket') : (es ? 'Llenar' : 'Fill in')}
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* PEER SELECTOR — choose whose bracket to view (post-deadline, league-scoped) */}
+      {compareReady && !showStandings && (
+        <div className="mb-3 flex items-center gap-2 text-[11px]">
+          <span className="text-muted-foreground shrink-0">{es ? 'Viendo' : 'Viewing'}</span>
+          <div className="relative">
+            <select
+              value={peerId ?? '__me__'}
+              onChange={(e) => {
+                const v = e.target.value;
+                setPeerId(v === '__me__' ? null : v);
+                if (v !== '__me__') setView('ladder');
+              }}
+              className="appearance-none rounded-lg border border-border/50 bg-card/70 pl-2.5 pr-7 py-1.5 font-semibold text-foreground max-w-[60vw] truncate"
+            >
+              <option value="__me__">{es ? 'Tu llave' : 'Your bracket'}</option>
+              {comparison!.peers.filter((p) => !p.isMe).map((p) => (
+                <option key={p.userId} value={p.userId}>{p.displayName} · {p.points} pts</option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          </div>
+          {viewingPeer && (
+            <span className="inline-flex items-center gap-1 text-emerald-300 font-bold">
+              {viewingPeer.points} pts
+              <span className="text-muted-foreground font-normal">· {viewingPeer.correctPicks} {es ? 'aciertos' : 'hits'}</span>
+            </span>
+          )}
+        </div>
+      )}
 
       {!mounted ? (
         <div className="p-10 text-center text-muted-foreground animate-pulse">{t('common.loading')}</div>
@@ -229,13 +357,24 @@ export function BracketBoard({ initialBracket, teams, locale, myUserId }: Bracke
               : 'The bracket opens once the groups finish and the 32 qualifiers are set (Jun 27). Come back then to fill it out.'}
           </p>
         </div>
-      ) : view === 'ladder' ? (
+      ) : showStandings && comparison ? (
+        <Standings
+          peers={comparison.peers}
+          es={es}
+          onPick={(uid, isMe) => {
+            setShowStandings(false);
+            setPeerId(isMe ? null : uid);
+            setView('ladder');
+          }}
+        />
+      ) : view === 'ladder' || viewingPeer ? (
         <LadderView
           rounds={ROUND_ORDER}
           sideTeam={sideTeam}
           labelFor={labelFor}
-          picks={picks}
+          picks={displayPicks}
           championId={championId}
+          statusOf={statusOf}
           es={es}
         />
       ) : (
@@ -284,9 +423,10 @@ export function BracketBoard({ initialBracket, teams, locale, myUserId }: Bracke
               const mLocked = matchLocked(mn);
               return (
                 <div key={mn} className="rounded-xl border border-border/45 bg-card/50 overflow-hidden">
-                  <div className="px-2.5 py-1 text-[10px] text-muted-foreground/80 bg-secondary/40 flex items-center">
+                  <div className="px-2.5 py-1 text-[10px] text-muted-foreground/80 bg-secondary/40 flex items-center gap-1.5">
                     <span>{es ? 'Partido' : 'Match'} {mn}</span>
-                    {!ready && <span className="ml-1.5">· {es ? 'esperando equipos' : 'awaiting teams'}</span>}
+                    <PointsPill mn={mn} earned={statusOf(mn, p.advancerTeamId) === 'earned'} />
+                    {!ready && <span>· {es ? 'esperando equipos' : 'awaiting teams'}</span>}
                     {ready && mLocked && (
                       <span className="ml-auto inline-flex items-center gap-1 text-amber-500 font-semibold">
                         <Lock className="h-2.5 w-2.5" /> {es ? 'cerrado' : 'locked'}
@@ -297,6 +437,8 @@ export function BracketBoard({ initialBracket, teams, locale, myUserId }: Bracke
                     const teamId = side === 'home' ? homeId : awayId;
                     const isWinner = !!teamId && p.advancerTeamId === teamId;
                     const selectable = ready && !mLocked;
+                    // Once results exist, color the chosen team by how it's doing.
+                    const st = isWinner ? statusOf(mn, teamId) : null;
                     return (
                       <button
                         key={side}
@@ -307,7 +449,7 @@ export function BracketBoard({ initialBracket, teams, locale, myUserId }: Bracke
                           // Whole row is the click target (clear, large hit area).
                           'w-full flex items-center justify-between gap-2 px-2.5 py-2.5 text-[13px] text-left transition-colors',
                           idx === 0 && 'border-b border-border/30',
-                          isWinner ? 'bg-emerald-500/15 font-bold text-emerald-300' : 'text-foreground',
+                          st ? STATUS_ROW[st] : isWinner ? 'bg-emerald-500/15 font-bold text-emerald-300' : 'text-foreground',
                           selectable && !isWinner && 'hover:bg-secondary/60 cursor-pointer',
                           !selectable && 'cursor-default'
                         )}
@@ -316,12 +458,12 @@ export function BracketBoard({ initialBracket, teams, locale, myUserId }: Bracke
                           <span
                             className={cn(
                               'shrink-0 flex h-4 w-4 items-center justify-center rounded-full border transition-colors',
-                              isWinner
-                                ? 'border-emerald-400 bg-emerald-400 text-background'
+                              st ? STATUS_DOT[st]
+                                : isWinner ? 'border-emerald-400 bg-emerald-400 text-background'
                                 : selectable ? 'border-muted-foreground/50' : 'border-transparent'
                             )}
                           >
-                            {isWinner && <Check className="h-3 w-3" />}
+                            {(isWinner && (!st || st === 'earned')) && <Check className="h-3 w-3" />}
                           </span>
                           <span className="truncate">{labelFor(mn, side, teamId)}</span>
                         </span>
@@ -391,13 +533,14 @@ export function BracketBoard({ initialBracket, teams, locale, myUserId }: Bracke
 
 // ---- Read-only full-bracket ladder (scrollable columns) ----
 function LadderView({
-  rounds, sideTeam, labelFor, picks, championId, es,
+  rounds, sideTeam, labelFor, picks, championId, statusOf, es,
 }: {
   rounds: typeof ROUND_ORDER;
-  sideTeam: (m: number, s: 'home' | 'away') => string | null;
+  sideTeam: (m: number, s: 'home' | 'away', p?: Record<number, Pick>) => string | null;
   labelFor: (m: number, s: 'home' | 'away', id: string | null) => React.ReactNode;
   picks: Record<number, Pick>;
   championId: string | null;
+  statusOf: (m: number, id: string | null) => PickStatus;
   es: boolean;
 }) {
   // Order columns left→right; put third-place last as a small aside.
@@ -407,22 +550,31 @@ function LadderView({
     <div className="overflow-x-auto scrollbar-none -mx-1 px-1">
       <div className="flex gap-3 min-w-max items-stretch">
         {cols.map((r) => (
-          <div key={r.round} className="flex flex-col justify-around gap-2 min-w-[148px]">
+          <div key={r.round} className="flex flex-col justify-around gap-2 min-w-[152px]">
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground/80 font-bold text-center">
               {es ? ROUND_LABEL[r.round].es : ROUND_LABEL[r.round].en}
             </div>
             {r.matches.map((mn) => {
-              const homeId = sideTeam(mn, 'home');
-              const awayId = sideTeam(mn, 'away');
+              const homeId = sideTeam(mn, 'home', picks);
+              const awayId = sideTeam(mn, 'away', picks);
               const adv = picks[mn]?.advancerTeamId ?? null;
               return (
                 <div key={mn} className="rounded-lg border border-border/40 bg-card/50 overflow-hidden text-[11px]">
                   {(['home', 'away'] as const).map((side, i) => {
                     const id = side === 'home' ? homeId : awayId;
                     const win = !!id && adv === id;
+                    const st = win ? statusOf(mn, id) : null;
                     return (
-                      <div key={side} className={cn('px-2 py-1.5 truncate', i === 0 && 'border-b border-border/25', win && 'bg-emerald-500/12 text-emerald-300 font-semibold')}>
-                        {labelFor(mn, side, id)}
+                      <div
+                        key={side}
+                        className={cn(
+                          'px-2 py-1.5 truncate flex items-center justify-between gap-1',
+                          i === 0 && 'border-b border-border/25',
+                          st ? STATUS_ROW[st] : win && 'bg-emerald-500/12 text-emerald-300 font-semibold'
+                        )}
+                      >
+                        <span className="truncate">{labelFor(mn, side, id)}</span>
+                        {win && <PointsPill mn={mn} earned={st === 'earned'} />}
                       </div>
                     );
                   })}
@@ -449,6 +601,59 @@ function LadderView({
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// ---- Bracket standings: who's nailing their bracket (league-scoped) ----
+function Standings({
+  peers, es, onPick,
+}: {
+  peers: BracketPeer[];
+  es: boolean;
+  onPick: (userId: string, isMe: boolean) => void;
+}) {
+  const top = peers[0]?.points ?? 0;
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between text-[11px] text-muted-foreground">
+        <span>{es ? 'Puntos de la llave hasta ahora' : 'Bracket points so far'}</span>
+        <span>{es ? 'aciertos · vivos' : 'hits · alive'}</span>
+      </div>
+      <div className="space-y-1.5">
+        {peers.map((p, i) => (
+          <button
+            key={p.userId}
+            type="button"
+            onClick={() => onPick(p.userId, p.isMe)}
+            className={cn(
+              'w-full flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors',
+              p.isMe ? 'border-primary/50 bg-primary/[0.07]' : 'border-border/45 bg-card/50 hover:bg-secondary/50'
+            )}
+          >
+            <span className={cn(
+              'shrink-0 w-6 text-center text-xs font-extrabold tabular-nums',
+              i === 0 ? 'text-amber-400' : i === 1 ? 'text-slate-300' : i === 2 ? 'text-amber-700' : 'text-muted-foreground'
+            )}>
+              {i + 1}
+            </span>
+            <span className="min-w-0 flex-1 truncate text-[13px] font-bold">
+              {p.displayName}{p.isMe && <span className="ml-1 text-[10px] font-semibold text-primary">{es ? '(tú)' : '(you)'}</span>}
+            </span>
+            {/* tiny progress bar relative to the leader */}
+            <span className="hidden sm:block w-20 h-1.5 rounded-full bg-secondary overflow-hidden">
+              <span className="block h-full bg-gradient-to-r from-primary to-emerald-400" style={{ width: `${top > 0 ? Math.round((p.points / top) * 100) : 0}%` }} />
+            </span>
+            <span className="shrink-0 w-12 text-right text-sm font-extrabold tabular-nums text-emerald-300">{p.points}</span>
+            <span className="shrink-0 w-12 text-right text-[10px] tabular-nums text-muted-foreground">
+              {p.correctPicks}·{p.alivePicks}
+            </span>
+          </button>
+        ))}
+      </div>
+      <p className="mt-3 text-center text-[10.5px] text-muted-foreground">
+        {es ? 'Toca a alguien para ver su llave' : 'Tap anyone to view their bracket'}
+      </p>
     </div>
   );
 }

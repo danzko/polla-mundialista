@@ -90,6 +90,24 @@ export interface BracketView {
   matches: BracketMatchView[];
 }
 
+// One league-mate's bracket, for the post-deadline comparison view.
+export interface BracketPeer {
+  userId: string;
+  displayName: string;
+  isMe: boolean;
+  advancers: Record<number, string | null>; // matchNumber -> advancer teamId
+  points: number;        // advancement points earned so far (live scoring)
+  correctPicks: number;  // picks already paying off
+  alivePicks: number;    // picks still able to score (team not yet eliminated)
+}
+
+export interface BracketComparison {
+  available: boolean;                          // false until the deadline passes
+  actualAdvancers: Record<number, string>;     // matchNumber -> real advancer teamId
+  eliminatedTeamIds: string[];                 // teams knocked out so far
+  peers: BracketPeer[];                        // league-mates (incl. you), ranked
+}
+
 export interface LeagueSummary {
   id: string;
   name: string;

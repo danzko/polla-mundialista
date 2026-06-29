@@ -109,3 +109,20 @@ export function resolveSide(
 
 export const KO_FIRST_MATCH = 73;
 export const KO_LAST_MATCH = 104;
+
+/**
+ * Advancement points a correct advancer pick is worth, by match number — the
+ * points for the round the picked team REACHES by winning that game. Mirrors the
+ * live leaderboard_view feeder weights (migration 0022): R32→R16 4, R16→QF 8,
+ * QF→SF 16, SF→Final 30, Final→Champion 55. The 3rd-place game (103) earns no
+ * advancement points (its scoreline still scores 6/2/0 in the Matches tab).
+ */
+export const ADVANCEMENT_POINTS_BY_MATCH: Record<number, number> = (() => {
+  const m: Record<number, number> = {};
+  for (let n = 73; n <= 88; n++) m[n] = 4;   // R32 → reaches R16
+  for (let n = 89; n <= 96; n++) m[n] = 8;   // R16 → QF
+  for (let n = 97; n <= 100; n++) m[n] = 16;  // QF  → SF
+  m[101] = 30; m[102] = 30;                   // SF  → Final
+  m[104] = 55;                                // Final → Champion
+  return m;
+})();

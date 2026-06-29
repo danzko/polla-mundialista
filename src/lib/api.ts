@@ -6,8 +6,9 @@ import type {
   SessionUser, Team, MatchView, LeagueSummary, LeagueDetail,
   BonusView, ActionResult, Locale, MatchStage, LeaderboardRow,
   LeagueMemberView, MatchPickRow, LiveScore, LiveScoresPayload,
-  BracketView, BracketMatchView,
+  BracketView, BracketMatchView, BracketComparison, BracketPeer,
 } from "./types";
+import { ADVANCEMENT_POINTS_BY_MATCH } from "./bracket";
 import {
   displayNameSchema, emailSchema, leagueNameSchema,
   inviteCodeSchema, scoreSchema, bonusPredictionsSchema
@@ -626,6 +627,137 @@ export async function getBracket(): Promise<BracketView> {
     return { lockAt, locked, matches };
   } catch (err) {
     console.error("Error in getBracket:", err);
+    return empty;
+  }
+}
+
+/**
+ * Post-deadline bracket comparison, scoped to the viewer's OWN leagues only
+ * (the deduped member union across the live leagues they belong to — never the
+ * whole pool). Returns every league-mate's advancer picks (incl. the viewer),
+ * the real advancers so far, eliminated teams, and each peer's advancement
+ * points / correct / still-alive counts, ranked. Empty until the deadline
+ * passes (brackets stay private until then, enforced by RLS too).
+ */
+export async function getLeagueBrackets(): Promise<BracketComparison> {
+  const empty: BracketComparison = { available: false, actualAdvancers: {}, eliminatedTeamIds: [], peers: [] };
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return empty;
+
+    // Only reveal once the (effective) deadline has passed.
+    const { data: deadline } = await supabase.rpc("bracket_deadline");
+    if (typeof deadline === "string" && Date.now() < new Date(deadline).getTime()) {
+      return empty;
+    }
+
+    // League-union scope (live leagues only), identical to the pick strips.
+    const { data: myLeagues } = await supabase
+      .from("league_members").select("league_id").eq("user_id", user.id);
+    const candidateLeagueIds = (myLeagues ?? []).map((r) => r.league_id);
+    if (candidateLeagueIds.length === 0) return empty;
+    const { data: liveLeagues } = await supabase
+      .from("leagues").select("id").in("id", candidateLeagueIds);
+    const leagueIds = (liveLeagues ?? []).map((l) => l.id);
+    if (leagueIds.length === 0) return empty;
+    const { data: memberRows } = await supabase
+      .from("league_members").select("user_id").in("league_id", leagueIds);
+    const memberIds = Array.from(new Set((memberRows ?? []).map((r) => r.user_id)));
+    if (memberIds.length === 0) return empty;
+
+    const { data: userRows } = await supabase
+      .from("users").select("id, display_name").in("id", memberIds);
+    const nameById = new Map((userRows ?? []).map((u) => [u.id, u.display_name as string]));
+
+    // KO matches: number + real participants (home/away once assigned).
+    const { data: koMatches } = await supabase
+      .from("matches")
+      .select("id, match_number, home_team_id, away_team_id")
+      .neq("stage", "group");
+    const numById = new Map((koMatches ?? []).map((m) => [m.id, m.match_number as number]));
+    const participants = new Map<number, Array<string>>();
+    for (const m of koMatches ?? []) {
+      participants.set(m.match_number, [m.home_team_id, m.away_team_id].filter(Boolean) as string[]);
+    }
+
+    // Real advancers so far → actualAdvancers + the (weight:team) "earned" set.
+    const { data: results } = await supabase
+      .from("match_results").select("match_id, advanced_team_id");
+    const actualAdvancers: Record<number, string> = {};
+    const realEarned = new Set<string>();
+    const eliminated = new Set<string>();
+    for (const r of results ?? []) {
+      const mn = numById.get(r.match_id);
+      if (mn == null || !r.advanced_team_id) continue;
+      actualAdvancers[mn] = r.advanced_team_id as string;
+      const w = ADVANCEMENT_POINTS_BY_MATCH[mn];
+      if (w) realEarned.add(`${w}:${r.advanced_team_id}`);
+      for (const p of participants.get(mn) ?? []) {
+        if (p !== r.advanced_team_id) eliminated.add(p);
+      }
+    }
+
+    // Every member's advancer picks (paginated — members × KO matches can pass 1000).
+    const advByUser = new Map<string, Record<number, string | null>>();
+    const PAGE = 1000;
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await supabase
+        .from("bracket_picks")
+        .select("user_id, match_id, advancer_team_id")
+        .in("user_id", memberIds)
+        .order("user_id", { ascending: true })
+        .order("match_id", { ascending: true })
+        .range(from, from + PAGE - 1);
+      if (error || !data || data.length === 0) break;
+      for (const row of data) {
+        const mn = numById.get(row.match_id);
+        if (mn == null) continue;
+        const map = advByUser.get(row.user_id) ?? {};
+        map[mn] = (row.advancer_team_id as string | null) ?? null;
+        advByUser.set(row.user_id, map);
+      }
+      if (data.length < PAGE) break;
+    }
+
+    const peers: BracketPeer[] = memberIds.map((uid) => {
+      const advancers = advByUser.get(uid) ?? {};
+      let points = 0, correctPicks = 0, alivePicks = 0;
+      const counted = new Set<string>(); // dedup (weight:team) for set-based points
+      for (const [mnStr, team] of Object.entries(advancers)) {
+        if (!team) continue;
+        const mn = Number(mnStr);
+        const w = ADVANCEMENT_POINTS_BY_MATCH[mn];
+        const earned = !!w && realEarned.has(`${w}:${team}`);
+        if (earned) {
+          correctPicks++;
+          const key = `${w}:${team}`;
+          if (!counted.has(key)) { counted.add(key); points += w; }
+        } else if (actualAdvancers[mn] === undefined && !eliminated.has(team)) {
+          alivePicks++; // game not played yet and the pick's team is still in
+        }
+      }
+      return {
+        userId: uid,
+        displayName: nameById.get(uid) ?? "—",
+        isMe: uid === user.id,
+        advancers,
+        points,
+        correctPicks,
+        alivePicks,
+      };
+    });
+
+    peers.sort((a, b) =>
+      b.points - a.points ||
+      b.correctPicks - a.correctPicks ||
+      b.alivePicks - a.alivePicks ||
+      a.displayName.localeCompare(b.displayName)
+    );
+
+    return { available: true, actualAdvancers, eliminatedTeamIds: Array.from(eliminated), peers };
+  } catch (err) {
+    console.error("Error in getLeagueBrackets:", err);
     return empty;
   }
 }
