@@ -1067,7 +1067,14 @@ export async function getStats(leagueId?: string, locale: Locale = "es"): Promis
       .map((p) => ({ label: p.label, count: p.count, pct: Math.round((p.count / memberCount) * 100), pickedBy: p.pickedBy }))
       .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
 
-    return { leagues, leagueId: selected.id, leagueName: selected.name, memberCount, titleRace, goldenBoot, goldenBall, snapshotLoaded };
+    // Keep it easy to read: top 5 per section (already sorted by relevance).
+    return {
+      leagues, leagueId: selected.id, leagueName: selected.name, memberCount,
+      titleRace: titleRace.slice(0, 5),
+      goldenBoot: goldenBoot.slice(0, 5),
+      goldenBall: goldenBall.slice(0, 5),
+      snapshotLoaded,
+    };
   } catch (err) {
     console.error("Error in getStats:", err);
     return empty;
