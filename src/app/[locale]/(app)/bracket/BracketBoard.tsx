@@ -388,9 +388,9 @@ export function BracketBoard({ initialBracket, comparison, teams, locale }: Brac
             ))}
           </div>
 
-          <div className="mb-2 text-[11px] text-muted-foreground">
+          <div className={cn('mb-2 text-[11px]', locked ? 'text-emerald-400 font-semibold' : 'text-muted-foreground')}>
             {locked
-              ? (es ? 'Llave cerrada — solo lectura' : 'Bracket locked — read only')
+              ? (es ? '✓ Tus picks están guardados y bloqueados' : '✓ Your picks are saved & locked in')
               : (es ? `Toca quién avanza · ${chosenInRound}/${roundGames.length} listos` : `Tap who advances · ${chosenInRound}/${roundGames.length} set`)}
           </div>
           {!locked && (
@@ -428,8 +428,12 @@ export function BracketBoard({ initialBracket, comparison, teams, locale }: Brac
                     const teamId = side === 'home' ? homeId : awayId;
                     const isWinner = !!teamId && p.advancerTeamId === teamId;
                     const selectable = ready && !mLocked;
-                    // Once results exist, color the chosen team by how it's doing.
+                    // Once a game is PLAYED, recolor the pick (green correct /
+                    // red wrong). A not-yet-played pick must still read as
+                    // clearly locked in (filled dot + check) — never hollow —
+                    // so 'pending' gets no restyle.
                     const st = isWinner ? statusOf(mn, teamId) : null;
+                    const resultSt = st === 'earned' || st === 'dead' ? st : null;
                     return (
                       <button
                         key={side}
@@ -440,7 +444,7 @@ export function BracketBoard({ initialBracket, comparison, teams, locale }: Brac
                           // Whole row is the click target (clear, large hit area).
                           'w-full flex items-center justify-between gap-2 px-2.5 py-2.5 text-[13px] text-left transition-colors',
                           idx === 0 && 'border-b border-border/30',
-                          st ? STATUS_ROW[st] : isWinner ? 'bg-emerald-500/15 font-bold text-emerald-300' : 'text-foreground',
+                          resultSt ? STATUS_ROW[resultSt] : isWinner ? 'bg-emerald-500/15 font-bold text-emerald-300' : 'text-foreground',
                           selectable && !isWinner && 'hover:bg-secondary/60 cursor-pointer',
                           !selectable && 'cursor-default'
                         )}
@@ -449,12 +453,12 @@ export function BracketBoard({ initialBracket, comparison, teams, locale }: Brac
                           <span
                             className={cn(
                               'shrink-0 flex h-4 w-4 items-center justify-center rounded-full border transition-colors',
-                              st ? STATUS_DOT[st]
+                              resultSt ? STATUS_DOT[resultSt]
                                 : isWinner ? 'border-emerald-400 bg-emerald-400 text-background'
                                 : selectable ? 'border-muted-foreground/50' : 'border-transparent'
                             )}
                           >
-                            {(isWinner && (!st || st === 'earned')) && <Check className="h-3 w-3" />}
+                            {(isWinner && resultSt !== 'dead') && <Check className="h-3 w-3" />}
                           </span>
                           <span className="truncate">{labelFor(mn, side, teamId)}</span>
                         </span>
@@ -555,13 +559,14 @@ function LadderView({
                     const id = side === 'home' ? homeId : awayId;
                     const win = !!id && adv === id;
                     const st = win ? statusOf(mn, id) : null;
+                    const resultSt = st === 'earned' || st === 'dead' ? st : null;
                     return (
                       <div
                         key={side}
                         className={cn(
                           'px-2 py-1.5 truncate flex items-center justify-between gap-1',
                           i === 0 && 'border-b border-border/25',
-                          st ? STATUS_ROW[st] : win && 'bg-emerald-500/12 text-emerald-300 font-semibold'
+                          resultSt ? STATUS_ROW[resultSt] : win && 'bg-emerald-500/12 text-emerald-300 font-semibold'
                         )}
                       >
                         <span className="truncate">{labelFor(mn, side, id)}</span>
