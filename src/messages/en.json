@@ -17,6 +17,7 @@
   },
   "nav": {
     "dashboard": "Leagues",
+    "leaderboard": "Standings",
     "matches": "Games",
     "bracket": "Bracket",
     "bonuses": "Bonus",

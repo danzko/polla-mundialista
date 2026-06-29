@@ -108,6 +108,36 @@ export interface BracketComparison {
   peers: BracketPeer[];                        // league-mates (incl. you), ranked
 }
 
+// Unified leaderboard: one ranked row per player with the full point breakdown.
+export interface UnifiedLeaderboardEntry {
+  userId: string;
+  displayName: string;
+  isMe: boolean;
+  rank: number;
+  total: number;
+  // the four point sources that sum to `total`
+  groupScore: number;     // group-stage scorelines (6/2/0)
+  koScore: number;        // knockout scorelines (6/2/0)
+  bracket: number;        // bracket advancement (4/8/16/30/55)
+  bonus: number;          // pre-tournament picks (champion 50 + boot 25 + ball 25)
+  koTiebreak: number;     // knockout-stage points (the tiebreaker)
+  // their predicted champion (for the flag next to the name)
+  championTeamId: string | null;
+  championCode: string | null;
+  championNameEs: string | null;
+  championNameEn: string | null;
+  championFlagEmoji: string | null;
+  championEliminated: boolean;
+}
+
+export interface LeaderboardData {
+  myUserId: string | null;
+  leagues: { id: string; name: string }[];  // the viewer's live leagues (for the filter)
+  leagueId: string | null;                   // the league being shown
+  leagueName: string | null;
+  entries: UnifiedLeaderboardEntry[];
+}
+
 export interface LeagueSummary {
   id: string;
   name: string;

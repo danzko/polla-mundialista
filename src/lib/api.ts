@@ -7,6 +7,7 @@ import type {
   BonusView, ActionResult, Locale, MatchStage, LeaderboardRow,
   LeagueMemberView, MatchPickRow, LiveScore, LiveScoresPayload,
   BracketView, BracketMatchView, BracketComparison, BracketPeer,
+  UnifiedLeaderboardEntry, LeaderboardData,
 } from "./types";
 import { ADVANCEMENT_POINTS_BY_MATCH } from "./bracket";
 import {
@@ -754,6 +755,117 @@ export async function getLeagueBrackets(): Promise<BracketComparison> {
     return { available: true, actualAdvancers, eliminatedTeamIds: Array.from(eliminated), peers };
   } catch (err) {
     console.error("Error in getLeagueBrackets:", err);
+    return empty;
+  }
+}
+
+/**
+ * Unified leaderboard for ONE league, ranked by grand total (then knockout-
+ * stage points). Returns every member with the full point breakdown (group /
+ * knockout scorelines, bracket advancement, bonus picks), their predicted
+ * champion (for the flag) and whether that team is out, plus the viewer's live
+ * leagues for the filter. Scoped to a league the viewer actually belongs to.
+ */
+export async function getLeaderboard(leagueId?: string): Promise<LeaderboardData> {
+  const empty: LeaderboardData = { myUserId: null, leagues: [], leagueId: null, leagueName: null, entries: [] };
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return empty;
+
+    // The viewer's live leagues (for the filter).
+    const { data: myMemberships } = await supabase
+      .from("league_members").select("league_id").eq("user_id", user.id);
+    const myLeagueIds = (myMemberships ?? []).map((r) => r.league_id);
+    if (myLeagueIds.length === 0) return { ...empty, myUserId: user.id };
+    const { data: leagueRows } = await supabase
+      .from("leagues").select("id, name").in("id", myLeagueIds).order("name", { ascending: true });
+    const leagues = (leagueRows ?? []).map((l) => ({ id: l.id as string, name: l.name as string }));
+    if (leagues.length === 0) return { ...empty, myUserId: user.id };
+
+    // Pick the requested league only if the viewer is in it; else the first.
+    const selected = leagues.find((l) => l.id === leagueId) ?? leagues[0];
+
+    // Members of the selected league + their names.
+    const { data: memberRows } = await supabase
+      .from("league_members").select("user_id").eq("league_id", selected.id);
+    const memberIds = Array.from(new Set((memberRows ?? []).map((r) => r.user_id)));
+    if (memberIds.length === 0) {
+      return { myUserId: user.id, leagues, leagueId: selected.id, leagueName: selected.name, entries: [] };
+    }
+    const { data: userRows } = await supabase
+      .from("users").select("id, display_name").in("id", memberIds);
+    const nameById = new Map((userRows ?? []).map((u) => [u.id, u.display_name as string]));
+
+    // Scores (members with no activity won't appear in the view → default 0s).
+    const { data: scoreRows } = await supabase
+      .from("leaderboard_view")
+      .select("user_id, total_points, group_score_points, ko_score_points, bracket_points, bonus_pick_points, knockout_points, first_prediction_at")
+      .in("user_id", memberIds);
+    const scoreById = new Map((scoreRows ?? []).map((s) => [s.user_id as string, s]));
+
+    // Each member's predicted champion (+ team info for the flag).
+    const { data: bonusRows } = await supabase
+      .from("bonus_predictions").select("user_id, champion_team_id").in("user_id", memberIds);
+    const championByUser = new Map(
+      (bonusRows ?? []).filter((b) => b.champion_team_id).map((b) => [b.user_id as string, b.champion_team_id as string])
+    );
+    const { data: teamRows } = await supabase
+      .from("teams").select("id, code, name_es, name_en, flag_emoji");
+    const teamById = new Map((teamRows ?? []).map((t) => [t.id as string, t]));
+
+    // Which teams are already knocked out (lost a played KO match).
+    const { data: koMatches } = await supabase
+      .from("matches").select("id, home_team_id, away_team_id").neq("stage", "group");
+    const participantsByMatch = new Map(
+      (koMatches ?? []).map((m) => [m.id as string, [m.home_team_id, m.away_team_id].filter(Boolean) as string[]])
+    );
+    const { data: results } = await supabase
+      .from("match_results").select("match_id, advanced_team_id");
+    const eliminated = new Set<string>();
+    for (const r of results ?? []) {
+      if (!r.advanced_team_id) continue;
+      for (const p of participantsByMatch.get(r.match_id as string) ?? []) {
+        if (p !== r.advanced_team_id) eliminated.add(p);
+      }
+    }
+
+    const entries: UnifiedLeaderboardEntry[] = memberIds.map((uid) => {
+      const s = scoreById.get(uid);
+      const championTeamId = championByUser.get(uid) ?? null;
+      const team = championTeamId ? teamById.get(championTeamId) : null;
+      return {
+        userId: uid,
+        displayName: nameById.get(uid) ?? "—",
+        isMe: uid === user.id,
+        rank: 0,
+        total: (s?.total_points as number) ?? 0,
+        groupScore: (s?.group_score_points as number) ?? 0,
+        koScore: (s?.ko_score_points as number) ?? 0,
+        bracket: (s?.bracket_points as number) ?? 0,
+        bonus: (s?.bonus_pick_points as number) ?? 0,
+        koTiebreak: (s?.knockout_points as number) ?? 0,
+        championTeamId,
+        championCode: (team?.code as string) ?? null,
+        championNameEs: (team?.name_es as string) ?? null,
+        championNameEn: (team?.name_en as string) ?? null,
+        championFlagEmoji: (team?.flag_emoji as string) ?? null,
+        championEliminated: !!championTeamId && eliminated.has(championTeamId),
+      };
+    });
+
+    // Rank: total desc, then knockout-stage points desc (the official tiebreak),
+    // then name for stability.
+    entries.sort((a, b) =>
+      b.total - a.total ||
+      b.koTiebreak - a.koTiebreak ||
+      a.displayName.localeCompare(b.displayName)
+    );
+    entries.forEach((e, i) => { e.rank = i + 1; });
+
+    return { myUserId: user.id, leagues, leagueId: selected.id, leagueName: selected.name, entries };
+  } catch (err) {
+    console.error("Error in getLeaderboard:", err);
     return empty;
   }
 }

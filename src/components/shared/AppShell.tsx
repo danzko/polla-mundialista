@@ -4,7 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Trophy, Calendar, Home, LogOut, Menu, X, GitBranch, HelpCircle } from 'lucide-react';
+import { Trophy, Calendar, Home, LogOut, Menu, X, GitBranch, HelpCircle, Medal } from 'lucide-react';
 import { LanguageToggle } from './LanguageToggle';
 import { NameChangeMenu } from './NameChangeMenu';
 import { Button } from '@/components/ui/button';
@@ -31,6 +31,11 @@ export function AppShell({ children, user, onLogout }: AppShellProps) {
       label: t('nav.dashboard'),
       href: `${basePath}/dashboard`,
       icon: Home,
+    },
+    {
+      label: t('nav.leaderboard'),
+      href: `${basePath}/leaderboard`,
+      icon: Medal,
     },
     {
       label: t('nav.matches'),

@@ -17,6 +17,7 @@
   },
   "nav": {
     "dashboard": "Ligas",
+    "leaderboard": "Tabla",
     "matches": "Partidos",
     "bracket": "Llave",
     "bonuses": "Bonos",

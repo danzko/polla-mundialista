@@ -1,7 +1,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getLeague, getSessionUser } from '@/lib/api';
+import { getLeague, getSessionUser, getLeaderboard } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { CopyableCode } from '@/components/shared/CopyableCode';
 import { ArrowLeft, Calendar, ShieldAlert } from 'lucide-react';
@@ -15,9 +15,10 @@ export default async function LeagueDetailPage({ params }: LeagueDetailPageProps
   const { id, locale } = await params;
   
   // Fetch data on the server
-  const [league, currentUser] = await Promise.all([
+  const [league, currentUser, leaderboardData] = await Promise.all([
     getLeague(id),
     getSessionUser(),
+    getLeaderboard(id),
   ]);
 
   if (!league) {
@@ -68,7 +69,7 @@ export default async function LeagueDetailPage({ params }: LeagueDetailPageProps
       </div>
 
       {/* TABS CONTAINER (Client component for tab state) */}
-      <LeagueTabs league={league} locale={locale as any} currentUserId={currentUser?.id || ''} />
+      <LeagueTabs league={league} locale={locale as any} currentUserId={currentUser?.id || ''} leaderboardData={leaderboardData} />
     </div>
   );
 }
