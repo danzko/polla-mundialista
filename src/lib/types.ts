@@ -141,6 +141,49 @@ export interface LeaderboardData {
   entries: UnifiedLeaderboardEntry[];
 }
 
+// ---- Statistics tab ----
+// One row of the "Title Race": Vegas odds (snapshot) + this league's champion-pick consensus.
+export interface TitleRaceRow {
+  teamCode: string;
+  teamName: string;
+  flagEmoji: string | null;
+  eliminated: boolean;
+  vegasOdds: string | null;        // e.g. "+280" (null until the snapshot is set)
+  vegasImpliedPct: number | null;  // e.g. 26
+  leagueCount: number;             // how many in the league picked them as champion
+  leaguePct: number;               // % of the league
+  pickedBy: string[];              // display names
+}
+// One row of the Golden Boot race: live scorer (snapshot) merged with league pick consensus.
+export interface BootRaceRow {
+  rank: number | null;             // snapshot leaderboard rank (null = a league pick not on the board)
+  playerName: string;
+  teamCode: string | null;
+  flagEmoji: string | null;
+  goals: number | null;            // current goals (null until snapshot set)
+  photoUrl: string | null;
+  leagueCount: number;
+  leaguePct: number;
+  pickedBy: string[];
+}
+// Generic pick-share row (Golden Ball, etc.)
+export interface PickShare {
+  label: string;
+  count: number;
+  pct: number;
+  pickedBy: string[];
+}
+export interface StatsData {
+  leagues: { id: string; name: string }[];
+  leagueId: string | null;
+  leagueName: string | null;
+  memberCount: number;
+  titleRace: TitleRaceRow[];
+  goldenBoot: BootRaceRow[];
+  goldenBall: PickShare[];
+  snapshotLoaded: boolean;         // whether the live scorers/odds overlay is populated
+}
+
 export interface LeagueSummary {
   id: string;
   name: string;

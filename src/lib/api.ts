@@ -8,6 +8,7 @@ import type {
   LeagueMemberView, MatchPickRow, LiveScore, LiveScoresPayload,
   BracketView, BracketMatchView, BracketComparison, BracketPeer,
   UnifiedLeaderboardEntry, LeaderboardData,
+  StatsData, TitleRaceRow, BootRaceRow, PickShare,
 } from "./types";
 import { ADVANCEMENT_POINTS_BY_MATCH } from "./bracket";
 import {
@@ -907,6 +908,168 @@ export async function getLeaderboard(leagueId?: string): Promise<LeaderboardData
     return { myUserId: user.id, leagues, leagueId: selected.id, leagueName: selected.name, entries };
   } catch (err) {
     console.error("Error in getLeaderboard:", err);
+    return empty;
+  }
+}
+
+/**
+ * Statistics for one league: the title-race (Vegas odds snapshot + this
+ * league's champion-pick consensus), the Golden Boot race (live scorer snapshot
+ * merged with who picked them), and the Golden Ball pick consensus. Works off
+ * our own pick data; the scorers/odds snapshot is an optional overlay.
+ */
+export async function getStats(leagueId?: string, locale: Locale = "es"): Promise<StatsData> {
+  const es = locale === "es";
+  const empty: StatsData = { leagues: [], leagueId: null, leagueName: null, memberCount: 0, titleRace: [], goldenBoot: [], goldenBall: [], snapshotLoaded: false };
+  const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return empty;
+
+    const { data: myMemberships } = await supabase
+      .from("league_members").select("league_id").eq("user_id", user.id);
+    const myLeagueIds = (myMemberships ?? []).map((r) => r.league_id);
+    if (myLeagueIds.length === 0) return empty;
+    const { data: leagueRows } = await supabase
+      .from("leagues").select("id, name").in("id", myLeagueIds).order("name", { ascending: true });
+    const leagues = (leagueRows ?? []).map((l) => ({ id: l.id as string, name: l.name as string }));
+    if (leagues.length === 0) return empty;
+    const selected = leagues.find((l) => l.id === leagueId) ?? leagues[0];
+
+    const { data: memberRows } = await supabase
+      .from("league_members").select("user_id").eq("league_id", selected.id);
+    const memberIds = Array.from(new Set((memberRows ?? []).map((r) => r.user_id)));
+    const memberCount = memberIds.length;
+    if (memberCount === 0) {
+      return { ...empty, leagues, leagueId: selected.id, leagueName: selected.name };
+    }
+    const { data: userRows } = await supabase.from("users").select("id, display_name").in("id", memberIds);
+    const nameById = new Map((userRows ?? []).map((u) => [u.id, u.display_name as string]));
+
+    const { data: bonus } = await supabase
+      .from("bonus_predictions")
+      .select("user_id, champion_team_id, top_scorer_name, best_player_name")
+      .in("user_id", memberIds);
+
+    const { data: teamRows } = await supabase.from("teams").select("id, code, name_es, name_en, flag_emoji");
+    const teamById = new Map((teamRows ?? []).map((t) => [t.id as string, t]));
+    const teamByCode = new Map((teamRows ?? []).map((t) => [t.code as string, t]));
+
+    // Eliminated teams (lost a played KO match) → for the champion flag.
+    const { data: koMatches } = await supabase
+      .from("matches").select("id, home_team_id, away_team_id").neq("stage", "group");
+    const partsByMatch = new Map((koMatches ?? []).map((m) => [m.id as string, [m.home_team_id, m.away_team_id].filter(Boolean) as string[]]));
+    const { data: results } = await supabase.from("match_results").select("match_id, advanced_team_id");
+    const eliminated = new Set<string>();
+    for (const r of results ?? []) {
+      if (!r.advanced_team_id) continue;
+      for (const p of partsByMatch.get(r.match_id as string) ?? []) if (p !== r.advanced_team_id) eliminated.add(p);
+    }
+
+    // Snapshot overlay.
+    const { data: oddsRows } = await supabase.from("stat_title_odds").select("rank, team_code, odds, implied_pct").order("rank");
+    const { data: bootRows } = await supabase.from("stat_golden_boot").select("rank, player_name, team_code, goals, photo_url").order("rank");
+    const snapshotLoaded = (oddsRows?.length ?? 0) > 0 || (bootRows?.length ?? 0) > 0;
+
+    // ---- Title race: champion-pick consensus ∪ Vegas odds, keyed by team code ----
+    const champCount = new Map<string, { count: number; pickedBy: string[] }>(); // teamCode -> tally
+    for (const b of bonus ?? []) {
+      if (!b.champion_team_id) continue;
+      const t = teamById.get(b.champion_team_id as string);
+      if (!t) continue;
+      const code = t.code as string;
+      const cur = champCount.get(code) ?? { count: 0, pickedBy: [] };
+      cur.count++; cur.pickedBy.push(nameById.get(b.user_id as string) ?? "—");
+      champCount.set(code, cur);
+    }
+    const oddsByCode = new Map((oddsRows ?? []).map((o) => [o.team_code as string, o]));
+    const titleCodes = new Set<string>([...champCount.keys(), ...oddsByCode.keys()]);
+    const titleRace: TitleRaceRow[] = Array.from(titleCodes).map((code) => {
+      const t = teamByCode.get(code);
+      const ch = champCount.get(code) ?? { count: 0, pickedBy: [] };
+      const o = oddsByCode.get(code);
+      return {
+        teamCode: code,
+        teamName: t ? ((es ? t.name_es : t.name_en) as string) : code,
+        flagEmoji: (t?.flag_emoji as string) ?? null,
+        eliminated: !!t && eliminated.has(t.id as string),
+        vegasOdds: (o?.odds as string) ?? null,
+        vegasImpliedPct: (o?.implied_pct as number) ?? null,
+        leagueCount: ch.count,
+        leaguePct: Math.round((ch.count / memberCount) * 100),
+        pickedBy: ch.pickedBy,
+      };
+    });
+    titleRace.sort((a, b) =>
+      (a.vegasImpliedPct == null ? 1 : 0) - (b.vegasImpliedPct == null ? 1 : 0) ||
+      (b.vegasImpliedPct ?? 0) - (a.vegasImpliedPct ?? 0) ||
+      b.leagueCount - a.leagueCount ||
+      a.teamName.localeCompare(b.teamName)
+    );
+
+    // ---- Golden Boot: scorer snapshot ∪ league boot picks, matched by name ----
+    const bootPick = new Map<string, { label: string; count: number; pickedBy: string[] }>();
+    for (const b of bonus ?? []) {
+      const raw = (b.top_scorer_name as string | null)?.trim();
+      if (!raw) continue;
+      const k = norm(raw);
+      const cur = bootPick.get(k) ?? { label: raw, count: 0, pickedBy: [] };
+      cur.count++; cur.pickedBy.push(nameById.get(b.user_id as string) ?? "—");
+      bootPick.set(k, cur);
+    }
+    const goldenBoot: BootRaceRow[] = [];
+    const usedBootKeys = new Set<string>();
+    for (const r of bootRows ?? []) {
+      const k = norm(r.player_name as string);
+      usedBootKeys.add(k);
+      const pick = bootPick.get(k);
+      const t = r.team_code ? teamByCode.get(r.team_code as string) : null;
+      goldenBoot.push({
+        rank: (r.rank as number) ?? null,
+        playerName: r.player_name as string,
+        teamCode: (r.team_code as string) ?? null,
+        flagEmoji: (t?.flag_emoji as string) ?? null,
+        goals: (r.goals as number) ?? null,
+        photoUrl: (r.photo_url as string) ?? null,
+        leagueCount: pick?.count ?? 0,
+        leaguePct: pick ? Math.round((pick.count / memberCount) * 100) : 0,
+        pickedBy: pick?.pickedBy ?? [],
+      });
+    }
+    // League picks not on the snapshot board (or no snapshot at all) → list them too.
+    for (const [k, pick] of bootPick) {
+      if (usedBootKeys.has(k)) continue;
+      goldenBoot.push({
+        rank: null, playerName: pick.label, teamCode: null, flagEmoji: null,
+        goals: null, photoUrl: null,
+        leagueCount: pick.count, leaguePct: Math.round((pick.count / memberCount) * 100), pickedBy: pick.pickedBy,
+      });
+    }
+    goldenBoot.sort((a, b) =>
+      (a.rank == null ? 1 : 0) - (b.rank == null ? 1 : 0) ||
+      (a.rank ?? 0) - (b.rank ?? 0) ||
+      b.leagueCount - a.leagueCount ||
+      a.playerName.localeCompare(b.playerName)
+    );
+
+    // ---- Golden Ball: pick consensus ----
+    const ballPick = new Map<string, { label: string; count: number; pickedBy: string[] }>();
+    for (const b of bonus ?? []) {
+      const raw = (b.best_player_name as string | null)?.trim();
+      if (!raw) continue;
+      const k = norm(raw);
+      const cur = ballPick.get(k) ?? { label: raw, count: 0, pickedBy: [] };
+      cur.count++; cur.pickedBy.push(nameById.get(b.user_id as string) ?? "—");
+      ballPick.set(k, cur);
+    }
+    const goldenBall: PickShare[] = Array.from(ballPick.values())
+      .map((p) => ({ label: p.label, count: p.count, pct: Math.round((p.count / memberCount) * 100), pickedBy: p.pickedBy }))
+      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+
+    return { leagues, leagueId: selected.id, leagueName: selected.name, memberCount, titleRace, goldenBoot, goldenBall, snapshotLoaded };
+  } catch (err) {
+    console.error("Error in getStats:", err);
     return empty;
   }
 }

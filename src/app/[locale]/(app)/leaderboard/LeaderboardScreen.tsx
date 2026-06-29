@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { Trophy, GitBranch, Star, ChevronDown, Goal } from 'lucide-react';
 import { Flag } from '@/components/shared/Flag';
 import { cn } from '@/lib/utils';
-import type { LeaderboardData, UnifiedLeaderboardEntry, Locale } from '@/lib/types';
+import { StatsSections } from './StatsSections';
+import type { LeaderboardData, UnifiedLeaderboardEntry, Locale, StatsData } from '@/lib/types';
 
 const MEDAL = ['🥇', '🥈', '🥉'];
 
@@ -46,10 +47,12 @@ function ChampionFlag({ e }: { e: UnifiedLeaderboardEntry }) {
   );
 }
 
-export function LeaderboardScreen({ data, locale, embedded = false }: { data: LeaderboardData; locale: Locale; embedded?: boolean }) {
+export function LeaderboardScreen({ data, locale, embedded = false, stats }: { data: LeaderboardData; locale: Locale; embedded?: boolean; stats?: StatsData | null }) {
   const es = locale === 'es';
   const [openId, setOpenId] = React.useState<string | null>(null);
+  const [tab, setTab] = React.useState<'standings' | 'stats'>('standings');
   const me = data.entries.find((x) => x.isMe) ?? null;
+  const showStats = !embedded && !!stats;
 
   if (data.leagues.length === 0) {
     return (
@@ -99,6 +102,26 @@ export function LeaderboardScreen({ data, locale, embedded = false }: { data: Le
         </div>
       )}
 
+      {/* STANDINGS | STATS toggle (standalone screen only) */}
+      {showStats && (
+        <div className="mb-3 flex rounded-lg border border-border/40 bg-card/50 p-0.5 text-xs font-bold">
+          {(['standings', 'stats'] as const).map((tk) => (
+            <button
+              key={tk}
+              type="button"
+              onClick={() => setTab(tk)}
+              className={cn('flex-1 rounded-md py-1.5 transition-colors', tab === tk ? 'bg-primary text-primary-foreground' : 'text-muted-foreground')}
+            >
+              {tk === 'standings' ? (es ? 'Tabla' : 'Standings') : (es ? 'Estadísticas' : 'Stats')}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {tab === 'stats' && stats ? (
+        <StatsSections data={stats} locale={locale} />
+      ) : (
+      <>
       {/* quick self-locator */}
       {me && (
         <div className="mb-2 flex items-center justify-between rounded-lg border border-primary/40 bg-primary/[0.07] px-3 py-1.5 text-[11px]">
@@ -180,6 +203,8 @@ export function LeaderboardScreen({ data, locale, embedded = false }: { data: Le
           );
         })}
       </div>
+      </>
+      )}
     </div>
   );
 }
