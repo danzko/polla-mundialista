@@ -24,6 +24,17 @@ function SourceBar({ e }: { e: UnifiedLeaderboardEntry }) {
   );
 }
 
+// Rank movement since the most recent result day (▲ up / ▼ down).
+function Movement({ m }: { m: number | null }) {
+  if (m == null || m === 0) return null;
+  const up = m > 0;
+  return (
+    <span className={cn('shrink-0 inline-flex items-center text-[10px] font-bold tabular-nums', up ? 'text-emerald-400' : 'text-rose-400')}>
+      {up ? '▲' : '▼'}{Math.abs(m)}
+    </span>
+  );
+}
+
 function ChampionFlag({ e }: { e: UnifiedLeaderboardEntry }) {
   const code = e.championCode;
   const emoji = e.championFlagEmoji;
@@ -133,6 +144,7 @@ export function LeaderboardScreen({ data, locale, embedded = false }: { data: Le
                     <span className="truncate text-[13px] font-bold">
                       {e.displayName}{e.isMe && <span className="ml-1 text-[10px] font-semibold text-primary">{es ? '(tú)' : '(you)'}</span>}
                     </span>
+                    <Movement m={e.movement} />
                   </span>
                   {/* desktop numeric columns */}
                   <span className="hidden md:block text-right text-xs tabular-nums text-muted-foreground">{matches}</span>

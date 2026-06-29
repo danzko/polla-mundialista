@@ -121,6 +121,9 @@ export interface UnifiedLeaderboardEntry {
   bracket: number;        // bracket advancement (4/8/16/30/55)
   bonus: number;          // pre-tournament picks (champion 50 + boot 25 + ball 25)
   koTiebreak: number;     // knockout-stage points (the tiebreaker)
+  // rank change since the start of the most recent result day (+ = climbed,
+  // - = dropped, 0 = held, null = no prior snapshot to compare)
+  movement: number | null;
   // their predicted champion (for the flag next to the name)
   championTeamId: string | null;
   championCode: string | null;

@@ -845,6 +845,7 @@ export async function getLeaderboard(leagueId?: string): Promise<LeaderboardData
         bracket: (s?.bracket_points as number) ?? 0,
         bonus: (s?.bonus_pick_points as number) ?? 0,
         koTiebreak: (s?.knockout_points as number) ?? 0,
+        movement: null,
         championTeamId,
         championCode: (team?.code as string) ?? null,
         championNameEs: (team?.name_es as string) ?? null,
@@ -862,6 +863,43 @@ export async function getLeaderboard(leagueId?: string): Promise<LeaderboardData
       a.displayName.localeCompare(b.displayName)
     );
     entries.forEach((e, i) => { e.rank = i + 1; });
+
+    // Rank-movement since the start of the most recent day that had results.
+    // "As of" totals come from leaderboard_total_as_of(cutoff) so they're
+    // consistent with the grand-total ranking. Competition ranking (ties share
+    // a rank) on total only, both snapshots, so ties never produce phantom arrows.
+    try {
+      const { data: latest } = await supabase
+        .from("match_results").select("recorded_at").order("recorded_at", { ascending: false }).limit(1);
+      const latestIso = latest?.[0]?.recorded_at as string | undefined;
+      if (latestIso) {
+        // Start of that result's day in US Eastern (EDT = UTC-4 for the whole WC).
+        const et = new Date(new Date(latestIso).getTime() - 4 * 3600_000);
+        const cutoffIso = new Date(Date.UTC(et.getUTCFullYear(), et.getUTCMonth(), et.getUTCDate(), 4, 0, 0)).toISOString();
+        const { data: asOf } = await supabase.rpc("leaderboard_total_as_of", { cutoff: cutoffIso });
+        const memberSet = new Set(memberIds);
+        const asOfTotal = new Map<string, number>(memberIds.map((id) => [id, 0]));
+        for (const r of (asOf ?? []) as Array<{ user_id: string; total_points: number }>) {
+          if (memberSet.has(r.user_id)) asOfTotal.set(r.user_id, r.total_points ?? 0);
+        }
+        const rankByTotal = (totalOf: (id: string) => number) => {
+          const ranks = new Map<string, number>();
+          for (const id of memberIds) {
+            const t = totalOf(id);
+            ranks.set(id, 1 + memberIds.filter((o) => totalOf(o) > t).length);
+          }
+          return ranks;
+        };
+        const nowRanks = rankByTotal((id) => entries.find((e) => e.userId === id)!.total);
+        const wasRanks = rankByTotal((id) => asOfTotal.get(id) ?? 0);
+        for (const e of entries) {
+          const was = wasRanks.get(e.userId), now = nowRanks.get(e.userId);
+          e.movement = was != null && now != null ? was - now : null;
+        }
+      }
+    } catch (mErr) {
+      console.error("movement calc:", mErr); // arrows are best-effort; never block the board
+    }
 
     return { myUserId: user.id, leagues, leagueId: selected.id, leagueName: selected.name, entries };
   } catch (err) {
