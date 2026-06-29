@@ -36,10 +36,13 @@ export function FeedMatchCard({
       : (knockoutSlotLabel(match.matchNumber, pos, locale) ?? (es ? 'Por definir' : 'TBD'));
   const flag = (team: MatchView['homeTeam']) => (team ? team.flagEmoji : '🏳️');
 
+  // Always US Eastern (ET) — the lock clock — so the close time matches what
+  // everyone else sees regardless of their device timezone.
   const fmtTime = (iso: string) =>
     new Date(iso).toLocaleTimeString(es ? 'es-CO' : 'en-US', {
+      timeZone: 'America/New_York',
       hour: 'numeric', minute: '2-digit', hour12: true,
-    });
+    }) + ' ET';
 
   const kickoff = new Date(match.kickoffAt).getTime();
   const started = Date.now() >= kickoff;

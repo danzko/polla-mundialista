@@ -11,9 +11,12 @@ import type { MatchView, Locale, MatchPickRow, LiveScoresPayload } from '@/lib/t
 import { cn } from '@/lib/utils';
 import { HelpCircle, CheckCircle2, AlertTriangle, X, ArrowDownToLine, Trophy, ChevronDown, GitBranch } from 'lucide-react';
 
-// Local-timezone day key (YYYY-MM-DD). Grouping by UTC day put every
-// Colombian evening match under the next day's header.
-const localDayKey = (iso: string) => new Date(iso).toLocaleDateString('en-CA');
+// US Eastern (ET) day key (YYYY-MM-DD). ET is the tournament clock the locks
+// run on; bucketing by the viewer's local day (or UTC) shoved evening matches
+// under the wrong day's header and made games look like they belonged to a
+// different day than the one they actually lock on.
+const localDayKey = (iso: string) =>
+  new Date(iso).toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
 
 interface MatchesFilterViewProps {
   initialMatches: MatchView[];
@@ -184,13 +187,16 @@ export function MatchesFilterView({
 
   // Spanish locale renders "mié, 17 de jun" — drop the "de" and commas.
   const cleanDate = (s: string) => s.replace(/\bde\b/gi, '').replace(/[.,]/g, '').replace(/\s+/g, ' ').trim();
+  // key is an ET calendar day (YYYY-MM-DD). Anchor at UTC noon and format in
+  // UTC so the weekday/month/day label always matches that exact day for every
+  // viewer, instead of drifting in the reader's local timezone.
   const chipLabel = (key: string) => {
-    const d = new Date(key + 'T12:00:00');
-    return cleanDate(d.toLocaleDateString(es ? 'es-CO' : 'en-US', { weekday: 'short', month: 'short', day: 'numeric' }));
+    const d = new Date(key + 'T12:00:00Z');
+    return cleanDate(d.toLocaleDateString(es ? 'es-CO' : 'en-US', { timeZone: 'UTC', weekday: 'short', month: 'short', day: 'numeric' }));
   };
   const dayHeader = (key: string) => {
-    const d = new Date(key + 'T12:00:00');
-    const s = cleanDate(d.toLocaleDateString(es ? 'es-CO' : 'en-US', { weekday: 'short', day: 'numeric', month: 'short' }));
+    const d = new Date(key + 'T12:00:00Z');
+    const s = cleanDate(d.toLocaleDateString(es ? 'es-CO' : 'en-US', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short' }));
     return s.charAt(0).toUpperCase() + s.slice(1);
   };
 

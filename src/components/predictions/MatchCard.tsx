@@ -20,23 +20,22 @@ interface MatchCardProps {
 export function MatchCard({ match, locale, homeScore, awayScore, onChange }: MatchCardProps) {
   const t = useTranslations();
 
-  // Kickoff is shown in the viewer's local timezone, which the server can't
-  // know — render it only after mount to avoid a hydration mismatch.
-  const [mounted, setMounted] = React.useState(false);
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Format kickoff time
+  // Kickoff is ALWAYS shown in US Eastern (ET) — the same clock the locks
+  // run on — so every contestant sees the same time regardless of their
+  // device timezone. ET-pinned output is identical on server and client,
+  // so no mount guard / hydration dance is needed.
   const formatKickoff = (isoString: string) => {
     const date = new Date(isoString);
-    return date.toLocaleString(locale === 'es' ? 'es-ES' : 'en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: locale !== 'es',
-    });
+    return (
+      date.toLocaleString(locale === 'es' ? 'es-ES' : 'en-US', {
+        timeZone: 'America/New_York',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: locale !== 'es',
+      }) + ' ET'
+    );
   };
 
   // Helper for TBD team names: use the real bracket slot descriptors
@@ -117,7 +116,7 @@ export function MatchCard({ match, locale, homeScore, awayScore, onChange }: Mat
               </span>
             ) : (
               <span className="text-foreground/80 font-medium">
-                {mounted ? formatKickoff(match.kickoffAt) : ' '}
+                {formatKickoff(match.kickoffAt)}
               </span>
             )}
           </div>

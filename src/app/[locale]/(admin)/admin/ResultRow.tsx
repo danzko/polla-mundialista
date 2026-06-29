@@ -96,11 +96,12 @@ export function ResultRow({ match, locale }: { match: RowMatch; locale: string }
 
   const fmt = (iso: string) =>
     new Date(iso).toLocaleString(locale === "es" ? "es-ES" : "en-US", {
+      timeZone: "America/New_York",
       month: "short",
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
-    });
+    }) + " ET";
 
   const stageLabel =
     match.stage === "group" ? `Grupo ${match.groupLabel || ""}` : match.stage.toUpperCase();
