@@ -4,7 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Lock, Trophy, Check, LayoutList, GitBranch, HelpCircle, ChevronDown } from 'lucide-react';
+import { Lock, Trophy, Check, X, LayoutList, GitBranch, HelpCircle, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { submitBracket } from '@/lib/api';
 import {
@@ -36,16 +36,17 @@ const ROUND_LABEL: Record<KnockoutRound, { es: string; en: string }> = {
   third_place: { es: '3er Puesto', en: 'Third place' },
 };
 
-// Coloring for an advancer chip once results exist: green = paying off,
-// red = pick is dead, amber = still in play.
+// Coloring for an advancer chip once results exist. A still-in-play pick stays
+// green ("you picked this"); a pick that has HIT goes gold with an inset ring —
+// so a correct pick reads as clearly more than just "selected"; red = dead.
 const STATUS_ROW: Record<'earned' | 'dead' | 'pending', string> = {
-  earned: 'bg-emerald-500/15 text-emerald-300 font-bold',
-  dead: 'bg-rose-500/10 text-rose-300/55 line-through',
+  earned: 'bg-amber-400/15 text-amber-200 font-bold ring-1 ring-inset ring-amber-400/60',
+  dead: 'bg-rose-500/12 text-rose-300/70 line-through ring-1 ring-inset ring-rose-500/40',
   pending: 'bg-amber-500/10 text-amber-200 font-semibold',
 };
 const STATUS_DOT: Record<'earned' | 'dead' | 'pending', string> = {
-  earned: 'border-emerald-400 bg-emerald-400 text-background',
-  dead: 'border-rose-400/50 bg-transparent text-rose-300/60',
+  earned: 'border-amber-300 bg-amber-300 text-background',
+  dead: 'border-rose-400 bg-rose-400 text-background',
   pending: 'border-amber-400/70 bg-transparent text-amber-300',
 };
 
@@ -57,7 +58,7 @@ function PointsPill({ mn, earned }: { mn: number; earned?: boolean }) {
     <span
       className={cn(
         'inline-flex items-center rounded-full px-1.5 py-px text-[9px] font-bold tabular-nums',
-        earned ? 'bg-emerald-500/20 text-emerald-300' : 'bg-primary/10 text-primary/80'
+        earned ? 'bg-amber-400/20 text-amber-200 ring-1 ring-inset ring-amber-400/50' : 'bg-primary/10 text-primary/80'
       )}
       title={mn === 104 ? 'Champion' : `+${pts} if correct`}
     >
@@ -101,6 +102,29 @@ export function BracketBoard({ initialBracket, comparison, teams, locale }: Brac
       return 'pending';
     },
     [comparison, earnedSet, eliminatedSet]
+  );
+
+  // How popular each advancer pick is across the league (post-deadline): what
+  // share of league-mates also sent a given team through a given match. Powers
+  // the small "62%" chip next to each team in the bracket view.
+  const pickPopularity = React.useMemo(() => {
+    const counts = new Map<string, number>();
+    const peers = comparison?.peers ?? [];
+    for (const peer of peers) {
+      for (const [mn, team] of Object.entries(peer.advancers)) {
+        if (!team) continue;
+        counts.set(`${mn}:${team}`, (counts.get(`${mn}:${team}`) ?? 0) + 1);
+      }
+    }
+    return { counts, total: peers.length };
+  }, [comparison]);
+  const pctFor = React.useCallback(
+    (matchNumber: number, teamId: string | null): number | null => {
+      if (!teamId || !comparison?.available || !pickPopularity.total) return null;
+      const c = pickPopularity.counts.get(`${matchNumber}:${teamId}`) ?? 0;
+      return Math.round((c / pickPopularity.total) * 100);
+    },
+    [comparison, pickPopularity]
   );
 
   // Which bracket is on screen: your own, or a league-mate's (post-deadline).
@@ -149,7 +173,10 @@ export function BracketBoard({ initialBracket, comparison, teams, locale }: Brac
   });
 
   const [roundIdx, setRoundIdx] = React.useState(0);
-  const [view, setView] = React.useState<'fill' | 'ladder'>('fill');
+  // Once the bracket is locked everyone's picks are in, so open straight to the
+  // read-only filled bracket; only show the entry screen by default while it's
+  // still fillable.
+  const [view, setView] = React.useState<'fill' | 'ladder'>(initialBracket.locked ? 'ladder' : 'fill');
   const [saving, setSaving] = React.useState(false);
   const [toast, setToast] = React.useState<string | null>(null);
   const [mounted, setMounted] = React.useState(false);
@@ -366,6 +393,7 @@ export function BracketBoard({ initialBracket, comparison, teams, locale }: Brac
           picks={displayPicks}
           championId={championId}
           statusOf={statusOf}
+          pctFor={pctFor}
           es={es}
         />
       ) : (
@@ -458,7 +486,9 @@ export function BracketBoard({ initialBracket, comparison, teams, locale }: Brac
                                 : selectable ? 'border-muted-foreground/50' : 'border-transparent'
                             )}
                           >
-                            {(isWinner && resultSt !== 'dead') && <Check className="h-3 w-3" />}
+                            {isWinner && (resultSt === 'dead'
+                              ? <X className="h-3 w-3" strokeWidth={3} />
+                              : <Check className="h-3 w-3" />)}
                           </span>
                           <span className="truncate">{labelFor(mn, side, teamId)}</span>
                         </span>
@@ -528,7 +558,7 @@ export function BracketBoard({ initialBracket, comparison, teams, locale }: Brac
 
 // ---- Read-only full-bracket ladder (scrollable columns) ----
 function LadderView({
-  rounds, sideTeam, labelFor, picks, championId, statusOf, es,
+  rounds, sideTeam, labelFor, picks, championId, statusOf, pctFor, es,
 }: {
   rounds: typeof ROUND_ORDER;
   sideTeam: (m: number, s: 'home' | 'away', p?: Record<number, Pick>) => string | null;
@@ -536,6 +566,7 @@ function LadderView({
   picks: Record<number, Pick>;
   championId: string | null;
   statusOf: (m: number, id: string | null) => PickStatus;
+  pctFor: (m: number, id: string | null) => number | null;
   es: boolean;
 }) {
   // Order columns left→right; put third-place last as a small aside.
@@ -560,6 +591,7 @@ function LadderView({
                     const win = !!id && adv === id;
                     const st = win ? statusOf(mn, id) : null;
                     const resultSt = st === 'earned' || st === 'dead' ? st : null;
+                    const pct = pctFor(mn, id);
                     return (
                       <div
                         key={side}
@@ -570,7 +602,17 @@ function LadderView({
                         )}
                       >
                         <span className="truncate">{labelFor(mn, side, id)}</span>
-                        {win && <PointsPill mn={mn} earned={st === 'earned'} />}
+                        <span className="flex items-center gap-1 shrink-0">
+                          {pct !== null && (
+                            <span
+                              className="text-[9px] tabular-nums text-muted-foreground/70"
+                              title={es ? `${pct}% de la liga eligió este equipo` : `${pct}% of the league picked this team`}
+                            >
+                              {pct}%
+                            </span>
+                          )}
+                          {win && <PointsPill mn={mn} earned={st === 'earned'} />}
+                        </span>
                       </div>
                     );
                   })}
