@@ -21,7 +21,6 @@ interface BracketBoardProps {
   comparison?: BracketComparison;
   teams: Team[];
   locale: Locale;
-  myUserId?: string;
 }
 
 type Pick = { advancerTeamId: string | null; homeScore: number | null; awayScore: number | null };
@@ -66,7 +65,7 @@ function PointsPill({ mn, earned }: { mn: number; earned?: boolean }) {
   );
 }
 
-export function BracketBoard({ initialBracket, comparison, teams, locale, myUserId }: BracketBoardProps) {
+export function BracketBoard({ initialBracket, comparison, teams, locale }: BracketBoardProps) {
   const t = useTranslations();
   const es = locale === 'es';
 
@@ -90,6 +89,9 @@ export function BracketBoard({ initialBracket, comparison, teams, locale, myUser
   const statusOf = React.useCallback(
     (matchNumber: number, teamId: string | null): PickStatus => {
       if (!teamId || !comparison?.available) return null;
+      // The 3rd-place game earns no advancement points, so don't color it as
+      // earned/dead — keep it neutral (consistent with showing no points pill).
+      if (matchNumber === 103) return null;
       const w = ADVANCEMENT_POINTS_BY_MATCH[matchNumber];
       if (w && earnedSet.has(`${w}:${teamId}`)) return 'earned';
       const actual = comparison.actualAdvancers[matchNumber];

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { getBracket, getLeagueBrackets, getTeams, getSessionUser } from '@/lib/api';
+import { getBracket, getLeagueBrackets, getTeams } from '@/lib/api';
 import { BracketBoard } from './BracketBoard';
 
 export const dynamic = 'force-dynamic';
@@ -10,11 +10,10 @@ interface BracketPageProps {
 
 export default async function BracketPage({ params }: BracketPageProps) {
   const { locale } = await params;
-  const [bracket, comparison, teams, sessionUser] = await Promise.all([
+  const [bracket, comparison, teams] = await Promise.all([
     getBracket(),
     getLeagueBrackets(),
     getTeams(),
-    getSessionUser(),
   ]);
 
   return (
@@ -24,7 +23,6 @@ export default async function BracketPage({ params }: BracketPageProps) {
         comparison={comparison}
         teams={teams}
         locale={locale as any}
-        myUserId={sessionUser?.id}
       />
     </div>
   );

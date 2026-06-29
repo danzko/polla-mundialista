@@ -603,10 +603,7 @@ export async function getBracket(): Promise<BracketView> {
     // Per-match lock: each pick locks at min(entry deadline, its kickoff-15m).
     // `lockAt` here is the overall entry deadline (when the whole bracket
     // closes); the client derives each game's own lock from its kickoff.
-    // Read the EFFECTIVE deadline from the DB (bracket_deadline()) so per-user
-    // admin grace extensions are honored; fall back to the global constant.
-    const { data: effDeadline } = await supabase.rpc("bracket_deadline");
-    const lockAt = typeof effDeadline === "string" ? effDeadline : BRACKET_ENTRY_DEADLINE_ISO;
+    const lockAt = BRACKET_ENTRY_DEADLINE_ISO;
     const locked = Date.now() >= new Date(lockAt).getTime();
 
     const matches: BracketMatchView[] = (matchRows ?? []).map((m) => {
@@ -646,9 +643,8 @@ export async function getLeagueBrackets(): Promise<BracketComparison> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return empty;
 
-    // Only reveal once the (effective) deadline has passed.
-    const { data: deadline } = await supabase.rpc("bracket_deadline");
-    if (typeof deadline === "string" && Date.now() < new Date(deadline).getTime()) {
+    // Only reveal once the bracket deadline has passed (RLS enforces the same).
+    if (Date.now() < new Date(BRACKET_ENTRY_DEADLINE_ISO).getTime()) {
       return empty;
     }
 
@@ -796,13 +792,7 @@ export async function submitBracket(input: {
       .from("matches")
       .select("id, kickoff_at, stage, is_voided")
       .in("id", ids);
-    // Effective per-user deadline (honors admin grace extensions); RLS enforces
-    // the same rule as the real backstop, this just avoids pre-filtering a
-    // still-open pick for a user whose deadline was extended.
-    const { data: effDeadline } = await supabase.rpc("bracket_deadline");
-    const deadlineMs = new Date(
-      typeof effDeadline === "string" ? effDeadline : BRACKET_ENTRY_DEADLINE_ISO
-    ).getTime();
+    const deadlineMs = new Date(BRACKET_ENTRY_DEADLINE_ISO).getTime();
     const nowMs = Date.now();
     const openIds = new Set(
       (kmatches ?? [])
