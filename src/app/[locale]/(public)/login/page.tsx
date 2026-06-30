@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Mail, CheckCircle2 } from 'lucide-react';
+import { BallMark } from '@/components/shared/brand';
 import { requestMagicLink } from '@/lib/api';
 import { emailSchema } from '@/lib/validation';
 
@@ -74,6 +75,7 @@ export default function LoginPage() {
             // LOGIN FORM STATE
             <form onSubmit={handleSubmit(onSubmit)}>
               <CardHeader className="space-y-2 text-center pb-4">
+                <BallMark className="mx-auto h-12 w-12 drop-shadow-[0_0_10px_rgba(25,194,90,0.35)]" />
                 <CardTitle className="text-2xl font-extrabold tracking-tight">
                   {t('auth.title')}
                 </CardTitle>

@@ -8,6 +8,7 @@ import { getDashboard, getSessionUser } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Plus, UserPlus, Trophy, Users, ShieldAlert, Award, Star } from 'lucide-react';
+import { BallMark } from '@/components/shared/brand';
 import type { LeagueSummary } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -84,8 +85,9 @@ export default function DashboardPage() {
       {/* HEADER SECTION */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-            ⚽️ {t('dashboard.title')}
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight flex items-center gap-2">
+            <BallMark className="h-7 w-7 shrink-0" />
+            {t('dashboard.title')}
           </h1>
           <p className="text-sm text-muted-foreground font-light mt-1">
             {currentLocale === 'es' ? `¡Hola de nuevo, ${userName}! Listo para predecir.` : `Hello, ${userName}! Ready to make predictions.`}

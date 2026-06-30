@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation';
 import { AppShell } from '@/components/shared/AppShell';
 import { Button } from '@/components/ui/button';
 import { Trophy, Calendar, Users, Star } from 'lucide-react';
+import { GlobeMark } from '@/components/shared/brand';
 
 export default function LandingPage() {
   const t = useTranslations();
@@ -19,6 +20,8 @@ export default function LandingPage() {
         
         {/* HERO SECTION */}
         <section className="text-center max-w-3xl space-y-6 flex flex-col items-center">
+          <GlobeMark className="h-24 w-24 sm:h-28 sm:w-28 drop-shadow-[0_0_28px_rgba(25,194,90,0.4)]" />
+
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-wider animate-pulse">
             <Star className="h-3.5 w-3.5 fill-primary" />
             FIFA World Cup 2026
