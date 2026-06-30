@@ -51,7 +51,25 @@ function interstitial(tokenHash: string, type: string, next: string): Response {
     <input type="hidden" name="token_hash" value="${tokenHash}">
     <input type="hidden" name="type" value="${type}">
     <input type="hidden" name="next" value="${next}">
-    <div class="t">⚽️ Polla Mundialista</div>
+    <svg width="48" height="48" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="margin-bottom:12px">
+      <defs>
+        <radialGradient id="bb" cx="36%" cy="30%" r="78%"><stop offset="0" stop-color="#ffffff"/><stop offset=".55" stop-color="#eef1f5"/><stop offset="1" stop-color="#cbd3dd"/></radialGradient>
+        <radialGradient id="bs" cx="40%" cy="34%" r="72%"><stop offset="0" stop-color="#000" stop-opacity="0"/><stop offset=".72" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#0b1220" stop-opacity=".34"/></radialGradient>
+        <clipPath id="bc"><circle cx="50" cy="50" r="46"/></clipPath>
+      </defs>
+      <circle cx="50" cy="50" r="46" fill="url(#bb)"/>
+      <g clip-path="url(#bc)">
+        <path d="M88.79 58.67 L89.26 72.72 L93.07 62.51 L94.95 42.14 L92.31 39.77 Z" fill="#17191e"/>
+        <path d="M34.56 21.64 L48.65 9.96 L40.72 5.11 L21.72 13.80 L17.92 24.01 Z" fill="#17191e"/>
+        <path d="M55.99 69.87 L44.54 83.93 L56.75 92.61 L75.74 83.93 L75.27 69.87 Z" fill="#17191e"/>
+        <path d="M39.58 58.67 L31.18 39.77 L14.54 42.14 L12.65 62.51 L28.13 72.72 Z" fill="#17191e"/>
+        <path d="M57.80 50.34 L77.08 50.34 L80.60 31.43 L63.50 19.75 L49.40 31.43 Z" fill="#17191e"/>
+      </g>
+      <circle cx="50" cy="50" r="46" fill="url(#bs)"/>
+      <ellipse cx="33" cy="31" rx="15" ry="10" fill="#fff" opacity=".5" transform="rotate(-28 33 31)"/>
+      <circle cx="50" cy="50" r="46" fill="none" stroke="#0b1220" stroke-opacity=".18" stroke-width="1"/>
+    </svg>
+    <div class="t">Polla 2026</div>
     <div class="s">Confirmando tu acceso… · Signing you in…</div>
     <button class="b" type="submit">Entrar / Sign in</button>
   </form>

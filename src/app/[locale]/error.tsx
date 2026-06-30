@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { BallMark } from '@/components/shared/brand';
 
 export default function LocaleError({
   error,
@@ -16,7 +17,10 @@ export default function LocaleError({
   return (
     <div className="flex min-h-[70vh] items-center justify-center px-4">
       <div className="glass-card w-full max-w-md rounded-2xl border border-border/60 p-8 text-center space-y-5">
-        <div className="text-5xl select-none">😵‍💫⚽</div>
+        <div className="flex items-center justify-center gap-2.5 select-none">
+          <span className="text-5xl">😵‍💫</span>
+          <BallMark className="h-11 w-11 drop-shadow-[0_0_10px_rgba(25,194,90,0.25)]" />
+        </div>
         <h2 className="text-xl font-extrabold text-foreground">
           Algo salió mal
         </h2>
