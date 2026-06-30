@@ -305,7 +305,7 @@ export function BracketBoard({ initialBracket, comparison, teams, locale }: Brac
     : null;
 
   return (
-    <div className="pb-28">
+    <div className={!locked && r32Ready ? 'pb-28' : 'pb-10'}>
       {/* HEADER */}
       <div className="mb-3 flex items-center justify-between">
         <div>

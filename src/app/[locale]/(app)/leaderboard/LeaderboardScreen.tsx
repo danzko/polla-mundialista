@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Trophy, GitBranch, Star, ChevronDown, Goal } from 'lucide-react';
 import { Flag } from '@/components/shared/Flag';
 import { cn } from '@/lib/utils';
@@ -49,6 +50,7 @@ function ChampionFlag({ e }: { e: UnifiedLeaderboardEntry }) {
 
 export function LeaderboardScreen({ data, locale, embedded = false, stats }: { data: LeaderboardData; locale: Locale; embedded?: boolean; stats?: StatsData | null }) {
   const es = locale === 'es';
+  const router = useRouter();
   const [openId, setOpenId] = React.useState<string | null>(null);
   const [tab, setTab] = React.useState<'standings' | 'stats'>('standings');
   const me = data.entries.find((x) => x.isMe) ?? null;
@@ -68,37 +70,34 @@ export function LeaderboardScreen({ data, locale, embedded = false, stats }: { d
 
   return (
     <div className={embedded ? '' : 'pb-24'}>
+      {/* HEADER — title + league switcher tucked into one tight row. The league
+          picker is a compact dropdown (was a row of pills) and only appears when
+          you're in more than one league. */}
       {!embedded && (
-        <div className="mb-3">
-          <h1 className="text-xl font-extrabold tracking-tight flex items-center gap-2">
+        <div className="mb-2.5 flex items-center justify-between gap-2">
+          <h1 className="text-lg font-extrabold tracking-tight flex items-center gap-1.5">
             <Trophy className="h-5 w-5 text-amber-500" />
-            {es ? 'Tabla de posiciones' : 'Leaderboard'}
+            {es ? 'Tabla' : 'Standings'}
           </h1>
-          <p className="text-[11px] text-muted-foreground mt-0.5">
-            {es ? 'Toca a alguien para ver de dónde salen sus puntos' : 'Tap anyone to see where their points come from'}
-          </p>
-        </div>
-      )}
-
-      {/* LEAGUE FILTER — only on the standalone screen, and only when in >1 league */}
-      {!embedded && data.leagues.length > 1 && (
-        <div className="mb-3 flex gap-1.5 overflow-x-auto scrollbar-none">
-          {data.leagues.map((l) => {
-            const active = l.id === data.leagueId;
-            return (
-              <Link
-                key={l.id}
-                href={`/${locale}/leaderboard?league=${l.id}`}
-                scroll={false}
-                className={cn(
-                  'flex-shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold whitespace-nowrap border transition-colors',
-                  active ? 'bg-primary text-primary-foreground border-primary' : 'bg-card/50 text-muted-foreground border-border/40'
-                )}
+          {data.leagues.length > 1 ? (
+            <div className="relative shrink-0">
+              <select
+                value={data.leagueId ?? ''}
+                onChange={(e) => router.push(`/${locale}/leaderboard?league=${e.target.value}`, { scroll: false })}
+                className="appearance-none rounded-lg border border-border/50 bg-card/70 pl-3 pr-8 py-1.5 text-xs font-bold text-foreground max-w-[55vw] truncate"
+                aria-label={es ? 'Elegir liga' : 'Choose league'}
               >
-                {l.name}
-              </Link>
-            );
-          })}
+                {data.leagues.map((l) => (
+                  <option key={l.id} value={l.id}>{l.name}</option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            </div>
+          ) : data.leagues.length === 1 ? (
+            <span className="shrink-0 max-w-[55vw] truncate text-xs font-bold text-muted-foreground">
+              {data.leagues[0].name}
+            </span>
+          ) : null}
         </div>
       )}
 

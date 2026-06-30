@@ -202,12 +202,12 @@ export default function DashboardPage() {
             </div>
             <div className="space-y-1">
               <h4 className="text-base font-bold text-foreground">
-                {currentLocale === 'es' ? '¡No olvides tus predicciones!' : 'Don\'t forget your predictions!'}
+                {currentLocale === 'es' ? '¡No te quedes atrás!' : "Don't fall behind!"}
               </h4>
               <p className="text-xs text-muted-foreground font-light">
-                {currentLocale === 'es' 
-                  ? 'Completa tus pronósticos y picks especiales antes de que empiece el torneo.'
-                  : 'Submit your match scores and tournament bonus picks before fixtures begin.'}
+                {currentLocale === 'es'
+                  ? 'Predice cada partido antes de que se cierre y sigue escalando en la tabla.'
+                  : 'Predict each match before it locks and keep climbing the table.'}
               </p>
             </div>
           </div>
