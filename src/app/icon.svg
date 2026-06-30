@@ -1,0 +1,25 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="pitch" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#16d666"/>
+      <stop offset="1" stop-color="#0a9d5a"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="8" fill="url(#pitch)"/>
+  <g transform="translate(16 16)">
+    <circle r="9.3" fill="#ffffff"/>
+    <path d="M0.00 -4.00 L3.80 -1.24 L2.35 3.24 L-2.35 3.24 L-3.80 -1.24 Z" fill="#0b1220"/>
+    <path d="M0.00 -4.70 L-1.90 -6.08 L-1.18 -8.32 L1.18 -8.32 L1.90 -6.08 Z" fill="#0b1220"/>
+    <path d="M4.47 -1.45 L5.20 -3.69 L7.55 -3.69 L8.27 -1.45 L6.37 -0.07 Z" fill="#0b1220"/>
+    <path d="M2.76 3.80 L5.11 3.80 L5.84 6.04 L3.94 7.42 L2.04 6.04 Z" fill="#0b1220"/>
+    <path d="M-2.76 3.80 L-2.04 6.04 L-3.94 7.42 L-5.84 6.04 L-5.11 3.80 Z" fill="#0b1220"/>
+    <path d="M-4.47 -1.45 L-6.37 -0.07 L-8.27 -1.45 L-7.55 -3.69 L-5.20 -3.69 Z" fill="#0b1220"/>
+    <g stroke="#0b1220" stroke-width="1.05" stroke-linecap="round">
+      <line x1="0.00" y1="-4.00" x2="0.00" y2="-4.70"/>
+      <line x1="3.80" y1="-1.24" x2="4.47" y2="-1.45"/>
+      <line x1="2.35" y1="3.24" x2="2.76" y2="3.80"/>
+      <line x1="-2.35" y1="3.24" x2="-2.76" y2="3.80"/>
+      <line x1="-3.80" y1="-1.24" x2="-4.47" y2="-1.45"/>
+    </g>
+  </g>
+</svg>
