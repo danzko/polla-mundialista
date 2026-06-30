@@ -804,7 +804,7 @@ export async function getLeaderboard(leagueId?: string): Promise<LeaderboardData
     // Scores (members with no activity won't appear in the view → default 0s).
     const { data: scoreRows } = await supabase
       .from("leaderboard_view")
-      .select("user_id, total_points, group_score_points, ko_score_points, bracket_points, bonus_pick_points, knockout_points, first_prediction_at")
+      .select("user_id, total_points, group_score_points, ko_score_points, bracket_points, bonus_pick_points, knockout_points, exact_count, first_prediction_at")
       .in("user_id", memberIds);
     const scoreById = new Map((scoreRows ?? []).map((s) => [s.user_id as string, s]));
 
@@ -849,6 +849,7 @@ export async function getLeaderboard(leagueId?: string): Promise<LeaderboardData
         bracket: (s?.bracket_points as number) ?? 0,
         bonus: (s?.bonus_pick_points as number) ?? 0,
         koTiebreak: (s?.knockout_points as number) ?? 0,
+        exactCount: (s?.exact_count as number) ?? 0,
         movement: null,
         championTeamId,
         championCode: (team?.code as string) ?? null,

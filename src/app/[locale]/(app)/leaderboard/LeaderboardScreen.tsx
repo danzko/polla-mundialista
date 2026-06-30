@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Trophy, GitBranch, Star, ChevronDown, Goal } from 'lucide-react';
+import { Trophy, GitBranch, Star, ChevronDown, Goal, Target } from 'lucide-react';
 import { Flag } from '@/components/shared/Flag';
 import { cn } from '@/lib/utils';
 import { StatsSections } from './StatsSections';
@@ -139,9 +139,12 @@ export function LeaderboardScreen({ data, locale, embedded = false, stats }: { d
       </div>
 
       <div className="space-y-1.5">
-        {data.entries.map((e) => {
+        {data.entries.map((e, idx) => {
           const open = openId === e.userId;
           const matches = e.groupScore + e.koScore;
+          // A little 💩 on the bottom three — but only on a board big enough that
+          // "last three" is a real trailing group, not most of the league.
+          const isBottomThree = data.entries.length >= 6 && idx >= data.entries.length - 3;
           return (
             <div
               key={e.userId}
@@ -166,6 +169,9 @@ export function LeaderboardScreen({ data, locale, embedded = false, stats }: { d
                     <span className="truncate text-[13px] font-bold">
                       {e.displayName}{e.isMe && <span className="ml-1 text-[10px] font-semibold text-primary">{es ? '(tú)' : '(you)'}</span>}
                     </span>
+                    {isBottomThree && (
+                      <span className="shrink-0 text-sm select-none" title={es ? 'Farolillo rojo' : 'Bringing up the rear'} aria-hidden>💩</span>
+                    )}
                     <Movement m={e.movement} />
                   </span>
                   {/* desktop numeric columns */}
@@ -183,6 +189,14 @@ export function LeaderboardScreen({ data, locale, embedded = false, stats }: { d
                 <div className="border-t border-border/30 px-3 py-2.5 text-[12px] space-y-1.5">
                   <Row icon={<Goal className="h-3.5 w-3.5 text-emerald-400" />} label={es ? 'Partidos (marcadores)' : 'Matches (scorelines)'}
                     sub={`${es ? 'Grupos' : 'Group'} ${e.groupScore} · ${es ? 'Eliminatorias' : 'KO'} ${e.koScore}`} value={matches} />
+                  {/* Exact-scoreline tally (count of 6-pointers, not points) — a sub-stat under Matches */}
+                  <div className="flex items-center justify-between gap-2 pl-5 -mt-0.5">
+                    <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                      <Target className="h-3 w-3 text-emerald-400/80" />
+                      {es ? 'Marcadores exactos' : 'Exact scores'}
+                    </span>
+                    <span className="shrink-0 tabular-nums text-[11px] font-semibold text-muted-foreground">{e.exactCount}</span>
+                  </div>
                   <Row icon={<GitBranch className="h-3.5 w-3.5 text-sky-400" />} label={es ? 'Avance en la llave' : 'Bracket advancement'} value={e.bracket} />
                   <Row icon={<Star className="h-3.5 w-3.5 text-amber-400" />} label={es ? 'Picks de bonos' : 'Bonus picks'} value={e.bonus} />
                   <div className="flex items-center justify-between border-t border-border/30 pt-1.5 font-extrabold">
