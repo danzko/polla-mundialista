@@ -7,39 +7,43 @@ import * as React from 'react';
 // Gradient ids are scoped per-instance with useId so multiple marks on one page
 // never collide.
 
-// Realistic shaded soccer ball — the app's logo mark. Reads cleanly down to
-// ~18px (header) yet keeps the classic truncated-icosahedron pattern and a
-// soft 3D sphere shade. Transparent background so it sits on any surface.
+// Realistic shaded soccer ball — the app's logo mark. The pentagon layout is a
+// real orthographic projection of a truncated-icosahedron (classic Telstar
+// topology), with a radial sphere shade + specular highlight so it reads as an
+// actual 3D ball, not a flat badge. Original geometry (no trademarked design).
+// Transparent background so it sits on any surface.
 export function BallMark({ className }: { className?: string }) {
   const id = React.useId();
+  const PENTS = [
+    'M88.79 58.67 L89.26 72.72 L93.07 62.51 L94.95 42.14 L92.31 39.77 Z',
+    'M34.56 21.64 L48.65 9.96 L40.72 5.11 L21.72 13.80 L17.92 24.01 Z',
+    'M55.99 69.87 L44.54 83.93 L56.75 92.61 L75.74 83.93 L75.27 69.87 Z',
+    'M39.58 58.67 L31.18 39.77 L14.54 42.14 L12.65 62.51 L28.13 72.72 Z',
+    'M57.80 50.34 L77.08 50.34 L80.60 31.43 L63.50 19.75 L49.40 31.43 Z',
+  ];
   return (
-    <svg viewBox="0 0 32 32" className={className} role="img" aria-hidden="true">
+    <svg viewBox="0 0 100 100" className={className} role="img" aria-hidden="true">
       <defs>
-        <radialGradient id={`${id}-s`} cx="36%" cy="30%" r="75%">
+        <radialGradient id={`${id}-body`} cx="36%" cy="30%" r="78%">
           <stop offset="0" stopColor="#ffffff" />
-          <stop offset="0.65" stopColor="#eef1f5" />
-          <stop offset="1" stopColor="#c4ccd6" />
+          <stop offset="0.55" stopColor="#eef1f5" />
+          <stop offset="1" stopColor="#cbd3dd" />
         </radialGradient>
+        <radialGradient id={`${id}-shade`} cx="40%" cy="34%" r="72%">
+          <stop offset="0" stopColor="#000000" stopOpacity="0" />
+          <stop offset="0.72" stopColor="#000000" stopOpacity="0" />
+          <stop offset="1" stopColor="#0b1220" stopOpacity="0.34" />
+        </radialGradient>
+        <clipPath id={`${id}-clip`}><circle cx="50" cy="50" r="46" /></clipPath>
       </defs>
-      <g transform="translate(16 16)">
-        <circle r="9.3" fill={`url(#${id}-s)`} />
-        <path d="M0.00 -4.00 L3.80 -1.24 L2.35 3.24 L-2.35 3.24 L-3.80 -1.24 Z" fill="#0b1220" />
-        <path d="M0.00 -4.70 L-1.90 -6.08 L-1.18 -8.32 L1.18 -8.32 L1.90 -6.08 Z" fill="#0b1220" />
-        <path d="M4.47 -1.45 L5.20 -3.69 L7.55 -3.69 L8.27 -1.45 L6.37 -0.07 Z" fill="#0b1220" />
-        <path d="M2.76 3.80 L5.11 3.80 L5.84 6.04 L3.94 7.42 L2.04 6.04 Z" fill="#0b1220" />
-        <path d="M-2.76 3.80 L-2.04 6.04 L-3.94 7.42 L-5.84 6.04 L-5.11 3.80 Z" fill="#0b1220" />
-        <path d="M-4.47 -1.45 L-6.37 -0.07 L-8.27 -1.45 L-7.55 -3.69 L-5.20 -3.69 Z" fill="#0b1220" />
-        <g stroke="#0b1220" strokeWidth="1.05" strokeLinecap="round">
-          <line x1="0.00" y1="-4.00" x2="0.00" y2="-4.70" />
-          <line x1="3.80" y1="-1.24" x2="4.47" y2="-1.45" />
-          <line x1="2.35" y1="3.24" x2="2.76" y2="3.80" />
-          <line x1="-2.35" y1="3.24" x2="-2.76" y2="3.80" />
-          <line x1="-3.80" y1="-1.24" x2="-4.47" y2="-1.45" />
-        </g>
-        {/* rim + top highlight for the sphere read */}
-        <circle r="9.3" fill="none" stroke="#0b1220" strokeOpacity="0.12" strokeWidth="0.6" />
-        <ellipse cx="-3" cy="-3.6" rx="3.2" ry="2" fill="#ffffff" opacity="0.5" />
+      <circle cx="50" cy="50" r="46" fill={`url(#${id}-body)`} />
+      <g clipPath={`url(#${id}-clip)`}>
+        {PENTS.map((d, i) => <path key={i} d={d} fill="#17191e" />)}
+        {PENTS.map((d, i) => <path key={`s${i}`} d={d} fill="none" stroke="#41444b" strokeWidth="0.5" />)}
       </g>
+      <circle cx="50" cy="50" r="46" fill={`url(#${id}-shade)`} />
+      <ellipse cx="33" cy="31" rx="15" ry="10" fill="#ffffff" opacity="0.5" transform="rotate(-28 33 31)" />
+      <circle cx="50" cy="50" r="46" fill="none" stroke="#0b1220" strokeOpacity="0.18" strokeWidth="1" />
     </svg>
   );
 }
