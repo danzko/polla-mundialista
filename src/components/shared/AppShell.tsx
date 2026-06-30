@@ -187,26 +187,9 @@ export function AppShell({ children, user, onLogout }: AppShellProps) {
                   <X className="h-6 w-6" />
                 </button>
               </div>
-              <div className="flex flex-col gap-4">
-                {navItems.map((item) => {
-                  const active = isActive(item.href);
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={cn(
-                        "flex items-center gap-3 py-3 px-4 rounded-xl text-base font-semibold transition-all duration-200",
-                        active
-                          ? "bg-accent text-accent-foreground glow-green"
-                          : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                      )}
-                    >
-                      <item.icon className="h-5 w-5" />
-                      {item.label}
-                    </Link>
-                  );
-                })}
+              {/* Primary navigation lives in the bottom tab bar on mobile, so
+                  this menu is just the account drawer (Rules + profile + logout). */}
+              <div className="flex flex-col gap-2">
                 <Link
                   href={`${basePath}/rules`}
                   onClick={() => setMobileMenuOpen(false)}

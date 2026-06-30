@@ -84,7 +84,7 @@ export default function DashboardPage() {
       {/* HEADER SECTION */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
             ⚽️ {t('dashboard.title')}
           </h1>
           <p className="text-sm text-muted-foreground font-light mt-1">
@@ -161,7 +161,7 @@ export default function DashboardPage() {
                     {league.name}
                   </CardTitle>
                   <CardDescription className="text-xs font-semibold font-mono tracking-wider text-muted-foreground uppercase flex items-center gap-1 select-none">
-                    <span>Code:</span>
+                    <span>{currentLocale === 'es' ? 'Código:' : 'Code:'}</span>
                     <span className="text-foreground">{league.inviteCode}</span>
                   </CardDescription>
                 </CardHeader>

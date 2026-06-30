@@ -19,7 +19,7 @@ export default async function BonusesPage({ params }: BonusesPageProps) {
     <div className="space-y-6 py-4">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-extrabold tracking-tight text-foreground select-none">
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground select-none">
           🏆 {locale === 'es' ? 'Pronósticos Especiales' : 'Tournament Predictions'}
         </h1>
         <p className="text-xs text-muted-foreground font-light mt-1">

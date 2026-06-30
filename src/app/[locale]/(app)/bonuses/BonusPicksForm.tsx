@@ -34,9 +34,16 @@ const padTo = (arr: string[], size: number) => {
 export function BonusPicksForm({ initialBonuses, teams, locale }: BonusPicksFormProps) {
   const t = useTranslations();
   
+  const es = locale === 'es';
   const [locked, setLocked] = React.useState(initialBonuses.locked);
   const [saveStatus, setSaveStatus] = React.useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [apiError, setApiError] = React.useState<string | null>(null);
+
+  // Once locked, the champion pick is the only one with a live signal — is that
+  // team still in the tournament or knocked out? Boot/Ball are decided at the
+  // very end, so we never show fake point totals mid-tournament.
+  const championTeam = teams.find((tm) => tm.id === initialBonuses.championTeamId) ?? null;
+  const championAlive = championTeam ? !championTeam.eliminated : false;
 
   const {
     control,
@@ -97,7 +104,11 @@ export function BonusPicksForm({ initialBonuses, teams, locale }: BonusPicksForm
       <div className="glass-card p-6 rounded-2xl border border-border/60 flex flex-col items-center text-center space-y-4 shadow-md">
         <CountdownToLock lockAt={initialBonuses.lockAt} onLockChange={handleLockChange} />
         <p className="text-xs text-muted-foreground max-w-sm leading-relaxed font-light">
-          {t('bonuses.description')}
+          {locked
+            ? (es
+                ? 'Tus picks están bloqueados. El campeón puntúa solo si gana todo; la Bota y el Balón de Oro se definen al terminar el torneo.'
+                : 'Your picks are locked. Your champion only scores if they win it all; the Golden Boot & Ball are decided when the tournament ends.')
+            : t('bonuses.description')}
         </p>
       </div>
 
@@ -123,6 +134,9 @@ export function BonusPicksForm({ initialBonuses, teams, locale }: BonusPicksForm
             <div className="space-y-2 md:max-w-md">
               <label className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5 select-none">
                 🏆 {t('bonuses.champion')}
+                {locked && (
+                  <LockedPill kind={initialBonuses.championTeamId ? (championAlive ? 'alive' : 'out') : 'nopick'} es={es} />
+                )}
               </label>
               <Controller
                 name="championTeamId"
@@ -150,6 +164,7 @@ export function BonusPicksForm({ initialBonuses, teams, locale }: BonusPicksForm
                 >
                   <Award className="h-4 w-4 text-amber-500" />
                   {t('bonuses.topScorer')}
+                  {locked && <LockedPill kind="pending" es={es} />}
                 </label>
                 <Controller
                   name="topScorerNames.0"
@@ -179,6 +194,7 @@ export function BonusPicksForm({ initialBonuses, teams, locale }: BonusPicksForm
                 >
                   <Star className="h-4 w-4 text-emerald-500" />
                   {t('bonuses.bestPlayer')}
+                  {locked && <LockedPill kind="pending" es={es} />}
                 </label>
                 <Controller
                   name="bestPlayerNames.0"
@@ -239,5 +255,21 @@ export function BonusPicksForm({ initialBonuses, teams, locale }: BonusPicksForm
         </Card>
       </form>
     </div>
+  );
+}
+
+// Small status chip shown next to each pick once bonuses are locked.
+// Champion: alive / eliminated. Boot & Ball: decided at the tournament's end.
+function LockedPill({ kind, es }: { kind: 'alive' | 'out' | 'pending' | 'nopick'; es: boolean }) {
+  const map = {
+    alive: { cls: 'bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-400/40', txt: es ? 'Sigue vivo' : 'Still alive' },
+    out: { cls: 'bg-rose-500/15 text-rose-300 ring-1 ring-inset ring-rose-400/40', txt: es ? 'Eliminado' : 'Eliminated' },
+    pending: { cls: 'bg-secondary/70 text-muted-foreground', txt: es ? 'Se define al final' : 'Decided at the end' },
+    nopick: { cls: 'bg-secondary/70 text-muted-foreground', txt: es ? 'Sin pick' : 'No pick' },
+  }[kind];
+  return (
+    <span className={cn('ml-auto inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold normal-case tracking-normal', map.cls)}>
+      {map.txt}
+    </span>
   );
 }
