@@ -87,6 +87,7 @@ export interface BracketMatchView {
 export interface BracketView {
   lockAt: string | null;     // first R32 kickoff
   locked: boolean;
+  fullyUnlocked: boolean;    // per-user admin grace: edit ANY knockout game (even started) until it expires
   matches: BracketMatchView[];
 }
 

@@ -1,7 +1,9 @@
 "use server";
 
 import { headers } from "next/headers";
+import type { EmailOtpType } from "@supabase/supabase-js";
 import { createClient } from "./supabase/server";
+import { createAdminClient } from "./supabase/admin";
 import type {
   SessionUser, Team, MatchView, LeagueSummary, LeagueDetail,
   BonusView, ActionResult, Locale, MatchStage, LeaderboardRow,
@@ -582,7 +584,7 @@ export async function changeDisplayName(input: { name: string }): Promise<Action
  * later-round participants from the player's advancers via the bracket tree.
  */
 export async function getBracket(): Promise<BracketView> {
-  const empty: BracketView = { lockAt: null, locked: false, matches: [] };
+  const empty: BracketView = { lockAt: null, locked: false, fullyUnlocked: false, matches: [] };
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -609,7 +611,12 @@ export async function getBracket(): Promise<BracketView> {
     // fall back to the global constant.
     const { data: effDeadline } = await supabase.rpc("bracket_deadline");
     const lockAt = typeof effDeadline === "string" ? effDeadline : BRACKET_ENTRY_DEADLINE_ISO;
-    const locked = Date.now() >= new Date(lockAt).getTime();
+    // A per-user full unlock (admin grace) overrides everything — including the
+    // per-match "already kicked off" lock — until it expires. Scoped in the DB
+    // to just that user; false for everyone else.
+    const { data: fu } = await supabase.rpc("bracket_fully_unlocked");
+    const fullyUnlocked = fu === true;
+    const locked = fullyUnlocked ? false : Date.now() >= new Date(lockAt).getTime();
 
     const matches: BracketMatchView[] = (matchRows ?? []).map((m) => {
       const p = pickByMatch.get(m.id);
@@ -626,7 +633,7 @@ export async function getBracket(): Promise<BracketView> {
       };
     });
 
-    return { lockAt, locked, matches };
+    return { lockAt, locked, fullyUnlocked, matches };
   } catch (err) {
     console.error("Error in getBracket:", err);
     return empty;
@@ -1121,6 +1128,10 @@ export async function submitBracket(input: {
     const deadlineMs = new Date(
       typeof effDeadline === "string" ? effDeadline : BRACKET_ENTRY_DEADLINE_ISO
     ).getTime();
+    // A per-user full unlock (admin grace) reopens every knockout game — even
+    // ones already kicked off — until it expires. RLS mirrors this exactly.
+    const { data: fu } = await supabase.rpc("bracket_fully_unlocked");
+    const fullyUnlocked = fu === true;
     const nowMs = Date.now();
     const openIds = new Set(
       (kmatches ?? [])
@@ -1128,7 +1139,8 @@ export async function submitBracket(input: {
           (m) =>
             m.stage !== "group" &&
             !m.is_voided &&
-            nowMs < Math.min(deadlineMs, new Date(m.kickoff_at).getTime() - LOCK_BEFORE_KICKOFF_MS)
+            (fullyUnlocked ||
+              nowMs < Math.min(deadlineMs, new Date(m.kickoff_at).getTime() - LOCK_BEFORE_KICKOFF_MS))
         )
         .map((m) => m.id)
     );
@@ -1266,12 +1278,54 @@ function generateInviteCode(): string {
   return code;
 }
 
+// Owner-authorized instant login: these accounts are signed straight in on
+// email entry — no magic link, no password. Reserved for specific users who
+// can't receive magic links mid-tournament (deliverability trouble). Keep this
+// list tiny; every entry is a full bypass of email verification for that user.
+const INSTANT_LOGIN_EMAILS = new Set<string>([
+  "juanespig@gmail.com", // Juanes / "Espitia" — magic links not arriving
+]);
+
+// Establish a real Supabase session for `email` with no email/password step,
+// by minting a one-time OTP with the service role and immediately verifying it
+// on the cookie-backed server client (same mechanism as the magic-link
+// callback, just self-served). Returns { instant: true } so the login page
+// knows to redirect straight into the app.
+async function instantLogin(email: string): Promise<ActionResult<{ instant: boolean }>> {
+  try {
+    const admin = createAdminClient();
+    const { data, error } = await admin.auth.admin.generateLink({ type: "magiclink", email });
+    const tokenHash = data?.properties?.hashed_token;
+    if (error || !tokenHash) {
+      console.error("instantLogin generateLink error:", error);
+      return { ok: false, error: "No se pudo iniciar sesión / Could not sign you in" };
+    }
+
+    const supabase = await createClient();
+    // generateLink('magiclink') yields a magiclink-type hash; fall back across
+    // the OTP types the way the auth callback does, for robustness.
+    const types: EmailOtpType[] = ["magiclink", "email", "signup"];
+    for (const type of types) {
+      const { error: vErr } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
+      if (!vErr) return { ok: true, data: { instant: true } };
+    }
+    return { ok: false, error: "No se pudo iniciar sesión / Could not sign you in" };
+  } catch (err: any) {
+    console.error("instantLogin exception:", err);
+    return { ok: false, error: err.message || "Error al iniciar sesión / Sign-in error" };
+  }
+}
+
 export async function requestMagicLink(
   input: { email: string; locale: Locale }
-): Promise<ActionResult> {
+): Promise<ActionResult<{ instant: boolean }>> {
   const validation = emailSchema.safeParse(input.email);
   if (!validation.success) {
     return { ok: false, error: "Email inválido / Invalid email" };
+  }
+
+  if (INSTANT_LOGIN_EMAILS.has(validation.data.trim().toLowerCase())) {
+    return instantLogin(validation.data);
   }
 
   try {
@@ -1297,7 +1351,7 @@ export async function requestMagicLink(
       return { ok: false, error: error.message };
     }
 
-    return { ok: true, data: undefined };
+    return { ok: true, data: { instant: false } };
   } catch (err: any) {
     console.error("Magic link exception:", err);
     return {

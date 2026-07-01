@@ -59,6 +59,12 @@ export default function LoginPage() {
     });
 
     if (result.ok) {
+      // Instant-login accounts already have a live session — go straight in.
+      // Full reload so the server picks up the freshly set auth cookies.
+      if (result.data?.instant) {
+        window.location.assign(`/${currentLocale}/dashboard`);
+        return;
+      }
       setSubmittedEmail(data.email);
       setIsSuccess(true);
     } else {

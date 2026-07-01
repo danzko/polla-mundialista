@@ -187,6 +187,10 @@ export function BracketBoard({ initialBracket, comparison, teams, bonus, locale 
   // so a game that kicks off before the deadline (e.g. the first R32 match)
   // closes when it starts while the rest stay open until the deadline.
   const locked = initialBracket.locked;
+  // Per-user admin grace: every knockout game is editable (even ones already
+  // kicked off) until the grace expires. The server (RLS + submitBracket) is
+  // the real authority; this just keeps the UI in sync.
+  const fullyUnlocked = initialBracket.fullyUnlocked;
   const deadlineMs = initialBracket.lockAt ? new Date(initialBracket.lockAt).getTime() : null;
   const [now, setNow] = React.useState(() => Date.now());
   React.useEffect(() => {
@@ -195,6 +199,7 @@ export function BracketBoard({ initialBracket, comparison, teams, bonus, locale 
   }, []);
   const matchLocked = React.useCallback(
     (mn: number) => {
+      if (fullyUnlocked) return false;
       if (locked) return true;
       const mv = matchByNumber.get(mn);
       if (!mv?.kickoffAt) return false;
@@ -202,7 +207,7 @@ export function BracketBoard({ initialBracket, comparison, teams, bonus, locale 
       const lockMoment = deadlineMs != null ? Math.min(deadlineMs, koLock) : koLock;
       return now >= lockMoment;
     },
-    [locked, matchByNumber, deadlineMs, now]
+    [fullyUnlocked, locked, matchByNumber, deadlineMs, now]
   );
 
   // Resolve which real/predicted team sits on a side of a match.
