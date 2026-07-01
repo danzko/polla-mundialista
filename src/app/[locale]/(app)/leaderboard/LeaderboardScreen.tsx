@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { GitBranch, Star, ChevronDown, Goal, Target } from 'lucide-react';
+import { GitBranch, Star, ChevronDown, Goal, Check, Minus, X } from 'lucide-react';
 import { TrophyMark } from '@/components/shared/brand';
 import { Flag } from '@/components/shared/Flag';
 import { cn } from '@/lib/utils';
@@ -187,23 +187,60 @@ export function LeaderboardScreen({ data, locale, embedded = false, stats }: { d
               </button>
 
               {open && (
-                <div className="border-t border-border/30 px-3 py-2.5 text-[12px] space-y-1.5">
-                  <Row icon={<Goal className="h-3.5 w-3.5 text-emerald-400" />} label={es ? 'Partidos (marcadores)' : 'Matches (scorelines)'}
-                    sub={`${es ? 'Grupos' : 'Group'} ${e.groupScore} · ${es ? 'Eliminatorias' : 'KO'} ${e.koScore}`} value={matches} />
-                  {/* Exact-scoreline tally (count of 6-pointers, not points) — a sub-stat under Matches */}
-                  <div className="flex items-center justify-between gap-2 pl-5 -mt-0.5">
-                    <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                      <Target className="h-3 w-3 text-emerald-400/80" />
-                      {es ? 'Marcadores exactos' : 'Exact scores'}
-                    </span>
-                    <span className="shrink-0 tabular-nums text-[11px] font-semibold text-muted-foreground">{e.exactCount}</span>
+                <div className="border-t border-border/30 px-3 py-2.5 text-[12px] space-y-2.5">
+                  {/* ── MATCHES: scoreline points, shown as the actual math ── */}
+                  <div>
+                    <SectionHead
+                      icon={<Goal className="h-3.5 w-3.5 text-emerald-400" />}
+                      label={es ? 'Marcadores' : 'Scorelines'}
+                      accent="text-emerald-300" value={matches}
+                    />
+                    <div className="mt-1 space-y-0.5 pl-5">
+                      <MathLine icon={<Check className="h-3 w-3 text-emerald-400" />}
+                        label={es ? 'Exactos' : 'Exact'} count={e.exactCount} mult={6} />
+                      <MathLine icon={<Minus className="h-3 w-3 text-sky-400" />}
+                        label={es ? 'Acertados' : 'Result'} count={e.resultCount} mult={2} />
+                      <MathLine icon={<X className="h-3 w-3 text-rose-400/70" />}
+                        label={es ? 'Fallados' : 'Missed'} count={e.wrongCount} mult={0} muted />
+                    </div>
+                    <p className="mt-0.5 pl-5 text-[10px] text-muted-foreground">
+                      {es ? 'Grupos' : 'Group'} {e.groupScore} · {es ? 'Eliminatorias' : 'KO'} {e.koScore}
+                    </p>
                   </div>
-                  <Row icon={<GitBranch className="h-3.5 w-3.5 text-sky-400" />} label={es ? 'Avance en la llave' : 'Bracket advancement'} value={e.bracket} />
-                  <Row icon={<Star className="h-3.5 w-3.5 text-amber-400" />} label={es ? 'Picks de bonos' : 'Bonus picks'} value={e.bonus} />
-                  <div className="flex items-center justify-between border-t border-border/30 pt-1.5 font-extrabold">
+
+                  {/* ── BRACKET: advancement points + how many spots are right ── */}
+                  <div>
+                    <SectionHead
+                      icon={<GitBranch className="h-3.5 w-3.5 text-sky-400" />}
+                      label={es ? 'Llave (avance)' : 'Bracket'}
+                      accent="text-sky-300" value={e.bracket}
+                    />
+                    <p className="mt-0.5 pl-5 text-[10px] text-muted-foreground">
+                      <span className="font-semibold text-emerald-400">{e.bracketCorrect}</span> {es ? 'aciertos' : 'correct'}
+                      {e.bracketAlive > 0 && (
+                        <> · <span className="font-semibold text-sky-300">{e.bracketAlive}</span> {es ? 'aún vivos' : 'still alive'}</>
+                      )}
+                    </p>
+                  </div>
+
+                  {/* ── BONUS picks ── */}
+                  <SectionHead
+                    icon={<Star className="h-3.5 w-3.5 text-amber-400" />}
+                    label={es ? 'Bonos' : 'Bonus'}
+                    accent="text-amber-300" value={e.bonus}
+                  />
+
+                  {/* ── TOTAL ── */}
+                  <div className="flex items-baseline justify-between border-t border-border/30 pt-2 font-extrabold">
                     <span>{es ? 'Total' : 'Total'}</span>
-                    <span className="tabular-nums">{e.total} <span className="font-normal text-[10px] text-muted-foreground">· {es ? 'desempate KO' : 'KO tiebreak'} {e.koTiebreak}</span></span>
+                    <span className="tabular-nums text-base">
+                      {e.total}
+                      <span className="ml-1 font-normal text-[10px] text-muted-foreground">
+                        · {es ? 'desempate KO' : 'KO tiebreak'} {e.koTiebreak}
+                      </span>
+                    </span>
                   </div>
+
                   <Link
                     href={`/${locale}/bracket?peer=${e.userId}`}
                     className="mt-1 flex items-center justify-center gap-1.5 rounded-lg border border-border/50 bg-secondary/40 py-2 text-xs font-bold text-primary"
@@ -223,14 +260,34 @@ export function LeaderboardScreen({ data, locale, embedded = false, stats }: { d
   );
 }
 
-function Row({ icon, label, sub, value }: { icon: React.ReactNode; label: string; sub?: string; value: number }) {
+// A category header row: icon + label on the left, the category's point total
+// (accent-colored) on the right.
+function SectionHead({ icon, label, accent, value }: { icon: React.ReactNode; label: string; accent: string; value: number }) {
   return (
     <div className="flex items-center justify-between gap-2">
+      <span className="flex items-center gap-1.5 min-w-0 font-bold uppercase tracking-wide text-[11px]">
+        {icon}
+        <span className="truncate">{label}</span>
+      </span>
+      <span className={cn('shrink-0 tabular-nums font-extrabold', accent)}>{value}<span className="ml-0.5 text-[9px] font-semibold text-muted-foreground">pts</span></span>
+    </div>
+  );
+}
+
+// One line of the scoreline math: "Exact  3 × 6 = 18". Zero-multiplier rows
+// (misses) render muted with no trailing subtotal noise.
+function MathLine({ icon, label, count, mult, muted = false }: { icon: React.ReactNode; label: string; count: number; mult: number; muted?: boolean }) {
+  return (
+    <div className={cn('flex items-center justify-between gap-2 tabular-nums', muted && 'opacity-60')}>
       <span className="flex items-center gap-1.5 min-w-0">
         {icon}
-        <span className="truncate">{label}{sub && <span className="block text-[10px] text-muted-foreground">{sub}</span>}</span>
+        <span className="truncate text-[11px]">{label}</span>
       </span>
-      <span className="shrink-0 tabular-nums font-semibold">{value}</span>
+      <span className="shrink-0 text-[11px] text-muted-foreground">
+        {count} <span className="opacity-70">× {mult}</span>
+        <span className="mx-1 opacity-40">=</span>
+        <span className={cn('font-bold', muted ? 'text-muted-foreground' : 'text-foreground')}>{count * mult}</span>
+      </span>
     </div>
   );
 }

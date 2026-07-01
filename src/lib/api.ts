@@ -678,6 +678,14 @@ export async function getLeagueBrackets(): Promise<BracketComparison> {
       .from("users").select("id, display_name").in("id", memberIds);
     const nameById = new Map((userRows ?? []).map((u) => [u.id, u.display_name as string]));
 
+    // Each member's pre-tournament picks (champion team + boot/ball player), so
+    // a peer's bracket view can show their tournament calls too.
+    const { data: bonusRows } = await supabase
+      .from("bonus_predictions")
+      .select("user_id, champion_team_id, top_scorer_names, best_player_names")
+      .in("user_id", memberIds);
+    const bonusByUser = new Map((bonusRows ?? []).map((b) => [b.user_id as string, b]));
+
     // KO matches: number + real participants (home/away once assigned).
     const { data: koMatches } = await supabase
       .from("matches")
@@ -745,6 +753,9 @@ export async function getLeagueBrackets(): Promise<BracketComparison> {
           alivePicks++; // game not played yet and the pick's team is still in
         }
       }
+      const b = bonusByUser.get(uid);
+      const bootArr = (b?.top_scorer_names as string[] | null) ?? null;
+      const ballArr = (b?.best_player_names as string[] | null) ?? null;
       return {
         userId: uid,
         displayName: nameById.get(uid) ?? "—",
@@ -753,6 +764,9 @@ export async function getLeagueBrackets(): Promise<BracketComparison> {
         points,
         correctPicks,
         alivePicks,
+        championTeamId: (b?.champion_team_id as string | null) ?? null,
+        bootPick: bootArr?.[0]?.trim() || null,
+        ballPick: ballArr?.[0]?.trim() || null,
       };
     });
 
@@ -811,7 +825,7 @@ export async function getLeaderboard(leagueId?: string): Promise<LeaderboardData
     // Scores (members with no activity won't appear in the view → default 0s).
     const { data: scoreRows } = await supabase
       .from("leaderboard_view")
-      .select("user_id, total_points, group_score_points, ko_score_points, bracket_points, bonus_pick_points, knockout_points, exact_count, first_prediction_at")
+      .select("user_id, total_points, group_score_points, ko_score_points, bracket_points, bonus_pick_points, knockout_points, exact_count, result_count, wrong_count, first_prediction_at")
       .in("user_id", memberIds);
     const scoreById = new Map((scoreRows ?? []).map((s) => [s.user_id as string, s]));
 
@@ -827,18 +841,55 @@ export async function getLeaderboard(leagueId?: string): Promise<LeaderboardData
 
     // Which teams are already knocked out (lost a played KO match).
     const { data: koMatches } = await supabase
-      .from("matches").select("id, home_team_id, away_team_id").neq("stage", "group");
+      .from("matches").select("id, match_number, home_team_id, away_team_id").neq("stage", "group");
     const participantsByMatch = new Map(
       (koMatches ?? []).map((m) => [m.id as string, [m.home_team_id, m.away_team_id].filter(Boolean) as string[]])
     );
+    const numById = new Map((koMatches ?? []).map((m) => [m.id as string, m.match_number as number]));
     const { data: results } = await supabase
       .from("match_results").select("match_id, advanced_team_id");
     const eliminated = new Set<string>();
+    const realEarned = new Set<string>();     // (weight:team) that actually advanced
+    const playedKoMatches = new Set<number>(); // KO match numbers with a recorded result
     for (const r of results ?? []) {
       if (!r.advanced_team_id) continue;
+      const mn = numById.get(r.match_id as string);
+      if (mn != null) {
+        playedKoMatches.add(mn);
+        const w = ADVANCEMENT_POINTS_BY_MATCH[mn];
+        if (w) realEarned.add(`${w}:${r.advanced_team_id}`);
+      }
       for (const p of participantsByMatch.get(r.match_id as string) ?? []) {
         if (p !== r.advanced_team_id) eliminated.add(p);
       }
+    }
+
+    // Every member's bracket advancer picks → per-user "spots correct" / "still
+    // alive" tallies (mirrors getLeagueBrackets; paginated for members × KO).
+    const bracketCorrectBy = new Map<string, number>();
+    const bracketAliveBy = new Map<string, number>();
+    const PAGE = 1000;
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await supabase
+        .from("bracket_picks")
+        .select("user_id, match_id, advancer_team_id")
+        .in("user_id", memberIds)
+        .order("user_id", { ascending: true })
+        .order("match_id", { ascending: true })
+        .range(from, from + PAGE - 1);
+      if (error || !data || data.length === 0) break;
+      for (const row of data) {
+        const team = row.advancer_team_id as string | null;
+        const mn = numById.get(row.match_id as string);
+        if (!team || mn == null) continue;
+        const w = ADVANCEMENT_POINTS_BY_MATCH[mn];
+        if (w && realEarned.has(`${w}:${team}`)) {
+          bracketCorrectBy.set(row.user_id as string, (bracketCorrectBy.get(row.user_id as string) ?? 0) + 1);
+        } else if (!playedKoMatches.has(mn) && !eliminated.has(team)) {
+          bracketAliveBy.set(row.user_id as string, (bracketAliveBy.get(row.user_id as string) ?? 0) + 1);
+        }
+      }
+      if (data.length < PAGE) break;
     }
 
     const entries: UnifiedLeaderboardEntry[] = memberIds.map((uid) => {
@@ -857,6 +908,10 @@ export async function getLeaderboard(leagueId?: string): Promise<LeaderboardData
         bonus: (s?.bonus_pick_points as number) ?? 0,
         koTiebreak: (s?.knockout_points as number) ?? 0,
         exactCount: (s?.exact_count as number) ?? 0,
+        resultCount: (s?.result_count as number) ?? 0,
+        wrongCount: (s?.wrong_count as number) ?? 0,
+        bracketCorrect: bracketCorrectBy.get(uid) ?? 0,
+        bracketAlive: bracketAliveBy.get(uid) ?? 0,
         movement: null,
         championTeamId,
         championCode: (team?.code as string) ?? null,

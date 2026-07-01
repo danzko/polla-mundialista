@@ -309,11 +309,13 @@ export function BracketBoard({ initialBracket, comparison, teams, bonus, locale 
     ? new Intl.DateTimeFormat(es ? 'es-CO' : 'en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(initialBracket.lockAt)) + ' ET'
     : null;
 
-  // The viewer's three pre-tournament picks (locked June 11), for the top strip.
-  const championPickTeam = bonus?.championTeamId ? teamById.get(bonus.championTeamId) : null;
-  const bootPick = bonus?.topScorerNames?.[0]?.trim() || null;
-  const ballPick = bonus?.bestPlayerNames?.[0]?.trim() || null;
-  const hasTournamentPicks = !!(championPickTeam || bootPick || ballPick);
+  // The three pre-tournament picks (champion · boot · ball, locked June 11) for
+  // the top strip — the viewer's own, or the selected peer's when browsing.
+  const shownChampionId = viewingPeer ? viewingPeer.championTeamId : (bonus?.championTeamId ?? null);
+  const shownBoot = viewingPeer ? viewingPeer.bootPick : (bonus?.topScorerNames?.[0]?.trim() || null);
+  const shownBall = viewingPeer ? viewingPeer.ballPick : (bonus?.bestPlayerNames?.[0]?.trim() || null);
+  const shownChampionTeam = shownChampionId ? teamById.get(shownChampionId) : null;
+  const hasTournamentPicks = !!(shownChampionTeam || shownBoot || shownBall);
 
   // The team that REALLY advanced from a match (once its result is in), so the
   // ladder can show who actually went through even when the viewer picked wrong.
@@ -390,32 +392,40 @@ export function BracketBoard({ initialBracket, comparison, teams, bonus, locale 
       )}
 
       {/* TOURNAMENT PICKS — the three pre-tournament calls (champion · boot ·
-          ball), one tight line. Shown for your own bracket only (we don't load
-          peers' boot/ball). */}
-      {!viewingPeer && hasTournamentPicks && (
-        <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-border/40 bg-card/40 px-2.5 py-1.5">
-          <span className="shrink-0 text-[9px] font-bold uppercase tracking-widest text-muted-foreground/70">
-            {es ? 'Tus picks' : 'Your picks'}
-          </span>
-          {championPickTeam && (
-            <span className="inline-flex items-center gap-1 text-[11px]" title={es ? 'Campeón' : 'Champion'}>
+          ball, locked June 11), as a tight aligned stack that never wraps.
+          Shown for your own bracket AND for a peer's when browsing. */}
+      {hasTournamentPicks && (
+        <div className="mb-3 rounded-lg border border-border/40 bg-card/40 px-3 py-2">
+          <div className="mb-1 text-[9px] font-bold uppercase tracking-widest text-muted-foreground/70">
+            {viewingPeer
+              ? (es ? `Picks de ${viewingPeer.displayName}` : `${viewingPeer.displayName}'s picks`)
+              : (es ? 'Tus picks' : 'Your picks')}
+          </div>
+          <div className="space-y-0.5 text-[12px]">
+            {/* Champion */}
+            <div className="flex items-center gap-2">
               <TrophyMark className="h-3.5 w-3.5 shrink-0" />
-              <Flag code={championPickTeam.code} emoji={championPickTeam.flagEmoji} className="inline-block h-2.5 w-auto rounded-[1px] shrink-0" />
-              <span className="font-semibold truncate max-w-[30vw]">{es ? championPickTeam.nameEs : championPickTeam.nameEn}</span>
-            </span>
-          )}
-          {bootPick && (
-            <span className="inline-flex items-center gap-1 text-[11px]" title={es ? 'Bota de Oro' : 'Golden Boot'}>
-              <Award className="h-3 w-3 text-amber-500 shrink-0" />
-              <span className="font-semibold truncate max-w-[30vw]">{bootPick}</span>
-            </span>
-          )}
-          {ballPick && (
-            <span className="inline-flex items-center gap-1 text-[11px]" title={es ? 'Balón de Oro' : 'Golden Ball'}>
-              <Star className="h-3 w-3 text-emerald-400 shrink-0" />
-              <span className="font-semibold truncate max-w-[30vw]">{ballPick}</span>
-            </span>
-          )}
+              <span className="w-14 shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground">{es ? 'Campeón' : 'Champion'}</span>
+              {shownChampionTeam ? (
+                <span className="inline-flex min-w-0 items-center gap-1.5">
+                  <Flag code={shownChampionTeam.code} emoji={shownChampionTeam.flagEmoji} className="inline-block h-3 w-auto rounded-[1px] shrink-0" />
+                  <span className="truncate font-semibold">{es ? shownChampionTeam.nameEs : shownChampionTeam.nameEn}</span>
+                </span>
+              ) : <span className="text-muted-foreground">—</span>}
+            </div>
+            {/* Golden Boot */}
+            <div className="flex items-center gap-2">
+              <Award className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+              <span className="w-14 shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground">{es ? 'Bota' : 'Boot'}</span>
+              {shownBoot ? <span className="truncate font-semibold">{shownBoot}</span> : <span className="text-muted-foreground">—</span>}
+            </div>
+            {/* Golden Ball */}
+            <div className="flex items-center gap-2">
+              <Star className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+              <span className="w-14 shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground">{es ? 'Balón' : 'Ball'}</span>
+              {shownBall ? <span className="truncate font-semibold">{shownBall}</span> : <span className="text-muted-foreground">—</span>}
+            </div>
+          </div>
         </div>
       )}
 

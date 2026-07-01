@@ -100,6 +100,10 @@ export interface BracketPeer {
   points: number;        // advancement points earned so far (live scoring)
   correctPicks: number;  // picks already paying off
   alivePicks: number;    // picks still able to score (team not yet eliminated)
+  // pre-tournament picks (locked June 11), so a peer's bracket view can show them too
+  championTeamId: string | null;
+  bootPick: string | null;   // Golden Boot pick (player name)
+  ballPick: string | null;   // Golden Ball pick (player name)
 }
 
 export interface BracketComparison {
@@ -123,6 +127,10 @@ export interface UnifiedLeaderboardEntry {
   bonus: number;          // pre-tournament picks (champion 50 + boot 25 + ball 25)
   koTiebreak: number;     // knockout-stage points (the tiebreaker)
   exactCount: number;     // # of exact-scoreline hits (6-pointers), group + KO
+  resultCount: number;    // # of correct-outcome-wrong-score hits (2-pointers), group + KO
+  wrongCount: number;     // # of missed scorelines (0-pointers), group + KO
+  bracketCorrect: number; // # of bracket advancement picks currently paying off
+  bracketAlive: number;   // # of bracket picks still able to score (team not yet out)
   // rank change since the start of the most recent result day (+ = climbed,
   // - = dropped, 0 = held, null = no prior snapshot to compare)
   movement: number | null;
