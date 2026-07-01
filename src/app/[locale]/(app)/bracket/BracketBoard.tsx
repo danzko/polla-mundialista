@@ -656,15 +656,15 @@ function LadderView({
                           <span className="truncate">{labelFor(mn, side, id)}</span>
                         </span>
                         <span className="flex items-center gap-1 shrink-0">
+                          {win && <PointsPill mn={mn} earned={st === 'earned'} />}
                           {pct !== null && (
                             <span
-                              className="text-[9px] tabular-nums text-muted-foreground/70"
+                              className="w-7 text-right text-[9px] tabular-nums text-muted-foreground/70"
                               title={es ? `${pct}% de la liga eligió este equipo` : `${pct}% of the league picked this team`}
                             >
                               {pct}%
                             </span>
                           )}
-                          {win && <PointsPill mn={mn} earned={st === 'earned'} />}
                         </span>
                       </div>
                     );
