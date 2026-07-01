@@ -4,10 +4,10 @@ import * as React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Calendar, Home, LogOut, Menu, X, GitBranch, HelpCircle, Medal } from 'lucide-react';
+import { Trophy, Calendar, Home, LogOut, Menu, X, GitBranch, HelpCircle, Medal } from 'lucide-react';
 import { LanguageToggle } from './LanguageToggle';
 import { NameChangeMenu } from './NameChangeMenu';
-import { BallMark, TrophyMark } from './brand';
+import { BallMark } from './brand';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { SessionUser, Locale } from '@/lib/types';
@@ -51,7 +51,7 @@ export function AppShell({ children, user, onLogout }: AppShellProps) {
     {
       label: t('nav.bonuses'),
       href: `${basePath}/bonuses`,
-      icon: TrophyMark,
+      icon: Trophy,
     },
   ];
 

@@ -13,7 +13,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { CopyableCode } from '@/components/shared/CopyableCode';
 import { createLeague } from '@/lib/api';
 import { leagueNameSchema } from '@/lib/validation';
-import { CheckCircle2, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Trophy, CheckCircle2, ArrowRight, ArrowLeft } from 'lucide-react';
 
 const formSchema = z.object({
   name: leagueNameSchema,

@@ -3,8 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { GitBranch, Star, ChevronDown, Goal, Target } from 'lucide-react';
-import { TrophyMark } from '@/components/shared/brand';
+import { Trophy, GitBranch, Star, ChevronDown, Goal, Target } from 'lucide-react';
 import { Flag } from '@/components/shared/Flag';
 import { cn } from '@/lib/utils';
 import { StatsSections } from './StatsSections';
@@ -60,7 +59,7 @@ export function LeaderboardScreen({ data, locale, embedded = false, stats }: { d
   if (data.leagues.length === 0) {
     return (
       <div className="rounded-2xl border border-border/40 bg-card/50 p-8 text-center">
-        <TrophyMark className="h-9 w-auto mx-auto mb-2" />
+        <Trophy className="h-7 w-7 text-amber-500 mx-auto mb-2" />
         <p className="text-sm font-bold">{es ? 'Aún no estás en una liga' : "You're not in a league yet"}</p>
         <Link href={`/${locale}/dashboard`} className="mt-2 inline-block text-xs font-semibold text-primary">
           {es ? 'Crea o únete a una liga →' : 'Create or join a league →'}
@@ -77,7 +76,7 @@ export function LeaderboardScreen({ data, locale, embedded = false, stats }: { d
       {!embedded && (
         <div className="mb-2.5 flex items-center justify-between gap-2">
           <h1 className="text-lg font-extrabold tracking-tight flex items-center gap-1.5">
-            <TrophyMark className="h-5 w-auto" />
+            <Trophy className="h-5 w-5 text-amber-500" />
             {es ? 'Tabla' : 'Standings'}
           </h1>
           {data.leagues.length > 1 ? (

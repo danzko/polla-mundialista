@@ -11,7 +11,6 @@ import { User, RefreshCw, Trash2, UserMinus, Settings } from 'lucide-react';
 import { renameLeague, regenerateLeagueCode, deleteLeague, kickMember } from '@/lib/api';
 import type { LeagueDetail, Locale, LeaderboardData } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { TrophyMark } from '@/components/shared/brand';
 import { LeaderboardScreen } from '../../leaderboard/LeaderboardScreen';
 
 interface LeagueTabsProps {
@@ -94,7 +93,7 @@ export function LeagueTabs({ league, locale, currentUserId, leaderboardData }: L
         league.isAdmin ? "grid-cols-3 max-w-xl" : "grid-cols-2 max-w-md"
       )}>
         <TabsTrigger value="leaderboard" className="rounded-lg font-bold py-2">
-<TrophyMark className="inline-block h-4 w-auto align-middle mr-1" />{t('league.tabLeaderboard')}
+          🏆 {t('league.tabLeaderboard')}
         </TabsTrigger>
         <TabsTrigger value="members" className="rounded-lg font-bold py-2">
           👥 {t('league.tabMembers')}

@@ -7,8 +7,8 @@ import { usePathname } from 'next/navigation';
 import { getDashboard, getSessionUser } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { Plus, UserPlus, Users, ShieldAlert, Award, Star } from 'lucide-react';
-import { BallMark, TrophyMark } from '@/components/shared/brand';
+import { Plus, UserPlus, Trophy, Users, ShieldAlert, Award, Star } from 'lucide-react';
+import { BallMark } from '@/components/shared/brand';
 import type { LeagueSummary } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -117,7 +117,7 @@ export default function DashboardPage() {
         // EMPTY STATE
         <div className="flex flex-col items-center justify-center p-8 text-center glass-card border border-border/60 rounded-3xl min-h-[350px] space-y-6">
           <div className="h-16 w-16 rounded-full bg-primary/10 border border-primary/20 text-primary flex items-center justify-center animate-pulse">
-            <TrophyMark className="h-9 w-auto" />
+            <Trophy className="h-8 w-8" />
           </div>
 
           <div className="space-y-2 max-w-sm">

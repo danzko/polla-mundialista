@@ -4,8 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Lock, Check, X, LayoutList, GitBranch, HelpCircle, ChevronDown, Award, Star } from 'lucide-react';
-import { TrophyMark } from '@/components/shared/brand';
+import { Lock, Trophy, Check, X, LayoutList, GitBranch, HelpCircle, ChevronDown, Award, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { submitBracket } from '@/lib/api';
 import {
@@ -321,7 +320,7 @@ export function BracketBoard({ initialBracket, comparison, teams, bonus, locale 
       <div className="mb-3 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-extrabold tracking-tight flex items-center gap-2">
-            <TrophyMark className="h-5 w-auto" />
+            <Trophy className="h-5 w-5 text-amber-500" />
             {es ? 'La Llave' : 'The Bracket'}
           </h1>
           <p className="text-[11px] text-muted-foreground mt-0.5">
@@ -394,7 +393,7 @@ export function BracketBoard({ initialBracket, comparison, teams, bonus, locale 
           </span>
           {championPickTeam && (
             <span className="inline-flex items-center gap-1 text-[11px]" title={es ? 'Campeón' : 'Champion'}>
-              <TrophyMark className="h-4 w-auto shrink-0" />
+              <Trophy className="h-3 w-3 text-amber-400 shrink-0" />
               <Flag code={championPickTeam.code} emoji={championPickTeam.flagEmoji} className="inline-block h-2.5 w-auto rounded-[1px] shrink-0" />
               <span className="font-semibold truncate max-w-[30vw]">{es ? championPickTeam.nameEs : championPickTeam.nameEn}</span>
             </span>
@@ -418,7 +417,7 @@ export function BracketBoard({ initialBracket, comparison, teams, bonus, locale 
         <div className="p-10 text-center text-muted-foreground animate-pulse">{t('common.loading')}</div>
       ) : !r32Ready && !locked ? (
         <div className="rounded-2xl border border-amber-500/30 bg-amber-500/[0.06] p-6 text-center">
-          <TrophyMark className="h-9 w-auto mx-auto mb-2" />
+          <Trophy className="h-7 w-7 text-amber-500 mx-auto mb-2" />
           <p className="text-sm font-bold">{es ? 'Aún no se habilita' : 'Not open yet'}</p>
           <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
             {es

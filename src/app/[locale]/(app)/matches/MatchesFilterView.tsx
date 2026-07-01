@@ -9,8 +9,7 @@ import { submitPredictions, getLiveScores, getMatchPicks } from '@/lib/api';
 import { LOCK_BEFORE_KICKOFF_MS } from '@/lib/tournament';
 import type { MatchView, Locale, MatchPickRow, LiveScoresPayload } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { HelpCircle, CheckCircle2, AlertTriangle, X, ArrowDownToLine, ChevronDown, GitBranch } from 'lucide-react';
-import { TrophyMark } from '@/components/shared/brand';
+import { HelpCircle, CheckCircle2, AlertTriangle, X, ArrowDownToLine, Trophy, ChevronDown, GitBranch } from 'lucide-react';
 
 // US Eastern (ET) day key (YYYY-MM-DD). ET is the tournament clock the locks
 // run on; bucketing by the viewer's local day (or UTC) shoved evening matches
@@ -395,7 +394,7 @@ export function MatchesFilterView({
                 className="w-full flex items-center justify-between rounded-xl border border-amber-500/30 bg-amber-500/[0.06] px-3 py-2.5"
               >
                 <span className="flex items-center gap-2 text-xs font-bold text-amber-500">
-                  <TrophyMark className="h-4 w-auto" />
+                  <Trophy className="h-3.5 w-3.5" />
                   {t('matches.knockoutSection')}
                   <span className="font-medium text-muted-foreground normal-case">· {t('matches.knockoutSectionNote')}</span>
                 </span>
