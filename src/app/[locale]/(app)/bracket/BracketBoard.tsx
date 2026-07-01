@@ -4,7 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Lock, Trophy, Check, X, LayoutList, GitBranch, HelpCircle, ChevronDown } from 'lucide-react';
+import { Lock, Trophy, Check, X, LayoutList, GitBranch, HelpCircle, ChevronDown, Award, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { submitBracket } from '@/lib/api';
 import {
@@ -15,12 +15,13 @@ import { knockoutSlotLabel } from '@/lib/bracket-slots';
 import { LOCK_BEFORE_KICKOFF_MS } from '@/lib/tournament';
 import { Flag } from '@/components/shared/Flag';
 import { cn } from '@/lib/utils';
-import type { BracketView, Team, Locale, BracketComparison } from '@/lib/types';
+import type { BracketView, Team, Locale, BracketComparison, BonusView } from '@/lib/types';
 
 interface BracketBoardProps {
   initialBracket: BracketView;
   comparison?: BracketComparison;
   teams: Team[];
+  bonus?: BonusView;
   locale: Locale;
 }
 
@@ -50,24 +51,22 @@ const STATUS_DOT: Record<'earned' | 'dead' | 'pending', string> = {
   pending: 'border-amber-400/70 bg-transparent text-amber-300',
 };
 
-// Small "+N" pill showing what a correct pick in this match is worth.
+// Gold "+N" pill — shown ONLY once a pick has actually paid off (earned).
+// No pill for picks still in play; the clutter of "potential" points is gone.
 function PointsPill({ mn, earned }: { mn: number; earned?: boolean }) {
   const pts = ADVANCEMENT_POINTS_BY_MATCH[mn];
-  if (!pts) return null;
+  if (!pts || !earned) return null;
   return (
     <span
-      className={cn(
-        'inline-flex items-center rounded-full px-1.5 py-px text-[9px] font-bold tabular-nums',
-        earned ? 'bg-amber-400/20 text-amber-200 ring-1 ring-inset ring-amber-400/50' : 'bg-primary/10 text-primary/80'
-      )}
-      title={mn === 104 ? 'Champion' : `+${pts} if correct`}
+      className="inline-flex items-center rounded-full px-1.5 py-px text-[9px] font-bold tabular-nums bg-amber-400/20 text-amber-200 ring-1 ring-inset ring-amber-400/50"
+      title={mn === 104 ? 'Champion' : `+${pts} earned`}
     >
       +{pts}{mn === 104 ? '👑' : ''}
     </span>
   );
 }
 
-export function BracketBoard({ initialBracket, comparison, teams, locale }: BracketBoardProps) {
+export function BracketBoard({ initialBracket, comparison, teams, bonus, locale }: BracketBoardProps) {
   const t = useTranslations();
   const es = locale === 'es';
 
@@ -304,6 +303,17 @@ export function BracketBoard({ initialBracket, comparison, teams, locale }: Brac
     ? new Intl.DateTimeFormat(es ? 'es-CO' : 'en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(initialBracket.lockAt)) + ' ET'
     : null;
 
+  // The viewer's three pre-tournament picks (locked June 11), for the top strip.
+  const championPickTeam = bonus?.championTeamId ? teamById.get(bonus.championTeamId) : null;
+  const bootPick = bonus?.topScorerNames?.[0]?.trim() || null;
+  const ballPick = bonus?.bestPlayerNames?.[0]?.trim() || null;
+  const hasTournamentPicks = !!(championPickTeam || bootPick || ballPick);
+
+  // The team that REALLY advanced from a match (once its result is in), so the
+  // ladder can show who actually went through even when the viewer picked wrong.
+  const actualAdvancerOf = (mn: number): string | null =>
+    comparison?.actualAdvancers?.[mn] ?? null;
+
   return (
     <div className={!locked && r32Ready ? 'pb-28' : 'pb-10'}>
       {/* HEADER */}
@@ -373,6 +383,36 @@ export function BracketBoard({ initialBracket, comparison, teams, locale }: Brac
         </div>
       )}
 
+      {/* TOURNAMENT PICKS — the three pre-tournament calls (champion · boot ·
+          ball), one tight line. Shown for your own bracket only (we don't load
+          peers' boot/ball). */}
+      {!viewingPeer && hasTournamentPicks && (
+        <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-border/40 bg-card/40 px-2.5 py-1.5">
+          <span className="shrink-0 text-[9px] font-bold uppercase tracking-widest text-muted-foreground/70">
+            {es ? 'Tus picks' : 'Your picks'}
+          </span>
+          {championPickTeam && (
+            <span className="inline-flex items-center gap-1 text-[11px]" title={es ? 'Campeón' : 'Champion'}>
+              <Trophy className="h-3 w-3 text-amber-400 shrink-0" />
+              <Flag code={championPickTeam.code} emoji={championPickTeam.flagEmoji} className="inline-block h-2.5 w-auto rounded-[1px] shrink-0" />
+              <span className="font-semibold truncate max-w-[30vw]">{es ? championPickTeam.nameEs : championPickTeam.nameEn}</span>
+            </span>
+          )}
+          {bootPick && (
+            <span className="inline-flex items-center gap-1 text-[11px]" title={es ? 'Bota de Oro' : 'Golden Boot'}>
+              <Award className="h-3 w-3 text-amber-500 shrink-0" />
+              <span className="font-semibold truncate max-w-[30vw]">{bootPick}</span>
+            </span>
+          )}
+          {ballPick && (
+            <span className="inline-flex items-center gap-1 text-[11px]" title={es ? 'Balón de Oro' : 'Golden Ball'}>
+              <Star className="h-3 w-3 text-emerald-400 shrink-0" />
+              <span className="font-semibold truncate max-w-[30vw]">{ballPick}</span>
+            </span>
+          )}
+        </div>
+      )}
+
       {!mounted ? (
         <div className="p-10 text-center text-muted-foreground animate-pulse">{t('common.loading')}</div>
       ) : !r32Ready && !locked ? (
@@ -394,6 +434,7 @@ export function BracketBoard({ initialBracket, comparison, teams, locale }: Brac
           championId={championId}
           statusOf={statusOf}
           pctFor={pctFor}
+          actualAdvancerOf={actualAdvancerOf}
           es={es}
         />
       ) : (
@@ -558,7 +599,7 @@ export function BracketBoard({ initialBracket, comparison, teams, locale }: Brac
 
 // ---- Read-only full-bracket ladder (scrollable columns) ----
 function LadderView({
-  rounds, sideTeam, labelFor, picks, championId, statusOf, pctFor, es,
+  rounds, sideTeam, labelFor, picks, championId, statusOf, pctFor, actualAdvancerOf, es,
 }: {
   rounds: typeof ROUND_ORDER;
   sideTeam: (m: number, s: 'home' | 'away', p?: Record<number, Pick>) => string | null;
@@ -567,6 +608,7 @@ function LadderView({
   championId: string | null;
   statusOf: (m: number, id: string | null) => PickStatus;
   pctFor: (m: number, id: string | null) => number | null;
+  actualAdvancerOf: (m: number) => string | null;
   es: boolean;
 }) {
   // Order columns left→right; put third-place last as a small aside.
@@ -588,9 +630,14 @@ function LadderView({
                 <div key={mn} className="rounded-lg border border-border/40 bg-card/50 overflow-hidden text-[11px]">
                   {(['home', 'away'] as const).map((side, i) => {
                     const id = side === 'home' ? homeId : awayId;
-                    const win = !!id && adv === id;
+                    const win = !!id && adv === id;              // viewer picked this team to advance
                     const st = win ? statusOf(mn, id) : null;
                     const resultSt = st === 'earned' || st === 'dead' ? st : null;
+                    // The team that really advanced. If it's here but the viewer
+                    // didn't pick it, mark it green ("advanced") so you can see
+                    // who actually went through even though you missed it.
+                    const realAdv = actualAdvancerOf(mn);
+                    const missedReal = !!id && !!realAdv && id === realAdv && !win;
                     const pct = pctFor(mn, id);
                     return (
                       <div
@@ -598,10 +645,16 @@ function LadderView({
                         className={cn(
                           'px-2 py-1.5 truncate flex items-center justify-between gap-1',
                           i === 0 && 'border-b border-border/25',
-                          resultSt ? STATUS_ROW[resultSt] : win && 'bg-emerald-500/12 text-emerald-300 font-semibold'
+                          resultSt ? STATUS_ROW[resultSt]
+                            : win ? 'bg-emerald-500/12 text-emerald-300 font-semibold'
+                            : missedReal ? 'bg-emerald-500/10 text-emerald-300/80 font-medium'
+                            : undefined
                         )}
                       >
-                        <span className="truncate">{labelFor(mn, side, id)}</span>
+                        <span className="flex items-center gap-1 truncate">
+                          {missedReal && <Check className="h-3 w-3 shrink-0 text-emerald-400/80" />}
+                          <span className="truncate">{labelFor(mn, side, id)}</span>
+                        </span>
                         <span className="flex items-center gap-1 shrink-0">
                           {pct !== null && (
                             <span
