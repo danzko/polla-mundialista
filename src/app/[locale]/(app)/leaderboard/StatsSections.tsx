@@ -1,7 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { Trophy, Goal, Star } from 'lucide-react';
+import { Goal, Star } from 'lucide-react';
+import { TrophyMark } from '@/components/shared/brand';
 import { Flag } from '@/components/shared/Flag';
 import { cn } from '@/lib/utils';
 import type { StatsData, Locale } from '@/lib/types';
@@ -47,7 +48,7 @@ export function StatsSections({ data, locale }: { data: StatsData; locale: Local
   return (
     <div className="pb-24">
       {/* ① TITLE RACE — Vegas vs the league */}
-      <SectionTitle icon={<Trophy className="h-4 w-4 text-amber-400" />} title={es ? 'Carrera al título' : 'Title race'}
+      <SectionTitle icon={<TrophyMark className="h-4 w-4" />} title={es ? 'Carrera al título' : 'Title race'}
         sub={data.snapshotLoaded ? (es ? 'Vegas vs tu liga' : 'Vegas vs your league') : (es ? 'elección de tu liga' : "your league's picks")} />
       <div className="space-y-1.5">
         {data.titleRace.length === 0 && <Empty es={es} />}

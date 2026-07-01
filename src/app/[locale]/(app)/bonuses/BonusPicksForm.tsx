@@ -13,7 +13,8 @@ import { PlayerPicker } from '@/components/shared/PlayerPicker';
 import { submitBonuses } from '@/lib/api';
 import { bonusPredictionsSchema } from '@/lib/validation';
 import type { BonusView, Team, Locale } from '@/lib/types';
-import { Trophy, Award, Medal, Check, AlertCircle, RefreshCw, Star } from 'lucide-react';
+import { Award, Medal, Check, AlertCircle, RefreshCw, Star } from 'lucide-react';
+import { TrophyMark } from '@/components/shared/brand';
 import { cn } from '@/lib/utils';
 
 interface BonusPicksFormProps {
@@ -117,7 +118,7 @@ export function BonusPicksForm({ initialBonuses, teams, locale }: BonusPicksForm
         <Card className="glass-card rounded-2xl border-border/75 shadow-xl">
           <CardHeader className="pb-4 border-b border-border/40 select-none">
             <CardTitle className="text-xl font-extrabold flex items-center gap-2">
-              <Trophy className="h-5 w-5 text-amber-400" />
+              <TrophyMark className="h-5 w-5" />
               {locale === 'es' ? 'Picks del Torneo' : 'Tournament Picks'}
             </CardTitle>
           </CardHeader>
@@ -133,7 +134,7 @@ export function BonusPicksForm({ initialBonuses, teams, locale }: BonusPicksForm
             {/* THE THREE TOURNAMENT PICKS: champion 50 + top scorer 25 + best player 25 */}
             <div className="space-y-2 md:max-w-md">
               <label className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5 select-none">
-                🏆 {t('bonuses.champion')}
+<TrophyMark className="h-4 w-4 shrink-0" /> {t('bonuses.champion')}
                 {locked && (
                   <LockedPill kind={initialBonuses.championTeamId ? (championAlive ? 'alive' : 'out') : 'nopick'} es={es} />
                 )}

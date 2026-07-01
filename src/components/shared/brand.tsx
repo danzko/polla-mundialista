@@ -48,37 +48,21 @@ export function BallMark({ className }: { className?: string }) {
   );
 }
 
-// Gold World Cup–style trophy: a meridian globe on a twisting goblet stem and a
-// two-tier base. Evocative of the tournament without copying FIFA's trademarked
-// statue. Pairs with champion / tournament-pick surfaces.
+// Official-looking World Cup trophy (gold cup + green base), an owner-provided
+// icons8 mark rendered from /public/world-cup-trophy.png. Square art, so pass a
+// square size class (e.g. `h-6 w-6`). Used on the branded/hero trophy surfaces
+// (champion / tournament picks, leaderboard title, bracket header).
 export function TrophyMark({ className }: { className?: string }) {
-  const id = React.useId();
   return (
-    <svg viewBox="0 0 48 64" className={className} role="img" aria-hidden="true">
-      <defs>
-        <linearGradient id={`${id}-g`} x1="0" y1="4" x2="0" y2="60" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#ffe9a8" />
-          <stop offset="0.45" stopColor="#f6c84a" />
-          <stop offset="1" stopColor="#c98a16" />
-        </linearGradient>
-      </defs>
-      {/* stem */}
-      <path
-        d="M18 27 C 17 33, 21 39, 22 42 C 22 45, 17 47, 14 50 L 34 50 C 31 47, 26 45, 26 42 C 27 39, 31 33, 30 27 Z"
-        fill={`url(#${id}-g)`}
-      />
-      {/* base, two tiers */}
-      <rect x="12" y="49" width="24" height="5.5" rx="2.5" fill={`url(#${id}-g)`} />
-      <rect x="15.5" y="54.5" width="17" height="5" rx="2" fill={`url(#${id}-g)`} />
-      {/* globe */}
-      <circle cx="24" cy="17" r="12" fill={`url(#${id}-g)`} />
-      <g fill="none" stroke="#9a6a0e" strokeOpacity="0.5" strokeWidth="1">
-        <ellipse cx="24" cy="17" rx="5" ry="12" />
-        <ellipse cx="24" cy="17" rx="12" ry="5" />
-        <line x1="12" y1="17" x2="36" y2="17" />
-      </g>
-      <ellipse cx="20" cy="12.5" rx="3.4" ry="2.2" fill="#ffffff" opacity="0.4" />
-    </svg>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="/world-cup-trophy.png"
+      alt=""
+      role="img"
+      aria-hidden="true"
+      className={className}
+      draggable={false}
+    />
   );
 }
 

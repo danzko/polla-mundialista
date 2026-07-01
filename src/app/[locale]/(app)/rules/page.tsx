@@ -1,6 +1,7 @@
 import * as React from 'react';
 import Link from 'next/link';
-import { Trophy, GitBranch, Calendar, ArrowLeft } from 'lucide-react';
+import { GitBranch, Calendar, ArrowLeft } from 'lucide-react';
+import { TrophyMark } from '@/components/shared/brand';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,7 +35,7 @@ export default async function RulesPage({ params }: RulesPageProps) {
       </Link>
 
       <h1 className="text-2xl font-extrabold tracking-tight flex items-center gap-2">
-        <Trophy className="h-6 w-6 text-amber-500" />
+        <TrophyMark className="h-6 w-6" />
         {es ? 'Cómo se puntúa' : 'How scoring works'}
       </h1>
       <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
@@ -146,7 +147,7 @@ export default async function RulesPage({ params }: RulesPageProps) {
       {/* BONUS PICKS (pre-tournament) */}
       <section className="mt-4 rounded-2xl border border-border/50 bg-card/50 p-4">
         <h2 className="font-bold flex items-center gap-2">
-          <Trophy className="h-4 w-4 text-amber-500" />
+          <TrophyMark className="h-4 w-4" />
           {es ? 'Picks de bonos (pre-torneo)' : 'Bonus picks (pre-tournament)'}
         </h2>
         <ul className="mt-3 space-y-2 text-[13px]">

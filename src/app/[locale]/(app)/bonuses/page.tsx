@@ -21,7 +21,7 @@ export default async function BonusesPage({ params }: BonusesPageProps) {
       {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground select-none flex items-center gap-2">
-          <TrophyMark className="h-8 w-auto shrink-0 drop-shadow-[0_0_10px_rgba(246,200,74,0.3)]" />
+          <TrophyMark className="h-8 w-8 shrink-0 drop-shadow-[0_0_10px_rgba(246,200,74,0.3)]" />
           {locale === 'es' ? 'Pronósticos Especiales' : 'Tournament Predictions'}
         </h1>
         <p className="text-xs text-muted-foreground font-light mt-1">
