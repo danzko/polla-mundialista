@@ -6,8 +6,8 @@ import { useTranslations } from 'next-intl';
 import { usePathname } from 'next/navigation';
 import { AppShell } from '@/components/shared/AppShell';
 import { Button } from '@/components/ui/button';
-import { Trophy, Calendar, Users, Star } from 'lucide-react';
-import { GlobeMark } from '@/components/shared/brand';
+import { Calendar, Users, Star } from 'lucide-react';
+import { GlobeMark, TrophyMark } from '@/components/shared/brand';
 
 export default function LandingPage() {
   const t = useTranslations();
@@ -81,7 +81,7 @@ export default function LandingPage() {
             {/* Feature 3 */}
             <div className="glass-card p-6 rounded-2xl flex flex-col space-y-3 shadow-md hover:border-primary/30 transition-colors">
               <div className="h-10 w-10 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center">
-                <Trophy className="h-5 w-5" />
+                <TrophyMark className="h-6 w-auto" />
               </div>
               <h3 className="text-lg font-bold text-foreground">
                 {t('landing.feature3')}
