@@ -31,3 +31,4 @@ yarn-error.log*
 # Drizzle / Supabase local configs
 .drizzle/
 /supabase/.temp/
+omnigent-skills/
