@@ -15,10 +15,10 @@ const MEDAL = ['🥇', '🥈', '🥉'];
 function SourceBar({ e }: { e: UnifiedLeaderboardEntry }) {
   const matches = e.groupScore + e.koScore;
   const total = matches + e.bracket + e.bonus;
-  if (total <= 0) return <div className="h-1.5 w-full rounded-full bg-secondary/60" />;
+  if (total <= 0) return <div className="h-1 w-full rounded-full bg-secondary/60" />;
   const pct = (n: number) => `${(n / total) * 100}%`;
   return (
-    <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-secondary/60">
+    <div className="flex h-1 w-full overflow-hidden rounded-full bg-secondary/60">
       <span className="bg-emerald-500" style={{ width: pct(matches) }} />
       <span className="bg-sky-500" style={{ width: pct(e.bracket) }} />
       <span className="bg-amber-400" style={{ width: pct(e.bonus) }} />
@@ -138,7 +138,7 @@ export function LeaderboardScreen({ data, locale, embedded = false, stats }: { d
         <span className="text-right">Total</span>
       </div>
 
-      <div className="space-y-1.5">
+      <div className="space-y-1">
         {data.entries.map((e, idx) => {
           const open = openId === e.userId;
           const matches = e.groupScore + e.koScore;
@@ -156,7 +156,7 @@ export function LeaderboardScreen({ data, locale, embedded = false, stats }: { d
               <button
                 type="button"
                 onClick={() => setOpenId(open ? null : e.userId)}
-                className="w-full px-3 py-2.5 text-left"
+                className="w-full px-3 py-1.5 text-left"
               >
                 {/* line 1 */}
                 <div className="md:grid md:grid-cols-[2.5rem_1fr_4rem_4rem_4rem_4.5rem] md:gap-2 md:items-center flex items-center gap-2">
@@ -178,11 +178,11 @@ export function LeaderboardScreen({ data, locale, embedded = false, stats }: { d
                   <span className="hidden md:block text-right text-xs tabular-nums text-muted-foreground">{matches}</span>
                   <span className="hidden md:block text-right text-xs tabular-nums text-sky-300">{e.bracket}</span>
                   <span className="hidden md:block text-right text-xs tabular-nums text-amber-300">{e.bonus}</span>
-                  <span className="shrink-0 md:text-right text-lg font-extrabold tabular-nums text-foreground">{e.total}</span>
+                  <span className="shrink-0 md:text-right text-base md:text-lg font-extrabold tabular-nums text-foreground">{e.total}</span>
                   <ChevronDown className={cn('md:hidden h-4 w-4 shrink-0 text-muted-foreground transition-transform', open && 'rotate-180')} />
                 </div>
                 {/* line 2: source bar (mobile only) */}
-                <div className="mt-1.5 md:hidden"><SourceBar e={e} /></div>
+                <div className="mt-1 md:hidden"><SourceBar e={e} /></div>
               </button>
 
               {open && (
