@@ -56,6 +56,14 @@ export function LeaderboardScreen({ data, locale, embedded = false, stats }: { d
   const [tab, setTab] = React.useState<'standings' | 'stats'>('standings');
   const me = data.entries.find((x) => x.isMe) ?? null;
   const showStats = !embedded && !!stats;
+  // The KO-stage tiebreak only matters when two players share the same total —
+  // otherwise it's just noise. Track which totals are tied so we can surface it
+  // only for those rows.
+  const tiedTotals = React.useMemo(() => {
+    const counts = new Map<number, number>();
+    for (const e of data.entries) counts.set(e.total, (counts.get(e.total) ?? 0) + 1);
+    return new Set(Array.from(counts.entries()).filter(([, n]) => n > 1).map(([t]) => t));
+  }, [data.entries]);
 
   if (data.leagues.length === 0) {
     return (
@@ -235,9 +243,11 @@ export function LeaderboardScreen({ data, locale, embedded = false, stats }: { d
                     <span>{es ? 'Total' : 'Total'}</span>
                     <span className="tabular-nums text-base">
                       {e.total}
-                      <span className="ml-1 font-normal text-[10px] text-muted-foreground">
-                        · {es ? 'desempate KO' : 'KO tiebreak'} {e.koTiebreak}
-                      </span>
+                      {tiedTotals.has(e.total) && (
+                        <span className="ml-1 font-normal text-[10px] text-muted-foreground">
+                          · {es ? 'desempate' : 'tiebreak'} {e.koTiebreak}
+                        </span>
+                      )}
                     </span>
                   </div>
 
