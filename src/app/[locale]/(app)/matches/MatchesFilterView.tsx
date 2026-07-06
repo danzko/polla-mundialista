@@ -53,6 +53,12 @@ export function MatchesFilterView({
     return init;
   });
 
+  // Matches the user has actually interacted with. A match with no saved
+  // prediction is only ever written once it's in here — never from the phantom
+  // 0-0 default — so opening the page and hitting Save can't overwrite games
+  // you never touched with 0-0.
+  const [touched, setTouched] = React.useState<Set<string>>(() => new Set());
+
   const [showConfirmModal, setShowConfirmModal] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [toast, setToast] = React.useState<{ show: boolean; message: string; type: 'success' | 'warning' | 'error'; skippedCount: number; skippedNames?: string[] } | null>(null);
@@ -207,6 +213,7 @@ export function MatchesFilterView({
 
   const handleScoreChange = (matchId: string, homeScore: number, awayScore: number) => {
     setEdits(prev => ({ ...prev, [matchId]: { homeScore, awayScore } }));
+    setTouched(prev => (prev.has(matchId) ? prev : new Set(prev).add(matchId)));
   };
 
   const unsavedMatches = React.useMemo(() => {
@@ -214,10 +221,13 @@ export function MatchesFilterView({
       if (!isEditable(m)) return false;
       const edit = edits[m.id];
       if (!edit) return false;
-      if (m.myPrediction === null) return true;
+      // Never auto-save the phantom 0-0 default: a match with no saved
+      // prediction only counts once the user has actually touched it. A match
+      // that already has a saved prediction still counts only when changed.
+      if (m.myPrediction === null) return touched.has(m.id);
       return m.myPrediction.homeScore !== edit.homeScore || m.myPrediction.awayScore !== edit.awayScore;
     });
-  }, [matches, edits, isEditable]);
+  }, [matches, edits, touched, isEditable]);
   const unsavedCount = unsavedMatches.length;
 
   const savedGroupCount = React.useMemo(
