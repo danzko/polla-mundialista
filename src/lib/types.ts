@@ -1,6 +1,20 @@
 export type Locale = 'es' | 'en';
 export type MatchStage =
-  | 'group' | 'r32' | 'r16' | 'qf' | 'sf' | 'third_place' | 'final';
+  | 'group' | 'league' | 'playoff' | 'r32' | 'r16' | 'qf' | 'sf' | 'third_place' | 'final';
+
+/** One competition the club runs (World Cup 2026, Champions League 2026-27, ...). */
+export interface Tournament {
+  id: string;
+  slug: string;              // 'wc-2026', 'ucl-2026-27'
+  kind: 'world_cup' | 'ucl';
+  nameEn: string;
+  nameEs: string;
+  status: 'upcoming' | 'active' | 'archived';
+  startsAt: string | null;
+  endsAt: string | null;
+  picksLockAt: string | null;     // champion / boot / ball picks lock
+  bracketDeadline: string | null; // one-shot bracket entry deadline (null = per-match kickoff lock only)
+}
 
 export interface SessionUser {
   id: string;
@@ -16,9 +30,10 @@ export interface Team {
   code: string;          // FIFA 3-letter, e.g. "MEX"
   nameEn: string;
   nameEs: string;
-  flagEmoji: string;
-  group: string;         // 'A'..'L'
-  groupPosition: number; // 1..4
+  flagEmoji: string;             // '' for clubs (they use logoUrl)
+  logoUrl: string | null;        // club crest (ESPN CDN); null for national teams
+  group: string | null;          // 'A'..'L'; null for a league phase
+  groupPosition: number | null;  // 1..4; null for a league phase
   eliminated: boolean;
 }
 
@@ -32,6 +47,9 @@ export interface MatchView {
   matchNumber: number;        // 1..104
   stage: MatchStage;
   groupLabel: string | null;  // 'A'..'L' for group, null for knockouts
+  matchday: number | null;    // league-phase round (1..8), null otherwise
+  leg: number | null;         // 1 / 2 for two-legged ties, null for single games
+  tieNumber: number | null;   // groups the two legs of one tie
   kickoffAt: string;          // ISO 8601 UTC
   homeTeam: Team | null;      // null for TBD knockout slots
   awayTeam: Team | null;

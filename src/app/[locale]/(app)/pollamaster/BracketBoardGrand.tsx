@@ -227,7 +227,7 @@ export function BracketBoardGrand({ initialBracket, comparison, teams, bonus, lo
       if (!tm) return '—';
       return (
         <>
-          <Flag code={tm.code} emoji={tm.flagEmoji} className="pmx-fl" />
+          <Flag code={tm.code} emoji={tm.flagEmoji} logoUrl={tm.logoUrl} className="pmx-fl" />
           <span className="pmx-nm">{es ? tm.nameEs : tm.nameEn}</span>
         </>
       );
@@ -283,7 +283,7 @@ export function BracketBoardGrand({ initialBracket, comparison, teams, bonus, lo
             {thirdTeam && (
               <small>
                 {' '}· {es ? '3.er puesto' : '3rd place'}:{' '}
-                <Flag code={thirdTeam.code} emoji={thirdTeam.flagEmoji} className="pmx-fl-sm" />{' '}
+                <Flag code={thirdTeam.code} emoji={thirdTeam.flagEmoji} logoUrl={thirdTeam.logoUrl} className="pmx-fl-sm" />{' '}
                 {es ? thirdTeam.nameEs : thirdTeam.nameEn}
               </small>
             )}
@@ -311,7 +311,7 @@ export function BracketBoardGrand({ initialBracket, comparison, teams, bonus, lo
                 <div className="pmx-v">
                   {shownChampionTeam ? (
                     <>
-                      <Flag code={shownChampionTeam.code} emoji={shownChampionTeam.flagEmoji} className="pmx-fl-sm" />
+                      <Flag code={shownChampionTeam.code} emoji={shownChampionTeam.flagEmoji} logoUrl={shownChampionTeam.logoUrl} className="pmx-fl-sm" />
                       {es ? shownChampionTeam.nameEs : shownChampionTeam.nameEn}
                     </>
                   ) : '—'}
@@ -435,7 +435,7 @@ export function BracketBoardGrand({ initialBracket, comparison, teams, bonus, lo
                   <div className="pmx-t">
                     {championTeam ? (
                       <>
-                        <Flag code={championTeam.code} emoji={championTeam.flagEmoji} className="pmx-fl" />
+                        <Flag code={championTeam.code} emoji={championTeam.flagEmoji} logoUrl={championTeam.logoUrl} className="pmx-fl" />
                         {es ? championTeam.nameEs : championTeam.nameEn}
                         {champStatus === 'earned' && ' 👑'}
                       </>
@@ -447,7 +447,7 @@ export function BracketBoardGrand({ initialBracket, comparison, teams, bonus, lo
                   <div className="pmx-t">
                     {thirdTeam ? (
                       <>
-                        <Flag code={thirdTeam.code} emoji={thirdTeam.flagEmoji} className="pmx-fl-sm" />
+                        <Flag code={thirdTeam.code} emoji={thirdTeam.flagEmoji} logoUrl={thirdTeam.logoUrl} className="pmx-fl-sm" />
                         {es ? thirdTeam.nameEs : thirdTeam.nameEn}
                       </>
                     ) : '—'}

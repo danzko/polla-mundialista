@@ -30,14 +30,30 @@ export function isoFromEmoji(emoji: string): string | null {
 export function Flag({
   code,
   emoji,
+  logoUrl,
   className,
 }: {
   code: string;
   emoji: string;
+  logoUrl?: string | null; // club crest (UCL) — wins over the flag
   className?: string;
 }) {
   const [failed, setFailed] = React.useState(false);
   const iso = SUBDIVISION[code] ?? isoFromEmoji(emoji);
+
+  if (logoUrl && !failed) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={logoUrl}
+        alt=""
+        aria-hidden="true"
+        loading="lazy"
+        onError={() => setFailed(true)}
+        className={className ?? 'inline-block h-4 w-4 object-contain align-[-3px]'}
+      />
+    );
+  }
 
   if (!iso || failed) {
     // Emoji fallback (renders on Mac/iOS/Android; better than nothing on Windows).

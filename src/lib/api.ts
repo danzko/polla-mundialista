@@ -1,6 +1,6 @@
 "use server";
 
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { createClient } from "./supabase/server";
 import { createAdminClient } from "./supabase/admin";
@@ -10,15 +10,68 @@ import type {
   LeagueMemberView, MatchPickRow, LiveScore, LiveScoresPayload,
   BracketView, BracketMatchView, BracketComparison, BracketPeer,
   UnifiedLeaderboardEntry, LeaderboardData,
-  StatsData, TitleRaceRow, BootRaceRow, PickShare,
+  StatsData, TitleRaceRow, BootRaceRow, PickShare, Tournament,
 } from "./types";
-import { ADVANCEMENT_POINTS_BY_MATCH } from "./bracket";
 import {
   displayNameSchema, emailSchema, leagueNameSchema,
   inviteCodeSchema, scoreSchema, bonusPredictionsSchema
 } from "./validation";
 import { calculateMatchPoints } from "./scoring/calculate-points";
-import { TOURNAMENT_START_ISO, LOCK_BEFORE_KICKOFF_MS, BRACKET_ENTRY_DEADLINE_ISO } from "./tournament";
+import { LOCK_BEFORE_KICKOFF_MS, TOURNAMENT_COOKIE, LEAGUE_STAGES, finiteIso } from "./tournament";
+
+// ==========================================
+// TOURNAMENTS
+// ==========================================
+
+function mapTournament(t: any): Tournament {
+  return {
+    id: t.id, slug: t.slug, kind: t.kind, nameEn: t.name_en, nameEs: t.name_es, status: t.status,
+    startsAt: t.starts_at, endsAt: t.ends_at, picksLockAt: t.picks_lock_at, bracketDeadline: t.bracket_deadline,
+  };
+}
+
+/** Every tournament, newest first. */
+export async function listTournaments(): Promise<Tournament[]> {
+  const supabase = await createClient();
+  const { data } = await supabase.from("tournaments").select("*").order("starts_at", { ascending: false });
+  return (data ?? []).map(mapTournament);
+}
+
+/**
+ * The tournament the viewer is looking at: the `t` cookie (slug) if it names
+ * a real tournament, else the active one, else the newest. Every read below
+ * is scoped to it.
+ */
+export async function getCurrentTournament(): Promise<Tournament> {
+  const all = await listTournaments();
+  const slug = (await cookies()).get(TOURNAMENT_COOKIE)?.value;
+  return all.find((t) => t.slug === slug) ?? all.find((t) => t.status === "active") ?? all[0];
+}
+
+/** Switch the viewer to another tournament (tab click). */
+export async function setCurrentTournament(slug: string): Promise<ActionResult> {
+  const all = await listTournaments();
+  if (!all.some((t) => t.slug === slug)) return { ok: false, error: "Unknown tournament" };
+  (await cookies()).set(TOURNAMENT_COOKIE, slug, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
+  return { ok: true, data: undefined };
+}
+
+/** Advancement points per deciding match of a tournament's bracket (bracket_nodes). */
+async function advancementWeights(supabase: any, tournamentId: string): Promise<Record<number, number>> {
+  const { data } = await supabase
+    .from("bracket_nodes").select("match_number, advance_points").eq("tournament_id", tournamentId);
+  const w: Record<number, number> = {};
+  for (const n of data ?? []) if (n.advance_points > 0) w[n.match_number] = n.advance_points;
+  return w;
+}
+
+function mapTeam(t: any): Team {
+  return {
+    id: t.id, code: t.code, nameEn: t.name_en, nameEs: t.name_es, flagEmoji: t.flag_emoji ?? "",
+    logoUrl: t.logo_url ?? null, group: t.group ?? null, groupPosition: t.group_position ?? null,
+    eliminated: !!t.eliminated,
+  };
+}
 
 // ==========================================
 // READS
@@ -67,6 +120,7 @@ export async function getDashboard(): Promise<LeagueSummary[]> {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return [];
+    const tournament = await getCurrentTournament();
 
     // Fetch all leagues the user belongs to
     const { data: memberships, error } = await supabase
@@ -106,6 +160,7 @@ export async function getDashboard(): Promise<LeagueSummary[]> {
       const { data: scores } = await supabase
         .from("leaderboard_view")
         .select("*")
+        .eq("tournament_id", tournament.id)
         .in("user_id", memberIds);
 
       const scoresMap = new Map(scores?.map((s) => [s.user_id, s]) ?? []);
@@ -187,10 +242,12 @@ export async function getLeague(leagueId: string): Promise<LeagueDetail | null> 
     if (!members) return null;
 
     const memberIds = members.map((m) => m.user_id);
+    const tournament = await getCurrentTournament();
 
     const { data: scores } = await supabase
       .from("leaderboard_view")
       .select("*")
+      .eq("tournament_id", tournament.id)
       .in("user_id", memberIds);
 
     const scoresMap = new Map(scores?.map((s) => [s.user_id, s]) ?? []);
@@ -260,27 +317,21 @@ export async function getLeague(leagueId: string): Promise<LeagueDetail | null> 
 export async function getTeams(): Promise<Team[]> {
   try {
     const supabase = await createClient();
+    const tournament = await getCurrentTournament();
     const { data: dbTeams, error } = await supabase
       .from("teams")
       .select("*")
-      .order("group", { ascending: true })
-      .order("group_position", { ascending: true });
+      .eq("tournament_id", tournament.id)
+      .order("group", { ascending: true, nullsFirst: false })
+      .order("group_position", { ascending: true, nullsFirst: false })
+      .order("name_en", { ascending: true });
 
     if (error || !dbTeams) {
       console.error("Error fetching teams:", error);
       return [];
     }
 
-    return dbTeams.map((t) => ({
-      id: t.id,
-      code: t.code,
-      nameEn: t.name_en,
-      nameEs: t.name_es,
-      flagEmoji: t.flag_emoji,
-      group: t.group,
-      groupPosition: t.group_position,
-      eliminated: t.eliminated,
-    }));
+    return dbTeams.map(mapTeam);
   } catch (err) {
     console.error("Error in getTeams:", err);
     return [];
@@ -293,6 +344,7 @@ export async function getMatches(
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
+    const tournament = await getCurrentTournament();
 
     let query = supabase
       .from("matches")
@@ -301,7 +353,8 @@ export async function getMatches(
         home_team:teams!matches_home_team_id_fkey (*),
         away_team:teams!matches_away_team_id_fkey (*),
         match_results (*)
-      `);
+      `)
+      .eq("tournament_id", tournament.id);
 
     if (filter?.stage) {
       query = query.eq("stage", filter.stage);
@@ -326,31 +379,8 @@ export async function getMatches(
     const now = new Date();
 
     const matches: MatchView[] = dbMatches.map((m: any) => {
-      const homeTeam = m.home_team
-        ? {
-            id: m.home_team.id,
-            code: m.home_team.code,
-            nameEn: m.home_team.name_en,
-            nameEs: m.home_team.name_es,
-            flagEmoji: m.home_team.flag_emoji,
-            group: m.home_team.group,
-            groupPosition: m.home_team.group_position,
-            eliminated: m.home_team.eliminated,
-          }
-        : null;
-
-      const awayTeam = m.away_team
-        ? {
-            id: m.away_team.id,
-            code: m.away_team.code,
-            nameEn: m.away_team.name_en,
-            nameEs: m.away_team.name_es,
-            flagEmoji: m.away_team.flag_emoji,
-            group: m.away_team.group,
-            groupPosition: m.away_team.group_position,
-            eliminated: m.away_team.eliminated,
-          }
-        : null;
+      const homeTeam = m.home_team ? mapTeam(m.home_team) : null;
+      const awayTeam = m.away_team ? mapTeam(m.away_team) : null;
 
       const kickoffDate = new Date(m.kickoff_at);
       // Picks close 15 min before each kickoff and never reopen. This applies
@@ -390,6 +420,9 @@ export async function getMatches(
         matchNumber: m.match_number,
         stage: m.stage as MatchStage,
         groupLabel: m.group_label,
+        matchday: m.matchday ?? null,
+        leg: m.leg ?? null,
+        tieNumber: m.tie_number ?? null,
         kickoffAt: m.kickoff_at,
         homeTeam,
         awayTeam,
@@ -458,9 +491,11 @@ export async function getMatchPicks(): Promise<Record<string, MatchPickRow[]>> {
     // Reveal picks for ANY started match, group OR knockout — knockout
     // scorelines live in the same `predictions` table and are scored 6/2/0
     // like group games, so the strips must show them too once kickoff passes.
+    const tournament = await getCurrentTournament();
     const { data: startedMatches } = await supabase
       .from("matches")
       .select("id")
+      .eq("tournament_id", tournament.id)
       .eq("is_voided", false)
       .lte("kickoff_at", nowIso);
     const startedIds = (startedMatches ?? []).map((m) => m.id);
@@ -524,11 +559,12 @@ export async function getMatchPicks(): Promise<Record<string, MatchPickRow[]>> {
 export async function getLiveScores(): Promise<LiveScoresPayload> {
   try {
     const supabase = await createClient();
+    const tournament = await getCurrentTournament();
     const [{ data: rows }, { data: state }] = await Promise.all([
       supabase
         .from("live_scores")
         .select("match_id, status, home_score, away_score, display_clock, completed"),
-      supabase.from("live_sync_state").select("last_run_at").eq("id", 1).maybeSingle(),
+      supabase.from("live_sync_state").select("last_run_at").eq("tournament_id", tournament.id).maybeSingle(),
     ]);
     const scores: Record<string, LiveScore> = {};
     for (const r of rows ?? []) {
@@ -590,10 +626,12 @@ export async function getBracket(): Promise<BracketView> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return empty;
 
+    const tournament = await getCurrentTournament();
     const { data: matchRows } = await supabase
       .from("matches")
       .select("id, match_number, stage, kickoff_at, home_team_id, away_team_id")
-      .neq("stage", "group")
+      .eq("tournament_id", tournament.id)
+      .not("stage", "in", '("group","league")')
       .order("match_number", { ascending: true });
 
     const { data: picks } = await supabase
@@ -609,14 +647,15 @@ export async function getBracket(): Promise<BracketView> {
     // closes); the client derives each game's own lock from its kickoff. Read
     // the EFFECTIVE deadline from the DB so per-user admin grace is honored;
     // fall back to the global constant.
-    const { data: effDeadline } = await supabase.rpc("bracket_deadline");
-    const lockAt = typeof effDeadline === "string" ? effDeadline : BRACKET_ENTRY_DEADLINE_ISO;
+    const { data: effDeadline } = await supabase.rpc("bracket_deadline", { p_tournament: tournament.id });
+    // null = no one-shot deadline (per-match kickoff locks only).
+    const lockAt = finiteIso(effDeadline) ?? tournament.bracketDeadline;
     // A per-user full unlock (admin grace) overrides everything — including the
     // per-match "already kicked off" lock — until it expires. Scoped in the DB
     // to just that user; false for everyone else.
-    const { data: fu } = await supabase.rpc("bracket_fully_unlocked");
+    const { data: fu } = await supabase.rpc("bracket_fully_unlocked", { p_tournament: tournament.id });
     const fullyUnlocked = fu === true;
-    const locked = fullyUnlocked ? false : Date.now() >= new Date(lockAt).getTime();
+    const locked = fullyUnlocked ? false : lockAt != null && Date.now() >= new Date(lockAt).getTime();
 
     const matches: BracketMatchView[] = (matchRows ?? []).map((m) => {
       const p = pickByMatch.get(m.id);
@@ -655,10 +694,16 @@ export async function getLeagueBrackets(): Promise<BracketComparison> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return empty;
 
+    const tournament = await getCurrentTournament();
     // Only reveal once the bracket deadline has passed (RLS enforces the same).
-    if (Date.now() < new Date(BRACKET_ENTRY_DEADLINE_ISO).getTime()) {
-      return empty;
-    }
+    // A tournament with per-match locks only (no one-shot deadline) reveals
+    // once its first knockout game has kicked off.
+    const { data: firstKo } = await supabase
+      .from("matches").select("kickoff_at").eq("tournament_id", tournament.id)
+      .not("stage", "in", '("group","league")').order("kickoff_at", { ascending: true }).limit(1).maybeSingle();
+    const revealAt = tournament.bracketDeadline ?? (firstKo?.kickoff_at as string | undefined) ?? null;
+    if (!revealAt || Date.now() < new Date(revealAt).getTime()) return empty;
+    const WEIGHTS = await advancementWeights(supabase, tournament.id);
 
     // League-union scope (live leagues only), identical to the pick strips.
     const { data: myLeagues } = await supabase
@@ -683,6 +728,7 @@ export async function getLeagueBrackets(): Promise<BracketComparison> {
     const { data: bonusRows } = await supabase
       .from("bonus_predictions")
       .select("user_id, champion_team_id, top_scorer_names, best_player_names")
+      .eq("tournament_id", tournament.id)
       .in("user_id", memberIds);
     const bonusByUser = new Map((bonusRows ?? []).map((b) => [b.user_id as string, b]));
 
@@ -690,7 +736,8 @@ export async function getLeagueBrackets(): Promise<BracketComparison> {
     const { data: koMatches } = await supabase
       .from("matches")
       .select("id, match_number, home_team_id, away_team_id")
-      .neq("stage", "group");
+      .eq("tournament_id", tournament.id)
+      .not("stage", "in", '("group","league")');
     const numById = new Map((koMatches ?? []).map((m) => [m.id, m.match_number as number]));
     const participants = new Map<number, Array<string>>();
     for (const m of koMatches ?? []) {
@@ -707,7 +754,7 @@ export async function getLeagueBrackets(): Promise<BracketComparison> {
       const mn = numById.get(r.match_id);
       if (mn == null || !r.advanced_team_id) continue;
       actualAdvancers[mn] = r.advanced_team_id as string;
-      const w = ADVANCEMENT_POINTS_BY_MATCH[mn];
+      const w = WEIGHTS[mn];
       if (w) realEarned.add(`${w}:${r.advanced_team_id}`);
       for (const p of participants.get(mn) ?? []) {
         if (p !== r.advanced_team_id) eliminated.add(p);
@@ -743,7 +790,7 @@ export async function getLeagueBrackets(): Promise<BracketComparison> {
       for (const [mnStr, team] of Object.entries(advancers)) {
         if (!team) continue;
         const mn = Number(mnStr);
-        const w = ADVANCEMENT_POINTS_BY_MATCH[mn];
+        const w = WEIGHTS[mn];
         const earned = !!w && realEarned.has(`${w}:${team}`);
         if (earned) {
           correctPicks++;
@@ -798,6 +845,9 @@ export async function getLeaderboard(leagueId?: string): Promise<LeaderboardData
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return empty;
 
+    const tournament = await getCurrentTournament();
+    const WEIGHTS = await advancementWeights(supabase, tournament.id);
+
     // The viewer's live leagues (for the filter).
     const { data: myMemberships } = await supabase
       .from("league_members").select("league_id").eq("user_id", user.id);
@@ -826,22 +876,25 @@ export async function getLeaderboard(leagueId?: string): Promise<LeaderboardData
     const { data: scoreRows } = await supabase
       .from("leaderboard_view")
       .select("user_id, total_points, group_score_points, ko_score_points, bracket_points, bonus_pick_points, knockout_points, exact_count, result_count, wrong_count, first_prediction_at")
+      .eq("tournament_id", tournament.id)
       .in("user_id", memberIds);
     const scoreById = new Map((scoreRows ?? []).map((s) => [s.user_id as string, s]));
 
     // Each member's predicted champion (+ team info for the flag).
     const { data: bonusRows } = await supabase
-      .from("bonus_predictions").select("user_id, champion_team_id").in("user_id", memberIds);
+      .from("bonus_predictions").select("user_id, champion_team_id")
+      .eq("tournament_id", tournament.id).in("user_id", memberIds);
     const championByUser = new Map(
       (bonusRows ?? []).filter((b) => b.champion_team_id).map((b) => [b.user_id as string, b.champion_team_id as string])
     );
     const { data: teamRows } = await supabase
-      .from("teams").select("id, code, name_es, name_en, flag_emoji");
+      .from("teams").select("id, code, name_es, name_en, flag_emoji").eq("tournament_id", tournament.id);
     const teamById = new Map((teamRows ?? []).map((t) => [t.id as string, t]));
 
     // Which teams are already knocked out (lost a played KO match).
     const { data: koMatches } = await supabase
-      .from("matches").select("id, match_number, home_team_id, away_team_id").neq("stage", "group");
+      .from("matches").select("id, match_number, home_team_id, away_team_id")
+      .eq("tournament_id", tournament.id).not("stage", "in", '("group","league")');
     const participantsByMatch = new Map(
       (koMatches ?? []).map((m) => [m.id as string, [m.home_team_id, m.away_team_id].filter(Boolean) as string[]])
     );
@@ -856,7 +909,7 @@ export async function getLeaderboard(leagueId?: string): Promise<LeaderboardData
       const mn = numById.get(r.match_id as string);
       if (mn != null) {
         playedKoMatches.add(mn);
-        const w = ADVANCEMENT_POINTS_BY_MATCH[mn];
+        const w = WEIGHTS[mn];
         if (w) realEarned.add(`${w}:${r.advanced_team_id}`);
       }
       for (const p of participantsByMatch.get(r.match_id as string) ?? []) {
@@ -882,7 +935,7 @@ export async function getLeaderboard(leagueId?: string): Promise<LeaderboardData
         const team = row.advancer_team_id as string | null;
         const mn = numById.get(row.match_id as string);
         if (!team || mn == null) continue;
-        const w = ADVANCEMENT_POINTS_BY_MATCH[mn];
+        const w = WEIGHTS[mn];
         if (w && realEarned.has(`${w}:${team}`)) {
           bracketCorrectBy.set(row.user_id as string, (bracketCorrectBy.get(row.user_id as string) ?? 0) + 1);
         } else if (!playedKoMatches.has(mn) && !eliminated.has(team)) {
@@ -937,13 +990,15 @@ export async function getLeaderboard(leagueId?: string): Promise<LeaderboardData
     // a rank) on total only, both snapshots, so ties never produce phantom arrows.
     try {
       const { data: latest } = await supabase
-        .from("match_results").select("recorded_at").order("recorded_at", { ascending: false }).limit(1);
+        .from("match_results").select("recorded_at, matches!inner(tournament_id)")
+        .eq("matches.tournament_id", tournament.id)
+        .order("recorded_at", { ascending: false }).limit(1);
       const latestIso = latest?.[0]?.recorded_at as string | undefined;
       if (latestIso) {
         // Start of that result's day in US Eastern (EDT = UTC-4 for the whole WC).
         const et = new Date(new Date(latestIso).getTime() - 4 * 3600_000);
         const cutoffIso = new Date(Date.UTC(et.getUTCFullYear(), et.getUTCMonth(), et.getUTCDate(), 4, 0, 0)).toISOString();
-        const { data: asOf } = await supabase.rpc("leaderboard_total_as_of", { cutoff: cutoffIso });
+        const { data: asOf } = await supabase.rpc("leaderboard_total_as_of", { cutoff: cutoffIso, p_tournament: tournament.id });
         const memberSet = new Set(memberIds);
         const asOfTotal = new Map<string, number>(memberIds.map((id) => [id, 0]));
         for (const r of (asOf ?? []) as Array<{ user_id: string; total_points: number }>) {
@@ -989,6 +1044,7 @@ export async function getStats(leagueId?: string, locale: Locale = "es"): Promis
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return empty;
+    const tournament = await getCurrentTournament();
 
     const { data: myMemberships } = await supabase
       .from("league_members").select("league_id").eq("user_id", user.id);
@@ -1013,15 +1069,17 @@ export async function getStats(leagueId?: string, locale: Locale = "es"): Promis
     const { data: bonus } = await supabase
       .from("bonus_predictions")
       .select("user_id, champion_team_id, top_scorer_name, best_player_name")
+      .eq("tournament_id", tournament.id)
       .in("user_id", memberIds);
 
-    const { data: teamRows } = await supabase.from("teams").select("id, code, name_es, name_en, flag_emoji");
+    const { data: teamRows } = await supabase.from("teams").select("id, code, name_es, name_en, flag_emoji").eq("tournament_id", tournament.id);
     const teamById = new Map((teamRows ?? []).map((t) => [t.id as string, t]));
     const teamByCode = new Map((teamRows ?? []).map((t) => [t.code as string, t]));
 
     // Eliminated teams (lost a played KO match) → for the champion flag.
     const { data: koMatches } = await supabase
-      .from("matches").select("id, home_team_id, away_team_id").neq("stage", "group");
+      .from("matches").select("id, home_team_id, away_team_id")
+      .eq("tournament_id", tournament.id).not("stage", "in", '("group","league")');
     const partsByMatch = new Map((koMatches ?? []).map((m) => [m.id as string, [m.home_team_id, m.away_team_id].filter(Boolean) as string[]]));
     const { data: results } = await supabase.from("match_results").select("match_id, advanced_team_id");
     const eliminated = new Set<string>();
@@ -1031,8 +1089,8 @@ export async function getStats(leagueId?: string, locale: Locale = "es"): Promis
     }
 
     // Snapshot overlay.
-    const { data: oddsRows } = await supabase.from("stat_title_odds").select("rank, team_code, odds, implied_pct").order("rank");
-    const { data: bootRows } = await supabase.from("stat_golden_boot").select("rank, player_name, team_code, goals, photo_url").order("rank");
+    const { data: oddsRows } = await supabase.from("stat_title_odds").select("rank, team_code, odds, implied_pct").eq("tournament_id", tournament.id).order("rank");
+    const { data: bootRows } = await supabase.from("stat_golden_boot").select("rank, player_name, team_code, goals, photo_url").eq("tournament_id", tournament.id).order("rank");
     const snapshotLoaded = (oddsRows?.length ?? 0) > 0 || (bootRows?.length ?? 0) > 0;
 
     // ---- Title race: champion-pick consensus ∪ Vegas odds, keyed by team code ----
@@ -1176,23 +1234,25 @@ export async function submitBracket(input: {
     const ids = input.picks.map((p) => p.matchId);
     const { data: kmatches } = await supabase
       .from("matches")
-      .select("id, kickoff_at, stage, is_voided")
+      .select("id, kickoff_at, stage, is_voided, tournament_id")
       .in("id", ids);
+    const tournamentId = (kmatches?.[0]?.tournament_id as string | undefined) ?? null;
+    if (!tournamentId) return { ok: true, data: undefined };
     // Effective per-user deadline (honors admin grace); RLS is the real backstop.
-    const { data: effDeadline } = await supabase.rpc("bracket_deadline");
-    const deadlineMs = new Date(
-      typeof effDeadline === "string" ? effDeadline : BRACKET_ENTRY_DEADLINE_ISO
-    ).getTime();
+    // 'infinity' (no one-shot deadline) → per-match kickoff locks only.
+    const { data: effDeadline } = await supabase.rpc("bracket_deadline", { p_tournament: tournamentId });
+    const effIso = finiteIso(effDeadline);
+    const deadlineMs = effIso ? new Date(effIso).getTime() : Infinity;
     // A per-user full unlock (admin grace) reopens every knockout game — even
     // ones already kicked off — until it expires. RLS mirrors this exactly.
-    const { data: fu } = await supabase.rpc("bracket_fully_unlocked");
+    const { data: fu } = await supabase.rpc("bracket_fully_unlocked", { p_tournament: tournamentId });
     const fullyUnlocked = fu === true;
     const nowMs = Date.now();
     const openIds = new Set(
       (kmatches ?? [])
         .filter(
           (m) =>
-            m.stage !== "group" &&
+            !(LEAGUE_STAGES as readonly string[]).includes(m.stage) &&
             !m.is_voided &&
             (fullyUnlocked ||
               nowMs < Math.min(deadlineMs, new Date(m.kickoff_at).getTime() - LOCK_BEFORE_KICKOFF_MS))
@@ -1230,7 +1290,9 @@ export async function submitBracket(input: {
 }
 
 export async function getBonuses(): Promise<BonusView> {
-  let lockAt = TOURNAMENT_START_ISO;
+  const tournament = await getCurrentTournament();
+  // No picks lock configured yet → treat as open (far-future lock).
+  let lockAt = tournament.picksLockAt ?? "2099-01-01T00:00:00Z";
   let locked = new Date() >= new Date(lockAt);
 
   try {
@@ -1269,6 +1331,7 @@ export async function getBonuses(): Promise<BonusView> {
       .from("bonus_predictions")
       .select("*")
       .eq("user_id", user.id)
+      .eq("tournament_id", tournament.id)
       .maybeSingle();
 
     if (error || !pred) {
@@ -1739,7 +1802,9 @@ export async function submitBonuses(
     const unlockActive =
       !!profile?.bonus_unlock_until &&
       new Date(profile.bonus_unlock_until) > new Date();
-    if (new Date() >= new Date(TOURNAMENT_START_ISO) && !unlockActive) {
+    const tournament = await getCurrentTournament();
+    const picksLockMs = tournament.picksLockAt ? new Date(tournament.picksLockAt).getTime() : Infinity;
+    if (Date.now() >= picksLockMs && !unlockActive) {
       return { ok: false, error: "Los bonos ya están bloqueados / Bonuses are already locked" };
     }
 
@@ -1751,6 +1816,7 @@ export async function submitBonuses(
       .from("bonus_predictions")
       .upsert({
         user_id: user.id,
+        tournament_id: tournament.id,
         champion_team_id: picks.championTeamId,
         runner_up_team_id: picks.runnerUpTeamId,
         third_place_team_id: picks.thirdPlaceTeamId,
@@ -1761,7 +1827,7 @@ export async function submitBonuses(
         top_scorer_name: topScorers[0] ?? null,
         best_player_name: bestPlayers[0] ?? null,
         updated_at: new Date().toISOString(),
-      });
+      }, { onConflict: "user_id,tournament_id" });
 
     if (upsertError) {
       console.error("Submit bonuses error:", upsertError);

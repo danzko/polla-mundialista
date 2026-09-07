@@ -31,6 +31,8 @@ import { sql } from "drizzle-orm";
 
 export const matchStageEnum = pgEnum("match_stage", [
   "group",
+  "league",   // UCL league phase (migration 0031)
+  "playoff",  // UCL knockout play-off round
   "r32",
   "r16",
   "qf",
@@ -70,22 +72,62 @@ export const users = pgTable("users", {
 });
 
 /**
- * The 48 national teams in the World Cup 2026.
- * Seeded once at project setup.
+ * One competition the club runs: World Cup 2026 (archived), Champions League
+ * 2026-27, ... Fixed ids live in src/lib/tournament.ts (migration 0031).
+ */
+export const tournaments = pgTable("tournaments", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  slug: text("slug").notNull().unique(),          // 'wc-2026', 'ucl-2026-27'
+  kind: text("kind").notNull(),                   // 'world_cup' | 'ucl'
+  nameEn: text("name_en").notNull(),
+  nameEs: text("name_es").notNull(),
+  status: text("status").notNull().default("upcoming"), // upcoming | active | archived
+  espnLeague: text("espn_league").notNull(),      // ESPN scoreboard league slug
+  startsAt: timestamp("starts_at", { withTimezone: true }),
+  endsAt: timestamp("ends_at", { withTimezone: true }),
+  picksLockAt: timestamp("picks_lock_at", { withTimezone: true }),       // champion/boot/ball lock
+  bracketDeadline: timestamp("bracket_deadline", { withTimezone: true }), // null = per-match locks only
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+/**
+ * Teams of a tournament: national teams (WC, flag emoji + groups) or clubs
+ * (UCL, crest logo_url, no groups). Unique code per tournament.
  */
 export const teams = pgTable(
   "teams",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    code: text("code").notNull(), // FIFA 3-letter code, e.g. "MEX", "ARG"
+    tournamentId: uuid("tournament_id").references(() => tournaments.id, { onDelete: "cascade" }).notNull(),
+    code: text("code").notNull(), // FIFA code ("MEX") or ESPN club abbreviation ("RMA")
     nameEn: text("name_en").notNull(),
     nameEs: text("name_es").notNull(),
     flagEmoji: text("flag_emoji").notNull().default(""),
-    group: text("group").notNull(), // A-L
-    groupPosition: smallint("group_position").notNull(), // 1-4 within group
+    logoUrl: text("logo_url"), // club crest
+    group: text("group"), // A-L; null for a league phase
+    groupPosition: smallint("group_position"), // 1-4 within group; null for a league phase
     eliminated: boolean("eliminated").default(false).notNull(),
   },
-  (table) => [uniqueIndex("teams_code_idx").on(table.code)]
+  (table) => [uniqueIndex("teams_tournament_code_idx").on(table.tournamentId, table.code)]
+);
+
+/**
+ * Knockout tree of a tournament as data: each deciding match, where its two
+ * sides come from ('W74' / 'L101' feeds or slot labels) and the advancement
+ * points for picking its advancer. Drives propagate_bracket() and the
+ * leaderboard view (migration 0031).
+ */
+export const bracketNodes = pgTable(
+  "bracket_nodes",
+  {
+    tournamentId: uuid("tournament_id").references(() => tournaments.id, { onDelete: "cascade" }).notNull(),
+    matchNumber: smallint("match_number").notNull(),
+    round: text("round").notNull(),
+    homeRef: text("home_ref").notNull(),
+    awayRef: text("away_ref").notNull(),
+    advancePoints: smallint("advance_points").notNull().default(0),
+  },
+  (table) => [primaryKey({ columns: [table.tournamentId, table.matchNumber] })]
 );
 
 /**
@@ -97,17 +139,22 @@ export const matches = pgTable(
   "matches",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    matchNumber: smallint("match_number").notNull(), // 1-104, FIFA official numbering
+    tournamentId: uuid("tournament_id").references(() => tournaments.id, { onDelete: "cascade" }).notNull(),
+    matchNumber: smallint("match_number").notNull(), // unique per tournament (WC: FIFA numbering 1-104)
     homeTeamId: uuid("home_team_id").references(() => teams.id),
     awayTeamId: uuid("away_team_id").references(() => teams.id),
     kickoffAt: timestamp("kickoff_at", { withTimezone: true }).notNull(),
     stage: matchStageEnum("stage").notNull(),
-    groupLabel: text("group_label"), // A-L for group stage, null for knockouts
+    groupLabel: text("group_label"), // A-L for group stage, null otherwise
+    matchday: smallint("matchday"), // league-phase round (1..8)
+    leg: smallint("leg"), // 1 / 2 for two-legged ties
+    tieNumber: smallint("tie_number"), // groups the two legs of one tie
     venue: text("venue"), // optional, nice to have
     isVoided: boolean("is_voided").default(false).notNull(),
   },
   (table) => [
-    uniqueIndex("matches_number_idx").on(table.matchNumber),
+    uniqueIndex("matches_tournament_number_idx").on(table.tournamentId, table.matchNumber),
+    index("matches_tournament_idx").on(table.tournamentId),
     index("matches_kickoff_idx").on(table.kickoffAt),
     index("matches_stage_idx").on(table.stage),
   ]
@@ -214,13 +261,16 @@ export const predictions = pgTable(
 );
 
 /**
- * Tournament-long bonus predictions. One row per user.
- * Locked at tournament start (June 11, 2026 first kickoff).
+ * Tournament-long bonus predictions. One row per user per tournament.
+ * Locked at tournaments.picks_lock_at.
  */
 export const bonusPredictions = pgTable("bonus_predictions", {
   userId: uuid("user_id")
-    .primaryKey()
-    .references(() => users.id, { onDelete: "cascade" }),
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+  tournamentId: uuid("tournament_id")
+    .references(() => tournaments.id, { onDelete: "cascade" })
+    .notNull(),
   championTeamId: uuid("champion_team_id").references(() => teams.id),
   runnerUpTeamId: uuid("runner_up_team_id").references(() => teams.id),
   thirdPlaceTeamId: uuid("third_place_team_id").references(() => teams.id),
@@ -241,7 +291,7 @@ export const bonusPredictions = pgTable("bonus_predictions", {
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
-});
+}, (table) => [primaryKey({ columns: [table.userId, table.tournamentId] })]);
 
 /**
  * Per-user knockout bracket predictions. One row per knockout match the
@@ -374,6 +424,8 @@ export const bonusPredictionsRelations = relations(
 // Type exports (for use across the app)
 // ============================================================
 
+export type Tournament = typeof tournaments.$inferSelect;
+export type BracketNode = typeof bracketNodes.$inferSelect;
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Team = typeof teams.$inferSelect;

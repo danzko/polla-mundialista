@@ -1,8 +1,9 @@
 import * as React from 'react';
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
-import { getSessionUser } from '@/lib/api';
+import { getSessionUser, listTournaments, getCurrentTournament } from '@/lib/api';
 import { AppShell } from '@/components/shared/AppShell';
+import { TournamentTabs } from '@/components/shared/TournamentTabs';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -25,8 +26,13 @@ export default async function AppLayout({ children, params }: AppLayoutProps) {
     redirect(`/${locale}/onboarding`);
   }
 
+  const [tournaments, current] = await Promise.all([listTournaments(), getCurrentTournament()]);
+
   return (
     <AppShell user={user}>
+      {!pathname.endsWith('/onboarding') && (
+        <TournamentTabs tournaments={tournaments} current={current} locale={locale as 'es' | 'en'} />
+      )}
       {children}
     </AppShell>
   );

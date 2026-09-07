@@ -239,7 +239,7 @@ export function BracketBoard({ initialBracket, comparison, teams, bonus, locale 
       if (!tm) return '—';
       return (
         <span className="inline-flex items-center gap-1.5 min-w-0 align-middle">
-          <Flag code={tm.code} emoji={tm.flagEmoji} className="inline-block h-3 w-auto rounded-[2px] shrink-0 shadow-sm" />
+          <Flag code={tm.code} emoji={tm.flagEmoji} logoUrl={tm.logoUrl} className="inline-block h-3 w-auto rounded-[2px] shrink-0 shadow-sm" />
           <span className="truncate">{es ? tm.nameEs : tm.nameEn}</span>
         </span>
       );
@@ -408,7 +408,7 @@ export function BracketBoard({ initialBracket, comparison, teams, bonus, locale 
               <span className="w-14 shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground">{es ? 'Campeón' : 'Champion'}</span>
               {shownChampionTeam ? (
                 <span className="inline-flex min-w-0 items-center gap-1.5">
-                  <Flag code={shownChampionTeam.code} emoji={shownChampionTeam.flagEmoji} className="inline-block h-3 w-auto rounded-[1px] shrink-0" />
+                  <Flag code={shownChampionTeam.code} emoji={shownChampionTeam.flagEmoji} logoUrl={shownChampionTeam.logoUrl} className="inline-block h-3 w-auto rounded-[1px] shrink-0" />
                   <span className="truncate font-semibold">{es ? shownChampionTeam.nameEs : shownChampionTeam.nameEn}</span>
                 </span>
               ) : <span className="text-muted-foreground">—</span>}
