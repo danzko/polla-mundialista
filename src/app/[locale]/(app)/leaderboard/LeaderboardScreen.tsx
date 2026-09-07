@@ -41,10 +41,10 @@ function Movement({ m }: { m: number | null }) {
 function ChampionFlag({ e }: { e: UnifiedLeaderboardEntry }) {
   const code = e.championCode;
   const emoji = e.championFlagEmoji;
-  if (!code || !emoji) return null;
+  if (!code || (!emoji && !e.championLogoUrl)) return null;
   return (
     <span className={cn('inline-flex shrink-0', e.championEliminated && 'opacity-40 grayscale')} title={e.championNameEn ?? undefined}>
-      <Flag code={code} emoji={emoji} className="inline-block h-3.5 w-auto rounded-[2px] shadow-sm" />
+      <Flag code={code} emoji={emoji ?? ''} logoUrl={e.championLogoUrl} className="inline-block h-3.5 w-auto rounded-[2px] shadow-sm" />
     </span>
   );
 }

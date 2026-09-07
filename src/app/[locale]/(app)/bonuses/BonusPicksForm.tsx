@@ -21,6 +21,8 @@ interface BonusPicksFormProps {
   initialBonuses: BonusView;
   teams: Team[];
   locale: Locale;
+  kind?: 'world_cup' | 'ucl';
+  players?: { n: string; t: string }[];
 }
 
 type FormData = z.infer<typeof bonusPredictionsSchema>;
@@ -32,10 +34,15 @@ const padTo = (arr: string[], size: number) => {
   return out;
 };
 
-export function BonusPicksForm({ initialBonuses, teams, locale }: BonusPicksFormProps) {
+export function BonusPicksForm({ initialBonuses, teams, locale, kind = 'world_cup', players }: BonusPicksFormProps) {
   const t = useTranslations();
-  
+
   const es = locale === 'es';
+  const ucl = kind === 'ucl';
+  // Award names differ per competition: FIFA Golden Boot / Ball vs UEFA's
+  // top scorer / Player of the Season.
+  const topScorerLabel = ucl ? (es ? 'Máximo goleador (25 pts)' : 'Top scorer (25 pts)') : t('bonuses.topScorer');
+  const bestPlayerLabel = ucl ? (es ? 'Jugador de la temporada (25 pts)' : 'Player of the Season (25 pts)') : t('bonuses.bestPlayer');
   const [locked, setLocked] = React.useState(initialBonuses.locked);
   const [saveStatus, setSaveStatus] = React.useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [apiError, setApiError] = React.useState<string | null>(null);
@@ -107,8 +114,8 @@ export function BonusPicksForm({ initialBonuses, teams, locale }: BonusPicksForm
         <p className="text-xs text-muted-foreground max-w-sm leading-relaxed font-light">
           {locked
             ? (es
-                ? 'Tus picks están bloqueados. El campeón puntúa solo si gana todo; la Bota y el Balón de Oro se definen al terminar el torneo.'
-                : 'Your picks are locked. Your champion only scores if they win it all; the Golden Boot & Ball are decided when the tournament ends.')
+                ? 'Tus picks están bloqueados. El campeón puntúa solo si gana todo; el goleador y el mejor jugador se definen al terminar el torneo.'
+                : 'Your picks are locked. Your champion only scores if they win it all; top scorer and best player are decided when the tournament ends.')
             : t('bonuses.description')}
         </p>
       </div>
@@ -164,7 +171,7 @@ export function BonusPicksForm({ initialBonuses, teams, locale }: BonusPicksForm
                   className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 select-none"
                 >
                   <Award className="h-4 w-4 text-amber-500" />
-                  {t('bonuses.topScorer')}
+                  {topScorerLabel}
                   {locked && <LockedPill kind="pending" es={es} />}
                 </label>
                 <Controller
@@ -177,6 +184,7 @@ export function BonusPicksForm({ initialBonuses, teams, locale }: BonusPicksForm
                       onChange={field.onChange}
                       disabled={locked}
                       placeholder={t('bonuses.playerPlaceholder')}
+                      players={players}
                     />
                   )}
                 />
@@ -194,7 +202,7 @@ export function BonusPicksForm({ initialBonuses, teams, locale }: BonusPicksForm
                   className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 select-none"
                 >
                   <Star className="h-4 w-4 text-emerald-500" />
-                  {t('bonuses.bestPlayer')}
+                  {bestPlayerLabel}
                   {locked && <LockedPill kind="pending" es={es} />}
                 </label>
                 <Controller
@@ -207,6 +215,7 @@ export function BonusPicksForm({ initialBonuses, teams, locale }: BonusPicksForm
                       onChange={field.onChange}
                       disabled={locked}
                       placeholder={t('bonuses.playerPlaceholder')}
+                      players={players}
                     />
                   )}
                 />

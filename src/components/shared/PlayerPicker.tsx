@@ -11,6 +11,8 @@ interface PlayerPickerProps {
   onChange: (value: string) => void;
   disabled?: boolean;
   placeholder?: string;
+  /** Squad list to suggest from; defaults to the World Cup 2026 squads. */
+  players?: { n: string; t: string }[];
 }
 
 // Accent-insensitive normalization: "Vinícius Júnior" -> "vinicius junior"
@@ -24,13 +26,13 @@ type PlayerEntry = { name: string; team: string; haystack: string };
 
 // Precomputed once: searchable haystack includes name, team and a "jr"
 // alias so colloquial searches like "vini jr" still match "Vinícius Júnior".
-const PLAYERS: PlayerEntry[] = (playersData as { n: string; t: string }[]).map(
-  (p) => {
+const toEntries = (list: { n: string; t: string }[]): PlayerEntry[] =>
+  list.map((p) => {
     const base = `${norm(p.n)} ${norm(p.t)}`;
     const haystack = base.includes('junior') ? `${base} jr` : base;
     return { name: p.n, team: p.t, haystack };
-  }
-);
+  });
+const DEFAULT_PLAYERS: PlayerEntry[] = toEntries(playersData as { n: string; t: string }[]);
 
 export function PlayerPicker({
   id,
@@ -38,7 +40,9 @@ export function PlayerPicker({
   onChange,
   disabled = false,
   placeholder,
+  players,
 }: PlayerPickerProps) {
+  const PLAYERS = React.useMemo(() => (players ? toEntries(players) : DEFAULT_PLAYERS), [players]);
   const [isOpen, setIsOpen] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
@@ -66,7 +70,7 @@ export function PlayerPicker({
     // Hide the dropdown when the field already holds an exact pick
     if (out.length === 1 && out[0].name === value) return [];
     return out;
-  }, [value]);
+  }, [value, PLAYERS]);
 
   return (
     <div ref={containerRef} className="relative w-full">

@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Archive, Trophy } from 'lucide-react';
 import { setCurrentTournament } from '@/lib/api';
@@ -58,10 +59,15 @@ export function TournamentTabs({ tournaments, current, locale }: {
         })}
       </div>
       {current.status === 'archived' && (
-        <p className="mt-2 rounded-lg border border-amber-500/30 bg-amber-500/[0.06] px-3 py-1.5 text-[11px] text-amber-200/90">
-          {es
-            ? 'Torneo terminado: resultados finales, solo lectura. Vuelve en el próximo Mundial.'
-            : 'Tournament over: final results, read-only. See you at the next World Cup.'}
+        <p className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-500/30 bg-amber-500/[0.06] px-3 py-1.5 text-[11px] text-amber-200/90">
+          <span>
+            {es
+              ? 'Torneo terminado: resultados finales, solo lectura.'
+              : 'Tournament over: final results, read-only.'}
+          </span>
+          <Link href={`/${locale}/hall`} className="font-bold text-amber-300 hover:underline">
+            {es ? 'Salón de la Fama →' : 'Hall of Fame →'}
+          </Link>
         </p>
       )}
     </div>

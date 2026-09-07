@@ -10,6 +10,22 @@ Danny (danzko@gmail.com) -- superadmin of the platform.
 
 ## Status
 
+**Sept 2026 — PIVOT to an annual multi-tournament club ("La Polla").** The
+World Cup 2026 is finished (pool champion PollArmando) and becomes the archived
+tournament #1; the 2026-27 Champions League is tournament #2 (launch target:
+matchday 2, Oct 13 2026). Migration `0031_multi_tournament.sql` adds the
+`tournaments` table, `tournament_id` on every scoped table, `bracket_nodes`
+(knockout tree + weights as data), per-tournament `leaderboard_view`, and RLS
+lock moments read from `tournaments`. Fixed ids: WC
+`a0000000-0000-4000-8000-000000002026`, UCL `a0000000-0000-4000-8000-000000002627`.
+Every read/write in `src/lib/api.ts` is scoped via `getCurrentTournament()`
+(cookie `t` = slug → active → newest); the shell shows `TournamentTabs`.
+UCL seed: `scripts/seed-ucl.ts` (36 clubs + 144 league-phase fixtures from
+ESPN, `uefa.champions`). UCL bracket (16-team tree, two-leg ties via
+`matches.tie_number`/`leg`) is phase 2 after the play-off draw (late Jan 2027).
+Hall of Fame at `/hall`; season hub on the dashboard. The World Cup notes below
+remain accurate for tournament #1.
+
 **Phase: LIVE in production (launched for the June 11, 2026 kickoff).**
 
 Production: https://polla-mundialista-puce.vercel.app (Vercel auto-deploys from GitHub `danzko/polla-mundialista` `main`). Supabase project `nsaajzmtzotwjpbfwyad`, fully seeded (48 teams, 104 matches with kickoffs verified against the group's Excel) with RLS on.
@@ -234,7 +250,7 @@ npx vercel --prod
 - Email/SMS/push notifications
 - Chat, comments, reactions
 - Social sharing
-- Multiple tournaments
+- ~~Multiple tournaments~~ SUPERSEDED Sept 2026: the app is now multi-tournament (see Status)
 - Mobile native apps
 - Profile pictures, badges, streaks
 - Public leaderboards

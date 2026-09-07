@@ -1,6 +1,6 @@
 {
   "common": {
-    "title": "Polla 2026",
+    "title": "La Polla",
     "save": "Save",
     "saving": "Saving...",
     "saved": "Saved!",
@@ -24,8 +24,8 @@
     "rules": "Rules"
   },
   "landing": {
-    "heroTitle": "The World Cup prediction pool for your friends",
-    "heroSubtitle": "Predict exact scores, earn points, and climb the leaderboard. Fast, simple, and fully optimized for mobile.",
+    "heroTitle": "The prediction pool for your friends, all year round",
+    "heroSubtitle": "World Cup, Champions League and whatever comes next. Predict scores, fill your bracket, earn points and compete in real time from your phone.",
     "ctaSignIn": "Enter my Pool",
     "featuresTitle": "How it works",
     "feature1": "Create or join leagues",
@@ -33,7 +33,7 @@
     "feature2": "Quick predictions",
     "feature2Desc": "Submit and update your predictions until 15 minutes before each kickoff.",
     "feature3": "Tournament bonus picks",
-    "feature3Desc": "Earn bonus points by predicting the Champion, Semifinalists, Golden Boot, and Golden Ball."
+    "feature3Desc": "Earn bonus points by predicting each tournament’s Champion, Top Scorer and Best Player."
   },
   "auth": {
     "title": "Sign in to the Pool",
@@ -55,7 +55,7 @@
     "submit": "Start Playing"
   },
   "dashboard": {
-    "title": "My Leagues",
+    "title": "My season",
     "noLeagues": "You aren't in any leagues yet.",
     "createBtn": "Create a League",
     "joinBtn": "Join with Code",
@@ -141,11 +141,11 @@
     "phaseKnockouts": "Knockouts",
     "comingSoon": "coming soon",
     "completed": "Completed",
-    "savedCount": "{count}/72 saved"
+    "savedCount": "{count}/{total} saved"
   },
   "bonuses": {
     "title": "Tournament Predictions",
-    "description": "These picks will lock at the start of the tournament (June 11, first kickoff). Make sure to save them before then!",
+    "description": "These picks lock when the tournament starts. Make sure to save them before then!",
     "champion": "Champion (50 pts)",
     "runnerUp": "Runner-Up",
     "thirdPlace": "3rd Place (20 pts)",

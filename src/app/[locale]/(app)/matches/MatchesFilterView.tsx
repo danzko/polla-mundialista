@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 import { FeedMatchCard } from '@/components/predictions/FeedMatchCard';
 import { Button } from '@/components/ui/button';
 import { submitPredictions, getLiveScores, getMatchPicks } from '@/lib/api';
-import { LOCK_BEFORE_KICKOFF_MS } from '@/lib/tournament';
+import { LOCK_BEFORE_KICKOFF_MS, LEAGUE_STAGES } from '@/lib/tournament';
 import type { MatchView, Locale, MatchPickRow, LiveScoresPayload } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { HelpCircle, CheckCircle2, AlertTriangle, X, ArrowDownToLine, ChevronDown, GitBranch } from 'lucide-react';
@@ -100,30 +100,44 @@ export function MatchesFilterView({
     [now]
   );
 
-  // Chronological feed grouped by local day: every fixture whose teams are
-  // known — all group games plus knockout rounds whose matchups have resolved.
+  // Sections: a league phase (UCL) groups by MATCHDAY ("Jornada 3"), with day
+  // sub-headers inside; everything else groups by ET day as before.
+  const hasMatchdays = React.useMemo(() => matches.some(m => m.matchday != null), [matches]);
+  const keyOf = React.useCallback(
+    (m: MatchView) => (hasMatchdays && m.matchday != null ? `md${String(m.matchday).padStart(2, '0')}` : localDayKey(m.kickoffAt)),
+    [hasMatchdays]
+  );
+  const isMdKey = (key: string) => key.startsWith('md');
+
+  // Chronological feed: every fixture whose teams are known — all group /
+  // league games plus knockout rounds whose matchups have resolved.
   const { dayKeys, matchesByDay, groupMatches } = React.useMemo(() => {
     const feed = matches
       .filter(m => m.homeTeam && m.awayTeam)
       .sort((a, b) => new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime());
     const byDay: Record<string, MatchView[]> = {};
     for (const m of feed) {
-      const k = localDayKey(m.kickoffAt);
-      (byDay[k] ??= []).push(m);
+      (byDay[keyOf(m)] ??= []).push(m);
     }
     return { dayKeys: Object.keys(byDay).sort(), matchesByDay: byDay, groupMatches: feed };
-  }, [matches]);
+  }, [matches, keyOf]);
 
   // Knockout fixtures whose teams aren't set yet (future rounds) — shown
   // read-only in the collapsed block until their matchups resolve.
   const knockoutMatches = React.useMemo(
     () => matches
-      .filter(m => m.stage !== 'group' && (!m.homeTeam || !m.awayTeam))
+      .filter(m => !(LEAGUE_STAGES as readonly string[]).includes(m.stage) && (!m.homeTeam || !m.awayTeam))
       .sort((a, b) => new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime()),
     [matches]
   );
 
   const todayKey = mounted ? localDayKey(new Date().toISOString()) : null;
+  // The section that contains today's games (a matchday, or the day itself).
+  const todaySectionKey = React.useMemo(() => {
+    if (!todayKey) return null;
+    const m = groupMatches.find(x => localDayKey(x.kickoffAt) === todayKey);
+    return m ? keyOf(m) : null;
+  }, [todayKey, groupMatches, keyOf]);
 
   // The "now" anchor: first live match, else first upcoming, else last.
   const nowMatchId = React.useMemo(() => {
@@ -136,10 +150,10 @@ export function MatchesFilterView({
   // The day the chip row should center on: today if it has games, else
   // the day of the live/next match.
   const focusDayKey = React.useMemo(() => {
-    if (todayKey && dayKeys.includes(todayKey)) return todayKey;
+    if (todaySectionKey) return todaySectionKey;
     const m = groupMatches.find(x => x.id === nowMatchId);
-    return m ? localDayKey(m.kickoffAt) : dayKeys[0] ?? null;
-  }, [todayKey, dayKeys, groupMatches, nowMatchId]);
+    return m ? keyOf(m) : dayKeys[0] ?? null;
+  }, [todaySectionKey, dayKeys, groupMatches, nowMatchId, keyOf]);
 
   const centerChips = React.useCallback((smooth = false) => {
     const key = focusDayKey;
@@ -197,13 +211,29 @@ export function MatchesFilterView({
   // key is an ET calendar day (YYYY-MM-DD). Anchor at UTC noon and format in
   // UTC so the weekday/month/day label always matches that exact day for every
   // viewer, instead of drifting in the reader's local timezone.
+  const fmtDayKey = (key: string, opts: Intl.DateTimeFormatOptions) =>
+    cleanDate(new Date(key + 'T12:00:00Z').toLocaleDateString(es ? 'es-CO' : 'en-US', { timeZone: 'UTC', ...opts }));
+  // Matchday sections: "J3 · 20 oct" chip, "Jornada 3 · 20–21 oct" header.
+  const mdRange = (key: string) => {
+    const ms = matchesByDay[key] ?? [];
+    const first = ms[0] ? localDayKey(ms[0].kickoffAt) : null;
+    const last = ms[ms.length - 1] ? localDayKey(ms[ms.length - 1].kickoffAt) : null;
+    if (!first || !last) return '';
+    const a = fmtDayKey(first, { day: 'numeric', month: 'short' });
+    const b = fmtDayKey(last, { day: 'numeric', month: 'short' });
+    return first === last ? a : `${a.split(' ')[0]}–${b}`;
+  };
   const chipLabel = (key: string) => {
-    const d = new Date(key + 'T12:00:00Z');
-    return cleanDate(d.toLocaleDateString(es ? 'es-CO' : 'en-US', { timeZone: 'UTC', weekday: 'short', month: 'short', day: 'numeric' }));
+    if (isMdKey(key)) return `J${Number(key.slice(2))} · ${mdRange(key)}`;
+    return fmtDayKey(key, { weekday: 'short', month: 'short', day: 'numeric' });
   };
   const dayHeader = (key: string) => {
-    const d = new Date(key + 'T12:00:00Z');
-    const s = cleanDate(d.toLocaleDateString(es ? 'es-CO' : 'en-US', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short' }));
+    if (isMdKey(key)) return `${es ? 'Jornada' : 'Matchday'} ${Number(key.slice(2))} · ${mdRange(key)}`;
+    const s = fmtDayKey(key, { weekday: 'short', day: 'numeric', month: 'short' });
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  };
+  const subDayLabel = (iso: string) => {
+    const s = fmtDayKey(localDayKey(iso), { weekday: 'long', day: 'numeric', month: 'short' });
     return s.charAt(0).toUpperCase() + s.slice(1);
   };
 
@@ -230,10 +260,11 @@ export function MatchesFilterView({
   }, [matches, edits, touched, isEditable]);
   const unsavedCount = unsavedMatches.length;
 
-  const savedGroupCount = React.useMemo(
-    () => matches.filter(m => m.stage === 'group' && m.myPrediction !== null).length,
-    [matches]
-  );
+  // Regular-season progress (group stage / league phase): saved of playable.
+  const { savedGroupCount, groupTotal } = React.useMemo(() => {
+    const regular = matches.filter(m => (LEAGUE_STAGES as readonly string[]).includes(m.stage) && m.homeTeam && m.awayTeam && !m.isVoided);
+    return { savedGroupCount: regular.filter(m => m.myPrediction !== null).length, groupTotal: regular.length };
+  }, [matches]);
 
   const getMatchDisplayName = (match: MatchView) => {
     const h = match.homeTeam ? (es ? match.homeTeam.nameEs : match.homeTeam.nameEn) : 'TBD';
@@ -294,7 +325,7 @@ export function MatchesFilterView({
       <div className="sticky top-16 z-20 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-2 pb-2 bg-background/90 backdrop-blur-md border-b border-border/40">
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-bold text-muted-foreground">
-            {savedGroupCount === 72 ? t('matches.completed') : t('matches.savedCount', { count: savedGroupCount })}
+            {groupTotal > 0 && savedGroupCount === groupTotal ? t('matches.completed') : t('matches.savedCount', { count: savedGroupCount, total: groupTotal })}
           </span>
           <span className="flex items-center gap-1.5 text-[11px]">
             {liveCount > 0 && (
@@ -324,7 +355,7 @@ export function MatchesFilterView({
           <div ref={chipScrollRef} className="flex gap-1.5 overflow-x-auto scrollbar-none flex-1">
             {dayKeys.map(key => {
               const isActive = activeDay === key;
-              const isToday = key === todayKey;
+              const isToday = key === todaySectionKey;
               return (
                 <button
                   key={key}
@@ -354,7 +385,7 @@ export function MatchesFilterView({
       ) : (
         <div className="space-y-5 pt-4">
           {/* Cross-link: knockout scores live here; advancers live in the Bracket. */}
-          {matches.some(m => m.stage !== 'group') && (
+          {matches.some(m => !(LEAGUE_STAGES as readonly string[]).includes(m.stage)) && (
             <Link
               href={`/${locale}/bracket`}
               className="flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/[0.06] px-3 py-2.5 text-[12px] text-foreground"
@@ -372,14 +403,20 @@ export function MatchesFilterView({
             >
               <h3 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/90 py-1 flex items-center gap-2">
                 {dayHeader(key)}
-                {key === todayKey && (
+                {key === todaySectionKey && (
                   <span className="rounded-full bg-primary/15 text-primary px-1.5 py-0.5 text-[9px] font-bold normal-case tracking-normal">
                     {es ? 'hoy' : 'today'}
                   </span>
                 )}
               </h3>
-              {matchesByDay[key].map(m => (
+              {matchesByDay[key].map((m, i, arr) => (
                 <div key={m.id} ref={(el) => { if (el) cardRefs.current.set(m.id, el); else cardRefs.current.delete(m.id); }}>
+                  {isMdKey(key) && (i === 0 || localDayKey(arr[i - 1].kickoffAt) !== localDayKey(m.kickoffAt)) && (
+                    <div className={cn('text-[10px] font-semibold text-muted-foreground/70 pb-1 flex items-center gap-1.5', i > 0 && 'pt-2')}>
+                      {subDayLabel(m.kickoffAt)}
+                      {localDayKey(m.kickoffAt) === todayKey && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
+                    </div>
+                  )}
                   <FeedMatchCard
                     match={m}
                     locale={locale}

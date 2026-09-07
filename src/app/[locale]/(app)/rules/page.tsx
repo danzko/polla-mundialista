@@ -2,6 +2,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { GitBranch, Calendar, ArrowLeft } from 'lucide-react';
 import { TrophyMark } from '@/components/shared/brand';
+import { getCurrentTournament } from '@/lib/api';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,9 +16,16 @@ export default async function RulesPage({ params }: RulesPageProps) {
   const { locale } = await params;
   const es = locale === 'es';
   const base = `/${locale}`;
+  const tournament = await getCurrentTournament();
+  // Same points ladder for every competition; only the round names change
+  // (UCL: play-off → octavos → cuartos → semis → final, two legs each).
+  const ucl = tournament.kind === 'ucl';
+  const regular = ucl ? (es ? 'la fase de liga' : 'the league phase') : (es ? 'la fase de grupos' : 'the group stage');
 
   const advancement = [
-    { en: 'Reaches Round of 16', es: 'Llega a Octavos', pts: 4 },
+    ucl
+      ? { en: 'Wins the play-off (reaches Round of 16)', es: 'Gana el play-off (llega a Octavos)', pts: 4 }
+      : { en: 'Reaches Round of 16', es: 'Llega a Octavos', pts: 4 },
     { en: 'Quarterfinals', es: 'Cuartos', pts: 8 },
     { en: 'Semifinals', es: 'Semifinal', pts: 16 },
     { en: 'Final', es: 'Final', pts: 30 },
@@ -40,8 +48,8 @@ export default async function RulesPage({ params }: RulesPageProps) {
       </h1>
       <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
         {es
-          ? 'En eliminatorias sumas de dos formas, y se acumulan: la Llave (los puntos grandes, por quién avanza) y el marcador de cada partido (6/2/0, igual que en grupos).'
-          : 'In the knockouts you score two ways, and they stack: the Bracket (the big points, for who advances) and each match scoreline (6/2/0, same as the group stage).'}
+          ? `En eliminatorias sumas de dos formas, y se acumulan: la Llave (los puntos grandes, por quién avanza) y el marcador de cada partido (6/2/0, igual que en ${regular}).`
+          : `In the knockouts you score two ways, and they stack: the Bracket (the big points, for who advances) and each match scoreline (6/2/0, same as ${regular}).`}
       </p>
 
       {/* 1 — THE BRACKET */}
@@ -83,9 +91,13 @@ export default async function RulesPage({ params }: RulesPageProps) {
           )}
         </div>
         <p className="text-[12px] text-amber-500 font-semibold mt-2">
-          ⏰ {es
-            ? 'Tienes hasta el cierre de hoy (11:59pm ET) para toda la Llave; un partido que empiece antes se cierra a su hora de inicio (el primero, Sudáfrica–Canadá, a las 2:45pm ET).'
-            : 'You have until tonight (11:59pm ET) for the whole Bracket; a game that kicks off sooner closes at its start (the first, South Africa–Canada, at 2:45pm ET).'}
+          ⏰ {ucl
+            ? (es
+                ? 'La Llave se abre tras el sorteo de los play-offs (finales de enero). Cada eliminatoria se cierra 15 min antes de su partido de ida.'
+                : 'The Bracket opens after the play-off draw (late January). Each tie locks 15 min before its first leg.')
+            : (es
+                ? 'La Llave se llena en una sola ventana antes de la primera eliminatoria; un partido que empiece antes se cierra a su hora de inicio.'
+                : 'The Bracket is filled in one window before the first knockout game; a game that kicks off sooner closes at its start.')}
         </p>
       </section>
 
@@ -93,12 +105,16 @@ export default async function RulesPage({ params }: RulesPageProps) {
       <section className="mt-4 rounded-2xl border border-border/50 bg-card/50 p-4">
         <h2 className="font-bold flex items-center gap-2">
           <Calendar className="h-4 w-4 text-primary" />
-          {es ? '2. Marcadores — igual que en grupos' : '2. Match scores — same as the group stage'}
+          {es ? `2. Marcadores — igual que en ${regular}` : `2. Match scores — same as ${regular}`}
         </h2>
         <p className="text-[13px] text-muted-foreground mt-1.5 leading-relaxed">
-          {es
-            ? 'En la pestaña Partidos predices el marcador de cada partido eliminatorio, ronda por ronda, a medida que se conocen los equipos. Cada partido se cierra 15 min antes del pitazo. Puntúa exactamente igual que la fase de grupos:'
-            : 'In the Matches tab you predict each knockout game’s scoreline, round by round, as the teams become known. Each game locks 15 min before kickoff. It scores exactly like the group stage:'}
+          {ucl
+            ? (es
+                ? 'En la pestaña Partidos predices el marcador de cada partido: las 8 jornadas de la fase de liga y luego cada partido eliminatorio (ida y vuelta) a medida que se conocen los cruces. Cada partido se cierra 15 min antes del pitazo:'
+                : 'In the Games tab you predict every scoreline: the 8 league-phase matchdays and then each knockout game (both legs) as the ties become known. Each game locks 15 min before kickoff:')
+            : (es
+                ? 'En la pestaña Partidos predices el marcador de cada partido eliminatorio, ronda por ronda, a medida que se conocen los equipos. Cada partido se cierra 15 min antes del pitazo. Puntúa exactamente igual que la fase de grupos:'
+                : 'In the Matches tab you predict each knockout game’s scoreline, round by round, as the teams become known. Each game locks 15 min before kickoff. It scores exactly like the group stage:')}
         </p>
         <ul className="mt-3 space-y-2 text-[13px]">
           <li className="flex gap-2">
@@ -162,13 +178,17 @@ export default async function RulesPage({ params }: RulesPageProps) {
           <li className="flex gap-2">
             <span className="font-bold text-amber-400 shrink-0">+25</span>
             <span className="text-muted-foreground">
-              {es ? 'Bota de Oro (goleador del torneo).' : 'Golden Boot (tournament top scorer).'}
+              {ucl
+                ? (es ? 'Máximo goleador de la temporada.' : 'Top scorer of the season.')
+                : (es ? 'Bota de Oro (goleador del torneo).' : 'Golden Boot (tournament top scorer).')}
             </span>
           </li>
           <li className="flex gap-2">
             <span className="font-bold text-amber-400 shrink-0">+25</span>
             <span className="text-muted-foreground">
-              {es ? 'Balón de Oro (mejor jugador).' : 'Golden Ball (best player).'}
+              {ucl
+                ? (es ? 'Jugador de la temporada (premio oficial UEFA).' : 'Player of the Season (official UEFA award).')
+                : (es ? 'Balón de Oro (mejor jugador).' : 'Golden Ball (best player).')}
             </span>
           </li>
         </ul>
@@ -180,13 +200,19 @@ export default async function RulesPage({ params }: RulesPageProps) {
           🧮 {es ? 'Ejemplo completo: cómo se suman los puntos' : 'Full example: how the points add up'}
         </h2>
         <div className="mt-3 rounded-xl border border-border/40 overflow-hidden text-[12px]">
-          {[
+          {(ucl ? [
+            { what: es ? 'Real Madrid → Campeón (y gana)' : 'Real Madrid → Champion (and wins)', detail: '4+8+16+30+55', pts: 113 },
+            { what: es ? 'Real Madrid, su pick de Campeón pre-torneo' : 'Real Madrid, his pre-tournament Champion pick', detail: '', pts: 50 },
+            { what: es ? 'Bayern → Final (pierde la final)' : 'Bayern → Final (loses the final)', detail: '4+8+16+30', pts: 58 },
+            { what: es ? '3 marcadores exactos en eliminatorias' : '3 knockout scorelines exact', detail: '3 × 6', pts: 18 },
+            { what: es ? 'Máximo goleador acertado' : 'Top scorer correct', detail: '', pts: 25 },
+          ] : [
             { what: es ? '🇫🇷 Francia → Campeón (y gana)' : '🇫🇷 France → Champion (and wins)', detail: '4+8+16+30+55', pts: 113 },
             { what: es ? '🇫🇷 Francia, su pick de Campeón pre-torneo' : '🇫🇷 France, his pre-tournament Champion pick', detail: '', pts: 50 },
             { what: es ? '🇧🇷 Brasil → Final (pierde la final)' : '🇧🇷 Brazil → Final (loses the final)', detail: '4+8+16+30', pts: 58 },
             { what: es ? '3 marcadores exactos en eliminatorias' : '3 knockout scorelines exact', detail: '3 × 6', pts: 18 },
             { what: es ? 'Bota de Oro acertada' : 'Golden Boot correct', detail: '', pts: 25 },
-          ].map((row) => (
+          ]).map((row) => (
             <div key={row.what} className="flex items-center justify-between gap-2 border-b border-border/30 px-3 py-1.5">
               <span className="flex-1">{row.what}</span>
               {row.detail && <span className="text-muted-foreground/70 hidden sm:inline">{row.detail}</span>}
@@ -200,8 +226,8 @@ export default async function RulesPage({ params }: RulesPageProps) {
         </div>
         <p className="text-[11px] text-muted-foreground/70 mt-2 leading-relaxed">
           {es
-            ? 'Fíjate: Francia le pagó en cada ronda (se acumula) y otra vez por su pick de campeón. Una buena lectura del torneo vale mucho más que un marcador suelto.'
-            : 'Notice: France paid him in every round (it stacks) and again via his champion pick. Reading the tournament right is worth far more than a lucky scoreline.'}
+            ? `Fíjate: ${ucl ? 'el Madrid' : 'Francia'} le pagó en cada ronda (se acumula) y otra vez por su pick de campeón. Una buena lectura del torneo vale mucho más que un marcador suelto.`
+            : `Notice: ${ucl ? 'Madrid' : 'France'} paid him in every round (it stacks) and again via his champion pick. Reading the tournament right is worth far more than a lucky scoreline.`}
         </p>
       </section>
 
@@ -216,9 +242,13 @@ export default async function RulesPage({ params }: RulesPageProps) {
       </section>
 
       <p className="text-[11px] text-muted-foreground/70 mt-4 text-center">
-        {es
-          ? 'La fase de grupos puntúa 6 (exacto) / 2 (resultado) / 0 (fallo), sin multiplicador.'
-          : 'The group stage scores 6 (exact) / 2 (result) / 0 (wrong), no multiplier.'}
+        {ucl
+          ? (es
+              ? 'La fase de liga (8 jornadas, 144 partidos) puntúa 6 (exacto) / 2 (resultado) / 0 (fallo), sin multiplicador.'
+              : 'The league phase (8 matchdays, 144 games) scores 6 (exact) / 2 (result) / 0 (wrong), no multiplier.')
+          : (es
+              ? 'La fase de grupos puntúa 6 (exacto) / 2 (resultado) / 0 (fallo), sin multiplicador.'
+              : 'The group stage scores 6 (exact) / 2 (result) / 0 (wrong), no multiplier.')}
       </p>
     </div>
   );

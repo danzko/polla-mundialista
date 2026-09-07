@@ -55,7 +55,7 @@ export function StatsSections({ data, locale }: { data: StatsData; locale: Local
         {data.titleRace.map((r) => (
           <div key={r.teamCode} className="rounded-xl border border-border/45 bg-card/50 px-3 py-2.5">
             <div className="flex items-center gap-2">
-              {r.flagEmoji && <span className={cn(r.eliminated && 'opacity-40 grayscale')}><Flag code={r.teamCode} emoji={r.flagEmoji} className="inline-block h-4 w-auto rounded-[2px] shadow-sm" /></span>}
+              {(r.flagEmoji || r.logoUrl) && <span className={cn(r.eliminated && 'opacity-40 grayscale')}><Flag code={r.teamCode} emoji={r.flagEmoji ?? ''} logoUrl={r.logoUrl} className="inline-block h-4 w-auto rounded-[2px] shadow-sm" /></span>}
               <span className={cn('flex-1 truncate text-[13px] font-bold', r.eliminated && 'line-through text-muted-foreground')}>{r.teamName}</span>
               {r.vegasOdds && (
                 <span className="shrink-0 rounded-md bg-secondary/70 px-1.5 py-0.5 text-[10px] font-bold tabular-nums">

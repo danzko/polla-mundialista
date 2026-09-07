@@ -1,5 +1,6 @@
 import * as React from "react";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentTournament } from "@/lib/api";
 import { ResultRow, type RowMatch } from "./ResultRow";
 import { LivePanel, type LiveItem, type SyncState } from "./LivePanel";
 
@@ -12,6 +13,7 @@ export default async function AdminResultsPage({
 }) {
   const { locale } = await params;
   const supabase = await createClient();
+  const tournament = await getCurrentTournament();
 
   const [{ data: matches }, { data: liveRows }, { data: syncRow }] = await Promise.all([
     supabase
@@ -22,9 +24,10 @@ export default async function AdminResultsPage({
          away_team:teams!matches_away_team_id_fkey (*),
          match_results (*)`
       )
+      .eq("tournament_id", tournament.id)
       .order("kickoff_at", { ascending: true }),
     supabase.from("live_scores").select("*"),
-    supabase.from("live_sync_state").select("*").eq("id", 1).maybeSingle(),
+    supabase.from("live_sync_state").select("*").eq("tournament_id", tournament.id).maybeSingle(),
   ]);
 
   const rows: RowMatch[] = (matches ?? []).map((m: any) => {
@@ -96,7 +99,7 @@ export default async function AdminResultsPage({
     <div className="space-y-3">
       <LivePanel items={liveItems} sync={syncState} />
       <div className="mb-2 text-sm text-muted-foreground">
-        {withResult} de {rows.length} partidos con resultado
+        <span className="font-semibold text-foreground">{tournament.nameEs}</span> · {withResult} de {rows.length} partidos con resultado
       </div>
       {rows.length === 0 && (
         <p className="text-sm text-muted-foreground">No hay partidos cargados.</p>

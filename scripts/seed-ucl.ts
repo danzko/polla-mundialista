@@ -5,6 +5,7 @@
  *
  * Usage:
  *   npx tsx --env-file=.env.local scripts/seed-ucl.ts
+ *   DRY_RUN=1 npx tsx scripts/seed-ucl.ts     # fetch + validate only, no writes
  *
  * Idempotent: upserts on (tournament_id, code) / (tournament_id, match_number).
  * Knockout fixtures (Feb 2027+) are seeded separately once the draws happen.
@@ -14,10 +15,11 @@ import { createClient } from "@supabase/supabase-js";
 const UCL_ID = "a0000000-0000-4000-8000-000000002627";
 const ESPN = "https://site.api.espn.com/apis/site/v2/sports/soccer/uefa.champions";
 
-const url = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-if (!url || !key) { console.error("Missing SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY"); process.exit(1); }
-const supabase = createClient(url, key);
+const DRY = process.env.DRY_RUN === "1";
+const url = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+if (!DRY && (!url || !key)) { console.error("Missing SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY"); process.exit(1); }
+const supabase = createClient(url || "https://dry.run.invalid", key || "dry");
 
 async function main() {
   // ---- teams ----
@@ -29,6 +31,17 @@ async function main() {
       logo: (t.team.logos?.[0]?.href as string) ?? null,
     }));
   console.log(`ESPN clubs: ${clubs.length}`);
+  if (DRY) {
+    // Validate the fixture parse without touching the database.
+    const sb = await fetch(`${ESPN}/scoreboard?dates=20260901-20270201&limit=400`).then((r) => r.json());
+    const events: any[] = (sb.events ?? []).sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    let md = 0, prev = 0; const per: Record<number, number> = {};
+    for (const e of events) { const ms = new Date(e.date).getTime(); if (ms - prev > 4 * 86_400_000) md++; prev = ms; per[md] = (per[md] ?? 0) + 1; }
+    const codes = new Set(clubs.map((c) => c.code));
+    const unknown = events.flatMap((e) => e.competitions[0].competitors.map((c: any) => c.team.abbreviation)).filter((a: string) => !codes.has(a));
+    console.log(`fixtures: ${events.length}; per matchday:`, per, `; unknown club codes: ${unknown.length}`);
+    return;
+  }
   const { data: teamRows, error: tErr } = await supabase
     .from("teams")
     .upsert(

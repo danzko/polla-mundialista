@@ -158,7 +158,42 @@ export interface UnifiedLeaderboardEntry {
   championNameEs: string | null;
   championNameEn: string | null;
   championFlagEmoji: string | null;
+  championLogoUrl: string | null;
   championEliminated: boolean;
+}
+
+// ---- Season hub (dashboard) + Hall of Fame ----
+/** The upcoming (or in-progress) round of the current tournament. */
+export interface NextMatchday {
+  matchday: number | null;    // league-phase round; null for a knockout round
+  label: string;              // 'Jornada 3' / 'Octavos', already localized
+  firstKickoff: string;       // ISO
+  lastKickoff: string;        // ISO
+  total: number;              // games in the round with both teams known
+  saved: number;              // of those, games the viewer has predicted
+  open: number;               // of those, games still open for picks
+  liveCount: number;
+}
+/** One archived tournament's final standing within the viewer's league. */
+export interface HonorsEntry {
+  tournament: Tournament;
+  leagueName: string | null;
+  participants: number;
+  podium: { userId: string; displayName: string; points: number; isMe: boolean }[];
+  myRank: number | null;
+  myPoints: number;
+  // the real champion of that tournament (for the plaque)
+  championName: string | null;
+  championCode: string | null;
+  championFlagEmoji: string | null;
+  championLogoUrl: string | null;
+  // full final table (Hall of Fame page only)
+  standings?: { rank: number; userId: string; displayName: string; points: number; isMe: boolean }[];
+}
+export interface SeasonHub {
+  tournament: Tournament;
+  nextMatchday: NextMatchday | null;
+  honors: HonorsEntry[];
 }
 
 export interface LeaderboardData {
@@ -175,6 +210,7 @@ export interface TitleRaceRow {
   teamCode: string;
   teamName: string;
   flagEmoji: string | null;
+  logoUrl: string | null;
   eliminated: boolean;
   vegasOdds: string | null;        // e.g. "+280" (null until the snapshot is set)
   vegasImpliedPct: number | null;  // e.g. 26

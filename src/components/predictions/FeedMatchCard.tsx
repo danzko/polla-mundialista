@@ -4,6 +4,7 @@ import * as React from 'react';
 import { ScoreStepper } from './ScoreStepper';
 import { PicksStrip } from './PicksStrip';
 import { knockoutSlotLabel } from '@/lib/bracket-slots';
+import { Flag } from '@/components/shared/Flag';
 import { cn } from '@/lib/utils';
 import type { MatchView, Locale, MatchPickRow, LiveScore } from '@/lib/types';
 
@@ -34,7 +35,25 @@ export function FeedMatchCard({
     team
       ? (es ? team.nameEs : team.nameEn)
       : (knockoutSlotLabel(match.matchNumber, pos, locale) ?? (es ? 'Por definir' : 'TBD'));
-  const flag = (team: MatchView['homeTeam']) => (team ? team.flagEmoji : '🏳️');
+  const flag = (team: MatchView['homeTeam']) =>
+    team
+      ? <Flag code={team.code} emoji={team.flagEmoji} logoUrl={team.logoUrl} className={team.logoUrl ? 'inline-block h-5 w-5 object-contain' : 'inline-block h-4 w-auto rounded-[2px] shadow-sm'} />
+      : <span>🏳️</span>;
+
+  // Meta label: Grupo A · Jornada 3 · Play-off · Eliminatoria (ida/vuelta)
+  const stageLabel = (() => {
+    if (match.stage === 'group') return `${es ? 'Grupo' : 'Group'} ${match.groupLabel ?? ''}`;
+    if (match.stage === 'league') return es ? `Jornada ${match.matchday ?? ''}` : `Matchday ${match.matchday ?? ''}`;
+    const base = match.stage === 'playoff' ? 'Play-off'
+      : match.stage === 'r16' ? (es ? 'Octavos' : 'Round of 16')
+      : match.stage === 'qf' ? (es ? 'Cuartos' : 'Quarterfinal')
+      : match.stage === 'sf' ? (es ? 'Semifinal' : 'Semifinal')
+      : match.stage === 'final' ? 'Final'
+      : match.stage === 'third_place' ? (es ? '3.er puesto' : '3rd place')
+      : (es ? 'Eliminatoria' : 'Knockout');
+    const leg = match.leg === 1 ? (es ? ' · ida' : ' · 1st leg') : match.leg === 2 ? (es ? ' · vuelta' : ' · 2nd leg') : '';
+    return base + leg;
+  })();
 
   // Always US Eastern (ET) — the lock clock — so the close time matches what
   // everyone else sees regardless of their device timezone.
@@ -123,9 +142,7 @@ export function FeedMatchCard({
         {/* meta row */}
         <div className="mb-1 flex items-center justify-between">
           <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">
-            {match.stage === 'group'
-              ? `${es ? 'Grupo' : 'Group'} ${match.groupLabel ?? ''}`
-              : (es ? 'Eliminatoria' : 'Knockout')}
+            {stageLabel}
             {!editable && !isLive && !isFinal && !match.isVoided && (
               <span className="ml-1.5 font-medium normal-case tracking-normal">· {fmtTime(match.kickoffAt)}</span>
             )}

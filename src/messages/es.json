@@ -1,6 +1,6 @@
 {
   "common": {
-    "title": "Polla 2026",
+    "title": "La Polla",
     "save": "Guardar",
     "saving": "Guardando...",
     "saved": "¡Guardado!",
@@ -24,8 +24,8 @@
     "rules": "Reglas"
   },
   "landing": {
-    "heroTitle": "La polla mundialista para tu grupo de amigos",
-    "heroSubtitle": "Predice marcadores, gana puntos y compite en tiempo real. Configuración rápida y simple, optimizada para celular.",
+    "heroTitle": "La polla de tu grupo de amigos, todo el año",
+    "heroSubtitle": "Mundial, Champions League y lo que venga. Predice marcadores, arma tu llave, gana puntos y compite en tiempo real desde el celular.",
     "ctaSignIn": "Ingresar a mi Polla",
     "featuresTitle": "Cómo funciona",
     "feature1": "Crea o únete a ligas",
@@ -33,7 +33,7 @@
     "feature2": "Predicciones rápidas",
     "feature2Desc": "Sube y edita tus marcadores hasta 15 minutos antes del kickoff de cada partido.",
     "feature3": "Premios y bonos especiales",
-    "feature3Desc": "Suma puntos extra pronosticando el Campeón, Semifinalistas, Goleador y Mejor Jugador."
+    "feature3Desc": "Suma puntos extra pronosticando el Campeón, el Goleador y el Mejor Jugador de cada torneo."
   },
   "auth": {
     "title": "Ingresa a la Polla",
@@ -55,7 +55,7 @@
     "submit": "Empezar a Jugar"
   },
   "dashboard": {
-    "title": "Mis Ligas",
+    "title": "Mi temporada",
     "noLeagues": "Aún no estás en ninguna liga.",
     "createBtn": "Crear una Liga",
     "joinBtn": "Unirse con Código",
@@ -141,11 +141,11 @@
     "phaseKnockouts": "Eliminatorias",
     "comingSoon": "próximamente",
     "completed": "Completado",
-    "savedCount": "{count}/72 guardados"
+    "savedCount": "{count}/{total} guardados"
   },
   "bonuses": {
     "title": "Pronósticos del Torneo",
-    "description": "Estos pronósticos se bloquean al inicio del torneo (11 de junio, primer partido). ¡Asegúrate de guardarlos antes!",
+    "description": "Estos pronósticos se bloquean cuando empieza el torneo. ¡Asegúrate de guardarlos antes!",
     "champion": "Campeón (50 pts)",
     "runnerUp": "Subcampeón",
     "thirdPlace": "Tercer Puesto (20 pts)",

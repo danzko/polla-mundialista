@@ -11,6 +11,7 @@ import type {
   BracketView, BracketMatchView, BracketComparison, BracketPeer,
   UnifiedLeaderboardEntry, LeaderboardData,
   StatsData, TitleRaceRow, BootRaceRow, PickShare, Tournament,
+  SeasonHub, NextMatchday, HonorsEntry,
 } from "./types";
 import {
   displayNameSchema, emailSchema, leagueNameSchema,
@@ -888,7 +889,7 @@ export async function getLeaderboard(leagueId?: string): Promise<LeaderboardData
       (bonusRows ?? []).filter((b) => b.champion_team_id).map((b) => [b.user_id as string, b.champion_team_id as string])
     );
     const { data: teamRows } = await supabase
-      .from("teams").select("id, code, name_es, name_en, flag_emoji").eq("tournament_id", tournament.id);
+      .from("teams").select("id, code, name_es, name_en, flag_emoji, logo_url").eq("tournament_id", tournament.id);
     const teamById = new Map((teamRows ?? []).map((t) => [t.id as string, t]));
 
     // Which teams are already knocked out (lost a played KO match).
@@ -971,6 +972,7 @@ export async function getLeaderboard(leagueId?: string): Promise<LeaderboardData
         championNameEs: (team?.name_es as string) ?? null,
         championNameEn: (team?.name_en as string) ?? null,
         championFlagEmoji: (team?.flag_emoji as string) ?? null,
+        championLogoUrl: (team?.logo_url as string | null) ?? null,
         championEliminated: !!championTeamId && eliminated.has(championTeamId),
       };
     });
@@ -1072,7 +1074,7 @@ export async function getStats(leagueId?: string, locale: Locale = "es"): Promis
       .eq("tournament_id", tournament.id)
       .in("user_id", memberIds);
 
-    const { data: teamRows } = await supabase.from("teams").select("id, code, name_es, name_en, flag_emoji").eq("tournament_id", tournament.id);
+    const { data: teamRows } = await supabase.from("teams").select("id, code, name_es, name_en, flag_emoji, logo_url").eq("tournament_id", tournament.id);
     const teamById = new Map((teamRows ?? []).map((t) => [t.id as string, t]));
     const teamByCode = new Map((teamRows ?? []).map((t) => [t.code as string, t]));
 
@@ -1114,6 +1116,7 @@ export async function getStats(leagueId?: string, locale: Locale = "es"): Promis
         teamCode: code,
         teamName: t ? ((es ? t.name_es : t.name_en) as string) : code,
         flagEmoji: (t?.flag_emoji as string) ?? null,
+        logoUrl: (t?.logo_url as string | null) ?? null,
         eliminated: !!t && eliminated.has(t.id as string),
         vegasOdds: (o?.odds as string) ?? null,
         vegasImpliedPct: (o?.implied_pct as number) ?? null,
@@ -1971,6 +1974,157 @@ export async function kickMember(
     return { ok: true, data: undefined };
   } catch (err: any) {
     return { ok: false, error: err.message || "Error al expulsar / Error removing member" };
+  }
+}
+
+// ==========================================
+// SEASON HUB + HALL OF FAME
+// ==========================================
+
+const ROUND_LABEL: Record<string, { es: string; en: string }> = {
+  playoff: { es: "Play-off", en: "Play-off" },
+  r32: { es: "32avos", en: "Round of 32" },
+  r16: { es: "Octavos", en: "Round of 16" },
+  qf: { es: "Cuartos", en: "Quarterfinals" },
+  sf: { es: "Semifinales", en: "Semifinals" },
+  third_place: { es: "3.er puesto", en: "Third place" },
+  final: { es: "Final", en: "Final" },
+};
+
+/**
+ * Final standings of archived tournaments within the viewer's club (their
+ * first league, alphabetically — the same friends every season). Podium +
+ * the viewer's own finish; `full` adds the whole table (Hall of Fame page).
+ */
+async function honorsFor(
+  supabase: any, userId: string, tournaments: Tournament[], full: boolean, locale: Locale
+): Promise<HonorsEntry[]> {
+  const es = locale === "es";
+  const { data: mem } = await supabase.from("league_members").select("league_id").eq("user_id", userId);
+  const leagueIds = (mem ?? []).map((r: any) => r.league_id as string);
+  if (leagueIds.length === 0) return [];
+  const { data: leagueRows } = await supabase
+    .from("leagues").select("id, name").in("id", leagueIds).order("name", { ascending: true }).limit(1);
+  const league = leagueRows?.[0];
+  if (!league) return [];
+  const { data: memberRows } = await supabase.from("league_members").select("user_id").eq("league_id", league.id);
+  const memberIds = Array.from(new Set((memberRows ?? []).map((r: any) => r.user_id as string)));
+  const { data: userRows } = await supabase.from("users").select("id, display_name").in("id", memberIds);
+  const nameById = new Map<string, string>((userRows ?? []).map((u: any) => [u.id, u.display_name]));
+
+  const out: HonorsEntry[] = [];
+  for (const t of tournaments) {
+    const { data: scores } = await supabase
+      .from("leaderboard_view")
+      .select("user_id, total_points, knockout_points, exact_count, result_count")
+      .eq("tournament_id", t.id).in("user_id", memberIds);
+    if (!scores || scores.length === 0) continue;
+    const rows = (scores as any[]).map((s) => ({
+      userId: s.user_id as string,
+      displayName: nameById.get(s.user_id) ?? "—",
+      points: (s.total_points as number) ?? 0,
+      ko: (s.knockout_points as number) ?? 0,
+      exact: (s.exact_count as number) ?? 0,
+      result: (s.result_count as number) ?? 0,
+      isMe: s.user_id === userId,
+    }));
+    rows.sort((a, b) => b.points - a.points || b.ko - a.ko || b.exact - a.exact || b.result - a.result || a.displayName.localeCompare(b.displayName));
+    const myIdx = rows.findIndex((r) => r.isMe);
+
+    const { data: outcome } = await supabase
+      .from("tournament_outcomes").select("champion_team_id").eq("tournament_id", t.id).maybeSingle();
+    let champ: any = null;
+    if (outcome?.champion_team_id) {
+      const { data: teamRow } = await supabase
+        .from("teams").select("code, name_es, name_en, flag_emoji, logo_url").eq("id", outcome.champion_team_id).maybeSingle();
+      champ = teamRow;
+    }
+
+    out.push({
+      tournament: t,
+      leagueName: league.name as string,
+      participants: rows.length,
+      podium: rows.slice(0, 3).map(({ userId: u, displayName, points, isMe }) => ({ userId: u, displayName, points, isMe })),
+      myRank: myIdx >= 0 ? myIdx + 1 : null,
+      myPoints: myIdx >= 0 ? rows[myIdx].points : 0,
+      championName: champ ? (es ? champ.name_es : champ.name_en) : null,
+      championCode: champ?.code ?? null,
+      championFlagEmoji: champ?.flag_emoji ?? null,
+      championLogoUrl: champ?.logo_url ?? null,
+      standings: full
+        ? rows.map((r, i) => ({ rank: i + 1, userId: r.userId, displayName: r.displayName, points: r.points, isMe: r.isMe }))
+        : undefined,
+    });
+  }
+  return out;
+}
+
+/** Dashboard hub: the current tournament's next round + the viewer's honors. */
+export async function getSeasonHub(locale: Locale = "es"): Promise<SeasonHub | null> {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+    const es = locale === "es";
+    const [tournament, all] = await Promise.all([getCurrentTournament(), listTournaments()]);
+
+    // Next round: the round containing the first game not yet finished
+    // (a game in progress still counts as "this round").
+    let nextMatchday: NextMatchday | null = null;
+    if (tournament.status !== "archived") {
+      const { data: ms } = await supabase
+        .from("matches")
+        .select("id, stage, matchday, kickoff_at")
+        .eq("tournament_id", tournament.id)
+        .eq("is_voided", false)
+        .not("home_team_id", "is", null)
+        .not("away_team_id", "is", null)
+        .order("kickoff_at", { ascending: true });
+      const nowMs = Date.now();
+      const cur = (ms ?? []).find((m: any) => new Date(m.kickoff_at).getTime() > nowMs - 2.5 * 3600_000);
+      if (cur) {
+        const key = (m: any) => (m.matchday != null ? `md:${m.matchday}` : `st:${m.stage}`);
+        const round = (ms ?? []).filter((m: any) => key(m) === key(cur));
+        const ids = round.map((m: any) => m.id as string);
+        const [{ data: preds }, { data: live }] = await Promise.all([
+          supabase.from("predictions").select("match_id").eq("user_id", user.id).in("match_id", ids),
+          supabase.from("live_scores").select("match_id, status").in("match_id", ids),
+        ]);
+        const label = cur.matchday != null
+          ? (es ? `Jornada ${cur.matchday}` : `Matchday ${cur.matchday}`)
+          : (ROUND_LABEL[cur.stage] ? (es ? ROUND_LABEL[cur.stage].es : ROUND_LABEL[cur.stage].en) : cur.stage);
+        nextMatchday = {
+          matchday: cur.matchday ?? null,
+          label,
+          firstKickoff: round[0].kickoff_at,
+          lastKickoff: round[round.length - 1].kickoff_at,
+          total: round.length,
+          saved: preds?.length ?? 0,
+          open: round.filter((m: any) => nowMs < new Date(m.kickoff_at).getTime() - LOCK_BEFORE_KICKOFF_MS).length,
+          liveCount: (live ?? []).filter((l: any) => l.status === "in").length,
+        };
+      }
+    }
+
+    const honors = await honorsFor(supabase, user.id, all.filter((t) => t.status === "archived"), false, locale);
+    return { tournament, nextMatchday, honors };
+  } catch (err) {
+    console.error("Error in getSeasonHub:", err);
+    return null;
+  }
+}
+
+/** Hall of Fame: every archived tournament's full final table in the viewer's club. */
+export async function getHallOfFame(locale: Locale = "es"): Promise<HonorsEntry[]> {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
+    const all = await listTournaments();
+    return await honorsFor(supabase, user.id, all.filter((t) => t.status === "archived"), true, locale);
+  } catch (err) {
+    console.error("Error in getHallOfFame:", err);
+    return [];
   }
 }
 
