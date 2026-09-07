@@ -3,15 +3,14 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Archive, Trophy } from 'lucide-react';
+import { Archive, ArrowLeft } from 'lucide-react';
 import { setCurrentTournament } from '@/lib/api';
-import { cn } from '@/lib/utils';
 import type { Tournament, Locale } from '@/lib/types';
 
 /**
- * Tournament switcher: one tab per competition (Champions League 2026-27,
- * Mundial 2026 archive, ...). Switching sets the `t` cookie server-side and
- * refreshes, so every page below re-reads scoped to that tournament.
+ * The present tournament IS the app: nothing is shown while you're on it.
+ * Only when someone has stepped into an archived tournament (via the Hall of
+ * Fame) does a slim bar appear, with one tap back to the current season.
  */
 export function TournamentTabs({ tournaments, current, locale }: {
   tournaments: Tournament[];
@@ -21,54 +20,36 @@ export function TournamentTabs({ tournaments, current, locale }: {
   const router = useRouter();
   const [pending, startTransition] = React.useTransition();
   const es = locale === 'es';
-  if (tournaments.length < 2) return null;
+  if (current.status !== 'archived') return null;
+  const live = tournaments.find((t) => t.status === 'active') ?? tournaments.find((t) => t.status === 'upcoming') ?? null;
 
-  const switchTo = (slug: string) => {
-    if (slug === current.slug) return;
+  const back = () => {
+    if (!live) return;
     startTransition(async () => {
-      await setCurrentTournament(slug);
+      await setCurrentTournament(live.slug);
+      router.push(`/${locale}/dashboard`);
       router.refresh();
     });
   };
 
   return (
-    <div className="mb-4">
-      <div className="flex gap-1.5 overflow-x-auto scrollbar-none" role="tablist">
-        {tournaments.map((t) => {
-          const active = t.slug === current.slug;
-          const archived = t.status === 'archived';
-          return (
-            <button
-              key={t.slug}
-              role="tab"
-              aria-selected={active}
-              disabled={pending}
-              onClick={() => switchTo(t.slug)}
-              className={cn(
-                'flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold whitespace-nowrap transition-colors',
-                active
-                  ? 'border-primary bg-primary text-primary-foreground'
-                  : 'border-border/50 bg-card/60 text-muted-foreground hover:text-foreground',
-                pending && 'opacity-60'
-              )}
-            >
-              {archived ? <Archive className="h-3.5 w-3.5" /> : <Trophy className="h-3.5 w-3.5" />}
-              {es ? t.nameEs : t.nameEn}
-            </button>
-          );
-        })}
-      </div>
-      {current.status === 'archived' && (
-        <p className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-500/30 bg-amber-500/[0.06] px-3 py-1.5 text-[11px] text-amber-200/90">
-          <span>
-            {es
-              ? 'Torneo terminado: resultados finales, solo lectura.'
-              : 'Tournament over: final results, read-only.'}
-          </span>
-          <Link href={`/${locale}/hall`} className="font-bold text-amber-300 hover:underline">
-            {es ? 'Salón de la Fama →' : 'Hall of Fame →'}
-          </Link>
-        </p>
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-500/30 bg-amber-500/[0.06] px-3 py-2 text-[11px] text-amber-200/90">
+      <span className="inline-flex items-center gap-1.5">
+        <Archive className="h-3.5 w-3.5" />
+        {es ? 'Torneo anterior' : 'Previous tournament'}: <b>{es ? current.nameEs : current.nameEn}</b> · {es ? 'solo lectura' : 'read-only'}
+        {' · '}
+        <Link href={`/${locale}/hall`} className="font-bold underline-offset-2 hover:underline">{es ? 'Salón de la Fama' : 'Hall of Fame'}</Link>
+      </span>
+      {live && (
+        <button
+          type="button"
+          onClick={back}
+          disabled={pending}
+          className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-[11px] font-bold text-primary-foreground disabled:opacity-60"
+        >
+          <ArrowLeft className="h-3 w-3" />
+          {es ? `Volver a ${live.nameEs}` : `Back to ${live.nameEn}`}
+        </button>
       )}
     </div>
   );

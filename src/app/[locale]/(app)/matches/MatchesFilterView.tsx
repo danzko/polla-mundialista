@@ -488,7 +488,7 @@ export function MatchesFilterView({
             disabled={unsavedCount === 0 || isSubmitting}
             className={cn(
               'rounded-xl px-4 py-2 font-extrabold text-xs sm:text-sm active:scale-95 transition-transform flex items-center gap-1.5',
-              unsavedCount > 0 ? 'bg-gradient-to-r from-primary to-emerald-500 text-primary-foreground' : 'bg-secondary text-muted-foreground cursor-not-allowed'
+              unsavedCount > 0 ? 'bg-gradient-to-r from-primary to-[hsl(var(--brand-2))] text-primary-foreground' : 'bg-secondary text-muted-foreground cursor-not-allowed'
             )}
           >
             {t('matches.saveBtnCount', { count: unsavedCount })}
@@ -520,7 +520,7 @@ export function MatchesFilterView({
             </div>
             <div className="flex items-center justify-end gap-3 pt-2">
               <Button variant="ghost" onClick={() => setShowConfirmModal(false)} disabled={isSubmitting} className="rounded-xl text-xs font-bold text-muted-foreground border border-border/40">{t('common.cancel')}</Button>
-              <Button onClick={handleSave} disabled={isSubmitting} className="rounded-xl text-xs font-extrabold bg-gradient-to-r from-primary to-emerald-500 text-primary-foreground">{isSubmitting ? t('common.saving') : t('matches.saveConfirmBtn')}</Button>
+              <Button onClick={handleSave} disabled={isSubmitting} className="rounded-xl text-xs font-extrabold bg-gradient-to-r from-primary to-[hsl(var(--brand-2))] text-primary-foreground">{isSubmitting ? t('common.saving') : t('matches.saveConfirmBtn')}</Button>
             </div>
           </div>
         </div>

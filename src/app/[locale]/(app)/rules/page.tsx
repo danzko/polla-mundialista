@@ -70,7 +70,7 @@ export default async function RulesPage({ params }: RulesPageProps) {
               <span className="w-24 shrink-0 text-muted-foreground">{es ? r.es : r.en}</span>
               <div className="flex-1 h-5 rounded bg-secondary/40 overflow-hidden">
                 <div
-                  className="h-full rounded bg-gradient-to-r from-primary to-emerald-400"
+                  className="h-full rounded bg-gradient-to-r from-primary to-[hsl(var(--brand-2))]"
                   style={{ width: `${(r.pts / 55) * 100}%` }}
                 />
               </div>

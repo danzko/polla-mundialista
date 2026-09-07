@@ -4,6 +4,7 @@ import { ArrowLeft, Users } from 'lucide-react';
 import { getHallOfFame } from '@/lib/api';
 import { Flag } from '@/components/shared/Flag';
 import { TrophyMark } from '@/components/shared/brand';
+import { ViewTournamentButton } from '@/components/shared/ViewTournamentButton';
 import { cn } from '@/lib/utils';
 import type { Locale } from '@/lib/types';
 
@@ -105,9 +106,16 @@ export default async function HallPage({ params }: { params: Promise<{ locale: s
 
           {/* Final table */}
           <div className="border-t border-border/40">
-            <div className="flex items-center justify-between px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            <div className="flex items-center justify-between gap-2 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
               <span>{es ? 'Tabla final' : 'Final table'}</span>
-              <span className="inline-flex items-center gap-1"><Users className="h-3 w-3" />{h.participants}</span>
+              <span className="inline-flex items-center gap-2">
+                <span className="inline-flex items-center gap-1"><Users className="h-3 w-3" />{h.participants}</span>
+                <ViewTournamentButton
+                  slug={h.tournament.slug}
+                  locale={locale as Locale}
+                  label={es ? 'Explorar el torneo' : 'Explore the tournament'}
+                />
+              </span>
             </div>
             {(h.standings ?? []).map((r) => (
               <div

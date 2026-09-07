@@ -38,8 +38,11 @@ function SectionTitle({ icon, title, sub }: { icon: React.ReactNode; title: stri
   );
 }
 
-export function StatsSections({ data, locale }: { data: StatsData; locale: Locale }) {
+export function StatsSections({ data, locale, kind = 'world_cup' }: { data: StatsData; locale: Locale; kind?: 'world_cup' | 'ucl' }) {
   const es = locale === 'es';
+  const ucl = kind === 'ucl';
+  const bootTitle = ucl ? (es ? 'Máximo goleador' : 'Top scorer') : (es ? 'Bota de Oro' : 'Golden Boot');
+  const ballTitle = ucl ? (es ? 'Jugador de la temporada' : 'Player of the Season') : (es ? 'Balón de Oro' : 'Golden Ball');
 
   if (data.memberCount === 0) {
     return <div className="rounded-xl border border-border/40 bg-card/50 p-6 text-center text-sm text-muted-foreground">{es ? 'Sin datos todavía' : 'No data yet'}</div>;
@@ -64,14 +67,14 @@ export function StatsSections({ data, locale }: { data: StatsData; locale: Local
               )}
               <span className="shrink-0 w-14 text-right text-xs font-extrabold tabular-nums text-primary">{r.leaguePct}%</span>
             </div>
-            <div className="mt-1.5"><Bar pct={r.leaguePct} className="bg-gradient-to-r from-primary to-emerald-400" /></div>
+            <div className="mt-1.5"><Bar pct={r.leaguePct} className="bg-gradient-to-r from-primary to-[hsl(var(--brand-2))]" /></div>
             <Pills names={r.pickedBy} es={es} />
           </div>
         ))}
       </div>
 
       {/* ② GOLDEN BOOT */}
-      <SectionTitle icon={<Goal className="h-4 w-4 text-emerald-400" />} title={es ? 'Bota de Oro' : 'Golden Boot'}
+      <SectionTitle icon={<Goal className="h-4 w-4 text-emerald-400" />} title={bootTitle}
         sub={data.snapshotLoaded ? (es ? 'goleadores + quién los eligió' : 'scorers + who picked them') : (es ? 'elección de tu liga' : "your league's picks")} />
       <div className="space-y-1.5">
         {data.goldenBoot.length === 0 && <Empty es={es} />}
@@ -105,7 +108,7 @@ export function StatsSections({ data, locale }: { data: StatsData; locale: Local
       </div>
 
       {/* ③ GOLDEN BALL */}
-      <SectionTitle icon={<Star className="h-4 w-4 text-amber-400" />} title={es ? 'Balón de Oro' : 'Golden Ball'}
+      <SectionTitle icon={<Star className="h-4 w-4 text-amber-400" />} title={ballTitle}
         sub={es ? 'elección de tu liga' : "your league's picks"} />
       <div className="space-y-1.5">
         {data.goldenBall.length === 0 && <Empty es={es} />}

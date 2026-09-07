@@ -49,7 +49,7 @@ function ChampionFlag({ e }: { e: UnifiedLeaderboardEntry }) {
   );
 }
 
-export function LeaderboardScreen({ data, locale, embedded = false, stats }: { data: LeaderboardData; locale: Locale; embedded?: boolean; stats?: StatsData | null }) {
+export function LeaderboardScreen({ data, locale, embedded = false, stats, kind }: { data: LeaderboardData; locale: Locale; embedded?: boolean; stats?: StatsData | null; kind?: 'world_cup' | 'ucl' }) {
   const es = locale === 'es';
   const router = useRouter();
   const [openId, setOpenId] = React.useState<string | null>(null);
@@ -127,7 +127,7 @@ export function LeaderboardScreen({ data, locale, embedded = false, stats }: { d
       )}
 
       {tab === 'stats' && stats ? (
-        <StatsSections data={stats} locale={locale} />
+        <StatsSections data={stats} locale={locale} kind={kind} />
       ) : (
       <>
       {/* quick self-locator */}

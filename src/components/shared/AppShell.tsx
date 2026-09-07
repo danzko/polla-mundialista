@@ -4,7 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Trophy, Calendar, Home, LogOut, Menu, X, GitBranch, HelpCircle, Medal } from 'lucide-react';
+import { Trophy, Calendar, Home, LogOut, Menu, X, GitBranch, HelpCircle, Medal, Award } from 'lucide-react';
 import { LanguageToggle } from './LanguageToggle';
 import { NameChangeMenu } from './NameChangeMenu';
 import { BallMark } from './brand';
@@ -16,9 +16,11 @@ interface AppShellProps {
   children: React.ReactNode;
   user: SessionUser | null;
   onLogout?: () => void;
+  /** Season skin: 'ucl' = Champions League (default), 'wc' = World Cup archive. */
+  theme?: 'ucl' | 'wc';
 }
 
-export function AppShell({ children, user, onLogout }: AppShellProps) {
+export function AppShell({ children, user, onLogout, theme = 'ucl' }: AppShellProps) {
   const t = useTranslations();
   const pathname = usePathname();
   const router = useRouter();
@@ -71,14 +73,14 @@ export function AppShell({ children, user, onLogout }: AppShellProps) {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground selection:bg-primary selection:text-primary-foreground">
+    <div data-theme={theme} className="flex min-h-screen flex-col bg-background text-foreground selection:bg-primary selection:text-primary-foreground">
       {/* HEADER */}
       <header className="sticky top-0 z-40 w-full glass-panel border-b border-border">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-6">
             <Link href={`${basePath}/dashboard`} className="flex items-center gap-2">
               <BallMark className="h-6 w-6 shrink-0 drop-shadow-[0_0_6px_rgba(25,194,90,0.35)]" />
-              <span className="bg-gradient-to-r from-primary to-emerald-400 bg-clip-text text-xl font-extrabold tracking-tight text-transparent">
+              <span className="bg-gradient-to-r from-primary to-[hsl(var(--brand-2))] bg-clip-text text-xl font-extrabold tracking-tight text-transparent">
                 {t('common.title')}
               </span>
             </Link>
@@ -115,6 +117,20 @@ export function AppShell({ children, user, onLogout }: AppShellProps) {
                 >
                   <HelpCircle className="h-4 w-4" />
                   {t('nav.rules')}
+                </Link>
+              )}
+              {user && (
+                <Link
+                  href={`${basePath}/hall`}
+                  className={cn(
+                    "flex items-center gap-2 text-sm font-semibold transition-colors py-2 px-1 border-b-2",
+                    isActive(`${basePath}/hall`)
+                      ? "border-amber-400 text-amber-300"
+                      : "border-transparent text-muted-foreground hover:text-amber-200"
+                  )}
+                >
+                  <Award className="h-4 w-4" />
+                  {currentLocale === 'es' ? 'Salón' : 'Hall'}
                 </Link>
               )}
             </nav>
@@ -205,6 +221,19 @@ export function AppShell({ children, user, onLogout }: AppShellProps) {
                 >
                   <HelpCircle className="h-5 w-5" />
                   {t('nav.rules')}
+                </Link>
+                <Link
+                  href={`${basePath}/hall`}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={cn(
+                    "flex items-center gap-3 py-3 px-4 rounded-xl text-base font-semibold transition-all duration-200",
+                    isActive(`${basePath}/hall`)
+                      ? "bg-amber-500/15 text-amber-200"
+                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  )}
+                >
+                  <Award className="h-5 w-5" />
+                  {currentLocale === 'es' ? 'Salón de la Fama · torneos anteriores' : 'Hall of Fame · previous tournaments'}
                 </Link>
               </div>
             </div>

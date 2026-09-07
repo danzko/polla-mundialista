@@ -15,7 +15,7 @@ export default function LandingPage() {
   const currentLocale = pathname.split('/')[1] || 'es';
 
   return (
-    <AppShell user={null}>
+    <AppShell user={null} theme="ucl">
       <div className="flex flex-col items-center justify-center space-y-16 py-12 md:py-20">
         
         {/* HERO SECTION */}
@@ -24,7 +24,7 @@ export default function LandingPage() {
 
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-wider animate-pulse">
             <Star className="h-3.5 w-3.5 fill-primary" />
-            Mundial 2026 · Champions League 2026-27
+            Champions League 2026-27
           </div>
 
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight leading-tight">

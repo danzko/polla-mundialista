@@ -102,10 +102,25 @@ export default function DashboardPage() {
       {/* ENROLLMENT MOMENT — once per new season */}
       {hub && leagues.length > 0 && <SeasonPass hub={hub} userName={userName} locale={currentLocale} />}
 
-      {/* HEADER SECTION */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      {/* HEADER SECTION — the Champions League gets the night-sky plaque */}
+      <div className={cn(
+        'flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4',
+        tournament?.kind === 'ucl' && 'ucl-sky rounded-2xl border border-white/10 p-5 sm:p-6 shadow-[0_20px_60px_-30px_rgba(94,124,255,.6)]'
+      )}>
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight flex items-center gap-2">
+          {tournament?.kind === 'ucl' && (
+            <div className="mb-1 text-[10px] font-semibold uppercase tracking-[.35em] text-blue-200/80">
+              {es ? 'Temporada 2026-27' : '2026-27 season'}
+            </div>
+          )}
+          <h1
+            className="text-2xl sm:text-3xl font-extrabold tracking-tight flex items-center gap-2"
+            style={tournament?.kind === 'ucl' ? {
+              fontFamily: '"Iowan Old Style","Palatino Linotype",Palatino,Georgia,ui-serif,serif',
+              background: 'linear-gradient(180deg,#FFFFFF 0%,#DCE4FF 55%,#9DB2FF 100%)',
+              WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
+            } : undefined}
+          >
             <BallMark className="h-7 w-7 shrink-0" />
             {tournament ? (es ? tournament.nameEs : tournament.nameEn) : t('dashboard.title')}
           </h1>

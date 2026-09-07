@@ -112,3 +112,41 @@
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(156, 163, 175, 0.45);
 }
+
+/* ---------- Season skins ----------
+   The present tournament sets data-theme on the app shell. Tokens above are
+   the World Cup (pitch green). The Champions League skin: midnight navy,
+   electric blue primary, violet second brand color, starball sky.        */
+:root {
+  --brand-2: 160 84% 39%; /* emerald partner of the green primary */
+}
+[data-theme="ucl"] {
+  --background: 230 55% 5%;
+  --card: 230 45% 9%;
+  --popover: 230 45% 8%;
+  --primary: 228 95% 67%;           /* electric blue */
+  --primary-foreground: 230 55% 6%;
+  --secondary: 230 32% 16%;
+  --accent: 230 60% 18%;
+  --accent-foreground: 228 95% 88%;
+  --border: 230 30% 17%;
+  --input: 230 30% 17%;
+  --ring: 228 95% 67%;
+  --brand-2: 262 83% 68%;           /* violet */
+}
+[data-theme="ucl"] .glow-green {
+  box-shadow: 0 0 24px -6px hsl(228 95% 67% / 0.45);
+}
+/* Night-sky hero for the Champions League: deep navy + faint starfield. */
+.ucl-sky {
+  background:
+    radial-gradient(1px 1px at 12% 30%, rgba(255,255,255,.7), transparent 60%),
+    radial-gradient(1.5px 1.5px at 28% 70%, rgba(255,255,255,.5), transparent 60%),
+    radial-gradient(1px 1px at 45% 20%, rgba(255,255,255,.6), transparent 60%),
+    radial-gradient(1.5px 1.5px at 63% 60%, rgba(255,255,255,.45), transparent 60%),
+    radial-gradient(1px 1px at 78% 25%, rgba(255,255,255,.65), transparent 60%),
+    radial-gradient(1px 1px at 90% 75%, rgba(255,255,255,.5), transparent 60%),
+    radial-gradient(1px 1px at 55% 85%, rgba(255,255,255,.4), transparent 60%),
+    radial-gradient(700px 260px at 50% -30%, rgba(94,124,255,.28), transparent 65%),
+    linear-gradient(180deg, #0B1240 0%, #070B1F 100%);
+}

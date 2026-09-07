@@ -29,7 +29,7 @@ export default async function AppLayout({ children, params }: AppLayoutProps) {
   const [tournaments, current] = await Promise.all([listTournaments(), getCurrentTournament()]);
 
   return (
-    <AppShell user={user}>
+    <AppShell user={user} theme={current.kind === 'ucl' ? 'ucl' : 'wc'}>
       {!pathname.endsWith('/onboarding') && (
         <TournamentTabs tournaments={tournaments} current={current} locale={locale as 'es' | 'en'} />
       )}

@@ -602,7 +602,7 @@ export function BracketBoard({ initialBracket, comparison, teams, bonus, locale 
             <Button
               onClick={handleSave}
               disabled={saving}
-              className="rounded-xl px-4 py-2 font-extrabold text-xs sm:text-sm bg-gradient-to-r from-primary to-emerald-500 text-primary-foreground"
+              className="rounded-xl px-4 py-2 font-extrabold text-xs sm:text-sm bg-gradient-to-r from-primary to-[hsl(var(--brand-2))] text-primary-foreground"
             >
               {saving ? (es ? 'Guardando…' : 'Saving…') : (es ? 'Guardar llave' : 'Save bracket')}
             </Button>
