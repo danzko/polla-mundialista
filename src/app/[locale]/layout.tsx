@@ -47,6 +47,8 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
   const messages = await getMessages();
 
   return (
+    // This is THE root layout (no app/layout.tsx): the font variable must sit on
+    // <html> so :root-level tokens (--font-sans) can resolve it.
     <html lang={locale} data-mode="dark" style={{ colorScheme: 'dark' }} className={outfit.variable} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: MODE_SCRIPT }} />

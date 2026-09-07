@@ -173,6 +173,15 @@ export interface NextMatchday {
   saved: number;              // of those, games the viewer has predicted
   open: number;               // of those, games still open for picks
   liveCount: number;
+  fixtures: NextFixture[];    // the round's games in kickoff order (for the slip)
+}
+export interface NextFixture {
+  id: string;
+  kickoffAt: string;
+  home: { code: string; nameEs: string; nameEn: string; flagEmoji: string; logoUrl: string | null };
+  away: { code: string; nameEs: string; nameEn: string; flagEmoji: string; logoUrl: string | null };
+  myPick: { h: number; a: number } | null;
+  locked: boolean;
 }
 /** One archived tournament's final standing within the viewer's league. */
 export interface HonorsEntry {
@@ -257,6 +266,8 @@ export interface LeagueSummary {
   myRank: number | null;
   myPoints: number;
   isAdmin: boolean;
+  // top 3 + the viewer (if outside the top 3), for the mini-table
+  top: { userId: string; displayName: string; points: number; rank: number; isMe: boolean }[];
 }
 
 export interface LeaderboardRow {

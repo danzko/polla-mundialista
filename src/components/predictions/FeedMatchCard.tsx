@@ -5,6 +5,7 @@ import { ScoreStepper } from './ScoreStepper';
 import { PicksStrip } from './PicksStrip';
 import { knockoutSlotLabel } from '@/lib/bracket-slots';
 import { Flag } from '@/components/shared/Flag';
+import { shortTeamName } from '@/lib/team-names';
 import { cn } from '@/lib/utils';
 import type { MatchView, Locale, MatchPickRow, LiveScore } from '@/lib/types';
 
@@ -33,7 +34,7 @@ export function FeedMatchCard({
 
   const name = (team: MatchView['homeTeam'], pos: 'home' | 'away') =>
     team
-      ? (es ? team.nameEs : team.nameEn)
+      ? shortTeamName(es ? team.nameEs : team.nameEn)
       : (knockoutSlotLabel(match.matchNumber, pos, locale) ?? (es ? 'Por definir' : 'TBD'));
   const flag = (team: MatchView['homeTeam']) =>
     team
@@ -141,12 +142,22 @@ export function FeedMatchCard({
       )}>
         {/* meta row */}
         <div className="mb-2 flex items-center justify-between">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">
-            {stageLabel}
-            {!editable && !isLive && !isFinal && !match.isVoided && (
-              <span className="ml-1.5 font-medium normal-case tracking-normal">· {fmtTime(match.kickoffAt)}</span>
-            )}
-          </span>
+          {match.stage === 'league' && !isLive && !isFinal ? (
+            // Inside a matchday section the round label is redundant: use the
+            // slot for the thing that matters — is this game picked yet?
+            <span className={cn('inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider',
+              match.myPrediction ? 'text-emerald-400/90' : editable ? 'text-amber-400' : 'text-muted-foreground/70')}>
+              <span className={cn('h-1.5 w-1.5 rounded-full', match.myPrediction ? 'bg-emerald-400' : editable ? 'bg-amber-400' : 'bg-muted-foreground/50')} />
+              {match.myPrediction ? (es ? 'Pronosticado' : 'Picked') : editable ? (es ? 'Sin pronóstico' : 'No pick yet') : (es ? 'Sin pronóstico' : 'No pick')}
+            </span>
+          ) : (
+            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">
+              {stageLabel}
+              {!editable && !isLive && !isFinal && !match.isVoided && (
+                <span className="ml-1.5 font-medium normal-case tracking-normal">· {fmtTime(match.kickoffAt)}</span>
+              )}
+            </span>
+          )}
           {badge}
         </div>
 

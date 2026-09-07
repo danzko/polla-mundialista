@@ -194,6 +194,19 @@ export async function getDashboard(): Promise<LeagueSummary[]> {
       const myRank = myIndex !== -1 ? myIndex + 1 : null;
       const myPoints = myIndex !== -1 ? standings[myIndex].totalPoints : 0;
 
+      // Mini-table: top 3 + you.
+      const { data: nameRows } = await supabase.from("users").select("id, display_name").in("id", memberIds);
+      const nameById = new Map<string, string>((nameRows ?? []).map((u: any) => [u.id, u.display_name]));
+      const pickIdx = new Set<number>([0, 1, 2]);
+      if (myIndex >= 3) pickIdx.add(myIndex);
+      const top = Array.from(pickIdx).filter((i) => i < standings.length).sort((a, b) => a - b).map((i) => ({
+        userId: standings[i].userId,
+        displayName: nameById.get(standings[i].userId) ?? "—",
+        points: standings[i].totalPoints,
+        rank: i + 1,
+        isMe: standings[i].userId === user.id,
+      }));
+
       summaries.push({
         id: league.id,
         name: league.name,
@@ -203,6 +216,7 @@ export async function getDashboard(): Promise<LeagueSummary[]> {
         myRank,
         myPoints,
         isAdmin: league.admin_user_id === user.id,
+        top,
       });
     }
 
@@ -2074,7 +2088,7 @@ export async function getSeasonHub(locale: Locale = "es"): Promise<SeasonHub | n
     if (tournament.status !== "archived") {
       const { data: ms } = await supabase
         .from("matches")
-        .select("id, stage, matchday, kickoff_at")
+        .select("id, stage, matchday, kickoff_at, home:teams!matches_home_team_id_fkey(code, name_es, name_en, flag_emoji, logo_url), away:teams!matches_away_team_id_fkey(code, name_es, name_en, flag_emoji, logo_url)")
         .eq("tournament_id", tournament.id)
         .eq("is_voided", false)
         .not("home_team_id", "is", null)
@@ -2087,9 +2101,22 @@ export async function getSeasonHub(locale: Locale = "es"): Promise<SeasonHub | n
         const round = (ms ?? []).filter((m: any) => key(m) === key(cur));
         const ids = round.map((m: any) => m.id as string);
         const [{ data: preds }, { data: live }] = await Promise.all([
-          supabase.from("predictions").select("match_id").eq("user_id", user.id).in("match_id", ids),
+          supabase.from("predictions").select("match_id, home_score, away_score").eq("user_id", user.id).in("match_id", ids),
           supabase.from("live_scores").select("match_id, status").in("match_id", ids),
         ]);
+        const pickBy = new Map<string, { h: number; a: number }>((preds ?? []).map((p: any) => [p.match_id, { h: p.home_score, a: p.away_score }]));
+        const side = (t: any) => {
+          const r = Array.isArray(t) ? t[0] : t;
+          return { code: r?.code ?? "", nameEs: r?.name_es ?? "", nameEn: r?.name_en ?? "", flagEmoji: r?.flag_emoji ?? "", logoUrl: r?.logo_url ?? null };
+        };
+        const fixtures = round.map((m: any) => ({
+          id: m.id as string,
+          kickoffAt: m.kickoff_at as string,
+          home: side(m.home),
+          away: side(m.away),
+          myPick: pickBy.get(m.id) ?? null,
+          locked: nowMs >= new Date(m.kickoff_at).getTime() - LOCK_BEFORE_KICKOFF_MS,
+        }));
         const label = cur.matchday != null
           ? (es ? `Jornada ${cur.matchday}` : `Matchday ${cur.matchday}`)
           : (ROUND_LABEL[cur.stage] ? (es ? ROUND_LABEL[cur.stage].es : ROUND_LABEL[cur.stage].en) : cur.stage);
@@ -2102,6 +2129,7 @@ export async function getSeasonHub(locale: Locale = "es"): Promise<SeasonHub | n
           saved: preds?.length ?? 0,
           open: round.filter((m: any) => nowMs < new Date(m.kickoff_at).getTime() - LOCK_BEFORE_KICKOFF_MS).length,
           liveCount: (live ?? []).filter((l: any) => l.status === "in").length,
+          fixtures,
         };
       }
     }
