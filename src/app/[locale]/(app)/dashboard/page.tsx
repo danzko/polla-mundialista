@@ -10,6 +10,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Plus, UserPlus, Users, Award, Calendar, Trophy, ChevronRight } from 'lucide-react';
 import { BallMark, TrophyMark } from '@/components/shared/brand';
 import { Flag } from '@/components/shared/Flag';
+import { SeasonPass } from '@/components/shared/SeasonPass';
 import type { LeagueSummary, SeasonHub, Locale } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -98,6 +99,9 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8 py-4">
+      {/* ENROLLMENT MOMENT — once per new season */}
+      {hub && leagues.length > 0 && <SeasonPass hub={hub} userName={userName} locale={currentLocale} />}
+
       {/* HEADER SECTION */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
