@@ -1,5 +1,6 @@
 "use server";
 
+import { cache } from "react";
 import { headers, cookies } from "next/headers";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { createClient } from "./supabase/server";
@@ -31,11 +32,16 @@ function mapTournament(t: any): Tournament {
   };
 }
 
-/** Every tournament, newest first. */
-export async function listTournaments(): Promise<Tournament[]> {
+// One query per request even though every read below asks for the tournament.
+const loadTournaments = cache(async (): Promise<Tournament[]> => {
   const supabase = await createClient();
   const { data } = await supabase.from("tournaments").select("*").order("starts_at", { ascending: false });
   return (data ?? []).map(mapTournament);
+});
+
+/** Every tournament, newest first. */
+export async function listTournaments(): Promise<Tournament[]> {
+  return loadTournaments();
 }
 
 /**

@@ -16,7 +16,7 @@
     "tipJar": "Invítanos un café ☕️"
   },
   "nav": {
-    "dashboard": "Ligas",
+    "dashboard": "Inicio",
     "leaderboard": "Tabla",
     "matches": "Partidos",
     "bracket": "Llave",
@@ -81,7 +81,7 @@
     "createTitle": "Crear Liga",
     "createDesc": "Nombra tu liga de amigos y prepárate para competir.",
     "leagueNameLabel": "Nombre de la liga",
-    "leagueNamePlaceholder": "La Liga del Barrio",
+    "leagueNamePlaceholder": "La polla de la oficina",
     "leagueLangLabel": "Idioma predeterminado para nuevos miembros",
     "createSubmit": "Crear Liga",
     "joinTitle": "Unirse con Código",

@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useTranslations } from 'next-intl';
 import { Search, ChevronDown, Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Flag } from '@/components/shared/Flag';
 import type { Team, Locale } from '@/lib/types';
 
 interface TeamPickerProps {
@@ -87,7 +88,7 @@ export function TeamPicker({
       >
         {selectedTeam ? (
           <div className="flex items-center gap-2">
-            <span className="text-xl filter drop-shadow-sm select-none">{selectedTeam.flagEmoji}</span>
+            <Flag code={selectedTeam.code} emoji={selectedTeam.flagEmoji} logoUrl={selectedTeam.logoUrl} className={selectedTeam.logoUrl ? 'h-7 w-7 object-contain' : 'h-5 w-auto rounded-[2px] shadow-sm'} />
             <span className="font-semibold text-foreground">
               {locale === 'es' ? selectedTeam.nameEs : selectedTeam.nameEn}
             </span>
@@ -164,7 +165,7 @@ export function TeamPicker({
                     )}
                   >
                     <div className="flex items-center gap-2">
-                      <span className="text-xl filter drop-shadow-sm select-none">{team.flagEmoji}</span>
+                      <Flag code={team.code} emoji={team.flagEmoji} logoUrl={team.logoUrl} className={team.logoUrl ? 'h-6 w-6 object-contain' : 'h-4 w-auto rounded-[2px] shadow-sm'} />
                       <span>{name}</span>
                       <span className="text-xs font-extrabold text-muted-foreground uppercase">
                         ({team.code})

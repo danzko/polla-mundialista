@@ -16,7 +16,7 @@
     "tipJar": "Buy us a coffee ☕️"
   },
   "nav": {
-    "dashboard": "Leagues",
+    "dashboard": "Home",
     "leaderboard": "Standings",
     "matches": "Games",
     "bracket": "Bracket",
@@ -81,7 +81,7 @@
     "createTitle": "Create League",
     "createDesc": "Name your league of friends and get ready to compete.",
     "leagueNameLabel": "League name",
-    "leagueNamePlaceholder": "Office World Cup Pool",
+    "leagueNamePlaceholder": "Office Champions Pool",
     "leagueLangLabel": "Default language for new members",
     "createSubmit": "Create League",
     "joinTitle": "Join with Code",
