@@ -327,7 +327,7 @@ export function MatchesFilterView({
           <span className="text-xs font-bold text-muted-foreground">
             {groupTotal > 0 && savedGroupCount === groupTotal ? t('matches.completed') : t('matches.savedCount', { count: savedGroupCount, total: groupTotal })}
           </span>
-          <span className="flex items-center gap-1.5 text-[11px]">
+          <span className="flex items-center gap-1.5 text-xs">
             {liveCount > 0 && (
               <span className="inline-flex items-center gap-1 font-bold text-red-400">
                 <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
@@ -346,7 +346,7 @@ export function MatchesFilterView({
           <button
             type="button"
             onClick={scrollToNow}
-            className="flex-shrink-0 inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-bold bg-primary text-primary-foreground active:scale-95 transition-transform shadow-sm"
+            className="flex-shrink-0 inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold bg-primary text-primary-foreground active:scale-95 transition-transform shadow-sm"
           >
             <ArrowDownToLine className="h-3 w-3" />
             {es ? 'Hoy' : 'Today'}
@@ -363,7 +363,7 @@ export function MatchesFilterView({
                   ref={(el) => { if (el) chipRefs.current.set(key, el); else chipRefs.current.delete(key); }}
                   onClick={() => jumpToDay(key)}
                   className={cn(
-                    'flex-shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-colors border',
+                    'flex-shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold whitespace-nowrap transition-colors border',
                     isActive
                       ? 'bg-foreground text-background border-foreground'
                       : isToday
@@ -388,7 +388,7 @@ export function MatchesFilterView({
           {matches.some(m => !(LEAGUE_STAGES as readonly string[]).includes(m.stage)) && (
             <Link
               href={`/${locale}/bracket`}
-              className="flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/[0.06] px-3 py-2.5 text-[12px] text-foreground"
+              className="flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/[0.06] px-3 py-2.5 text-[13px] text-foreground"
             >
               <GitBranch className="h-3.5 w-3.5 text-primary shrink-0" />
               <span>{t('matches.knockoutBanner')}</span>
@@ -401,10 +401,10 @@ export function MatchesFilterView({
               ref={(el) => { if (el) dayRefs.current.set(key, el); else dayRefs.current.delete(key); }}
               className="scroll-mt-[150px] space-y-2"
             >
-              <h3 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/90 py-1 flex items-center gap-2">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground/90 py-1 flex items-center gap-2">
                 {dayHeader(key)}
                 {key === todaySectionKey && (
-                  <span className="rounded-full bg-primary/15 text-primary px-1.5 py-0.5 text-[9px] font-bold normal-case tracking-normal">
+                  <span className="rounded-full bg-primary/15 text-primary px-1.5 py-0.5 text-[10px] font-bold normal-case tracking-normal">
                     {es ? 'hoy' : 'today'}
                   </span>
                 )}
@@ -412,7 +412,7 @@ export function MatchesFilterView({
               {matchesByDay[key].map((m, i, arr) => (
                 <div key={m.id} ref={(el) => { if (el) cardRefs.current.set(m.id, el); else cardRefs.current.delete(m.id); }}>
                   {isMdKey(key) && (i === 0 || localDayKey(arr[i - 1].kickoffAt) !== localDayKey(m.kickoffAt)) && (
-                    <div className={cn('text-[10px] font-semibold text-muted-foreground/70 pb-1 flex items-center gap-1.5', i > 0 && 'pt-2')}>
+                    <div className={cn('text-[11px] font-semibold text-muted-foreground/70 pb-1 flex items-center gap-1.5', i > 0 && 'pt-2')}>
                       {subDayLabel(m.kickoffAt)}
                       {localDayKey(m.kickoffAt) === todayKey && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
                     </div>
@@ -477,7 +477,7 @@ export function MatchesFilterView({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <span className={cn('h-2 w-2 rounded-full', unsavedCount > 0 ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500')} />
-            <span className="text-[11px] sm:text-xs font-bold text-foreground">
+            <span className="text-xs sm:text-xs font-bold text-foreground">
               {unsavedCount > 0
                 ? t('matches.unsavedChanges', { count: unsavedCount })
                 : (es ? 'Todo guardado' : 'All saved')}
@@ -510,7 +510,7 @@ export function MatchesFilterView({
               </button>
             </div>
             <p className="text-xs text-muted-foreground font-medium leading-relaxed">{t('matches.saveConfirmDesc', { count: unsavedCount })}</p>
-            <div className="bg-slate-950/50 rounded-xl border border-border/50 max-h-36 overflow-y-auto p-3 space-y-2 text-[11px]">
+            <div className="bg-slate-950/50 rounded-xl border border-border/50 max-h-36 overflow-y-auto p-3 space-y-2 text-xs">
               {unsavedMatches.map(m => (
                 <div key={m.id} className="flex justify-between items-center text-muted-foreground border-b border-border/10 pb-1.5 last:border-0 last:pb-0">
                   <span className="font-semibold text-foreground text-left line-clamp-1 max-w-[260px]">{getMatchDisplayName(m)}</span>
@@ -539,11 +539,11 @@ export function MatchesFilterView({
               <h4 className="text-xs font-bold text-foreground">
                 {toast.type === 'success' ? (es ? '¡Guardado!' : 'Saved!') : toast.type === 'error' ? (es ? 'Error al guardar' : 'Error saving') : (es ? 'Advertencia' : 'Warning')}
               </h4>
-              <p className="text-[11px] text-muted-foreground font-medium leading-normal">{toast.message}</p>
+              <p className="text-xs text-muted-foreground font-medium leading-normal">{toast.message}</p>
               {toast.skippedCount > 0 && toast.skippedNames && (
                 <div className="pt-1 space-y-1">
-                  <span className="text-[10px] font-bold text-amber-500 uppercase tracking-wider block">{es ? 'Partidos cerrados omitidos:' : 'Skipped closed matches:'}</span>
-                  <ul className="text-[9px] text-muted-foreground list-disc pl-3 space-y-0.5 font-semibold">
+                  <span className="text-[11px] font-bold text-amber-500 uppercase tracking-wider block">{es ? 'Partidos cerrados omitidos:' : 'Skipped closed matches:'}</span>
+                  <ul className="text-[10px] text-muted-foreground list-disc pl-3 space-y-0.5 font-semibold">
                     {toast.skippedNames.map((n, i) => <li key={i}>{n}</li>)}
                   </ul>
                 </div>

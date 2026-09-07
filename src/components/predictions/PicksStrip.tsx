@@ -85,7 +85,7 @@ export function PicksStrip({ picks, locale, myUserId, score = null, settled = fa
         className="flex w-full items-center justify-between gap-2 text-left"
         aria-expanded={open}
       >
-        <span className="flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground">
+        <span className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground">
           <span aria-hidden>👥</span>
           {summary}
         </span>
@@ -103,7 +103,7 @@ export function PicksStrip({ picks, locale, myUserId, score = null, settled = fa
               <span
                 key={p.userId}
                 className={cn(
-                  'inline-flex items-center gap-1 rounded-lg border px-1.5 py-1 text-[11px] font-semibold leading-none',
+                  'inline-flex items-center gap-1 rounded-lg border px-1.5 py-1 text-xs font-semibold leading-none',
                   STYLES[p.s],
                   isMe && 'ring-1 ring-primary/70'
                 )}
@@ -116,7 +116,7 @@ export function PicksStrip({ picks, locale, myUserId, score = null, settled = fa
                   {noEntry ? (es ? 'sin jugar' : '—') : `${p.homeScore}-${p.awayScore}`}
                 </span>
                 {settled && !noEntry && p.s !== 'pending' && (
-                  <span className={cn('rounded px-1 py-0.5 text-[9px] font-extrabold tabular-nums', PILL_STYLES[p.s])}>
+                  <span className={cn('rounded px-1 py-0.5 text-[10px] font-extrabold tabular-nums', PILL_STYLES[p.s])}>
                     {pointsOf(p.s) > 0 ? `+${pointsOf(p.s)}` : '0'}
                   </span>
                 )}
@@ -124,7 +124,7 @@ export function PicksStrip({ picks, locale, myUserId, score = null, settled = fa
             );
           })}
           {overflow > 0 && (
-            <span className="inline-flex items-center rounded-lg border border-border/40 bg-card/40 px-1.5 py-1 text-[11px] font-semibold text-muted-foreground">
+            <span className="inline-flex items-center rounded-lg border border-border/40 bg-card/40 px-1.5 py-1 text-xs font-semibold text-muted-foreground">
               +{overflow} {es ? 'más' : 'more'}
             </span>
           )}

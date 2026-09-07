@@ -59,7 +59,7 @@ function PointsPill({ mn, earned }: { mn: number; earned?: boolean }) {
   if (!pts || !earned) return null;
   return (
     <span
-      className="inline-flex items-center rounded-full px-1.5 py-px text-[9px] font-bold tabular-nums bg-amber-400/20 text-amber-200 ring-1 ring-inset ring-amber-400/50"
+      className="inline-flex items-center rounded-full px-1.5 py-px text-[10px] font-bold tabular-nums bg-amber-400/20 text-amber-200 ring-1 ring-inset ring-amber-400/50"
       title={mn === 104 ? 'Champion' : `+${pts} earned`}
     >
       +{pts}{mn === 104 ? '👑' : ''}
@@ -331,7 +331,7 @@ export function BracketBoard({ initialBracket, comparison, teams, bonus, locale 
             <TrophyMark className="h-5 w-5" />
             {es ? 'La Llave' : 'The Bracket'}
           </h1>
-          <p className="text-[11px] text-muted-foreground mt-0.5">
+          <p className="text-xs text-muted-foreground mt-0.5">
             {locked ? (
               <span className="text-amber-500 font-semibold flex items-center gap-1">
                 <Lock className="h-3 w-3" /> {es ? 'Cerrada' : 'Locked'}
@@ -342,7 +342,7 @@ export function BracketBoard({ initialBracket, comparison, teams, bonus, locale 
           </p>
           <Link
             href={`/${locale}/rules`}
-            className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-primary"
+            className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-primary"
           >
             <HelpCircle className="h-3 w-3" />
             {es ? 'Cómo se puntúa' : 'How scoring works'}
@@ -363,7 +363,7 @@ export function BracketBoard({ initialBracket, comparison, teams, bonus, locale 
 
       {/* PEER SELECTOR — choose whose bracket to view (post-deadline, league-scoped) */}
       {compareReady && (
-        <div className="mb-3 flex items-center gap-2 text-[11px]">
+        <div className="mb-3 flex items-center gap-2 text-xs">
           <span className="text-muted-foreground shrink-0">{es ? 'Viendo' : 'Viewing'}</span>
           <div className="relative">
             <select
@@ -396,16 +396,16 @@ export function BracketBoard({ initialBracket, comparison, teams, bonus, locale 
           Shown for your own bracket AND for a peer's when browsing. */}
       {hasTournamentPicks && (
         <div className="mb-3 rounded-lg border border-border/40 bg-card/40 px-3 py-2">
-          <div className="mb-1 text-[9px] font-bold uppercase tracking-widest text-muted-foreground/70">
+          <div className="mb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
             {viewingPeer
               ? (es ? `Picks de ${viewingPeer.displayName}` : `${viewingPeer.displayName}'s picks`)
               : (es ? 'Tus picks' : 'Your picks')}
           </div>
-          <div className="space-y-0.5 text-[12px]">
+          <div className="space-y-0.5 text-[13px]">
             {/* Champion */}
             <div className="flex items-center gap-2">
               <TrophyMark className="h-3.5 w-3.5 shrink-0" />
-              <span className="w-14 shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground">{es ? 'Campeón' : 'Champion'}</span>
+              <span className="w-14 shrink-0 text-[11px] uppercase tracking-wide text-muted-foreground">{es ? 'Campeón' : 'Champion'}</span>
               {shownChampionTeam ? (
                 <span className="inline-flex min-w-0 items-center gap-1.5">
                   <Flag code={shownChampionTeam.code} emoji={shownChampionTeam.flagEmoji} logoUrl={shownChampionTeam.logoUrl} className="inline-block h-3 w-auto rounded-[1px] shrink-0" />
@@ -416,13 +416,13 @@ export function BracketBoard({ initialBracket, comparison, teams, bonus, locale 
             {/* Golden Boot */}
             <div className="flex items-center gap-2">
               <Award className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-              <span className="w-14 shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground">{es ? 'Bota' : 'Boot'}</span>
+              <span className="w-14 shrink-0 text-[11px] uppercase tracking-wide text-muted-foreground">{es ? 'Bota' : 'Boot'}</span>
               {shownBoot ? <span className="truncate font-semibold">{shownBoot}</span> : <span className="text-muted-foreground">—</span>}
             </div>
             {/* Golden Ball */}
             <div className="flex items-center gap-2">
               <Star className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-              <span className="w-14 shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground">{es ? 'Balón' : 'Ball'}</span>
+              <span className="w-14 shrink-0 text-[11px] uppercase tracking-wide text-muted-foreground">{es ? 'Balón' : 'Ball'}</span>
               {shownBall ? <span className="truncate font-semibold">{shownBall}</span> : <span className="text-muted-foreground">—</span>}
             </div>
           </div>
@@ -462,7 +462,7 @@ export function BracketBoard({ initialBracket, comparison, teams, bonus, locale 
                 key={r.round}
                 onClick={() => setRoundIdx(i)}
                 className={cn(
-                  'flex-shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap border transition-colors',
+                  'flex-shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold whitespace-nowrap border transition-colors',
                   i === roundIdx
                     ? 'bg-primary text-primary-foreground border-primary'
                     : 'bg-card/50 text-muted-foreground border-border/40'
@@ -473,13 +473,13 @@ export function BracketBoard({ initialBracket, comparison, teams, bonus, locale 
             ))}
           </div>
 
-          <div className={cn('mb-2 text-[11px]', locked ? 'text-emerald-400 font-semibold' : 'text-muted-foreground')}>
+          <div className={cn('mb-2 text-xs', locked ? 'text-emerald-400 font-semibold' : 'text-muted-foreground')}>
             {locked
               ? (es ? '✓ Tus picks están guardados y bloqueados' : '✓ Your picks are saved & locked in')
               : (es ? `Toca quién avanza · ${chosenInRound}/${roundGames.length} listos` : `Tap who advances · ${chosenInRound}/${roundGames.length} set`)}
           </div>
           {!locked && (
-            <div className="mb-3 rounded-lg border border-border/40 bg-secondary/30 px-2.5 py-1.5 text-[10.5px] leading-relaxed text-muted-foreground">
+            <div className="mb-3 rounded-lg border border-border/40 bg-secondary/30 px-2.5 py-1.5 text-[11.5px] leading-relaxed text-muted-foreground">
               {es
                 ? 'Aquí eliges solo quién avanza (los puntos grandes). Tienes hasta el cierre de hoy para toda la llave — salvo un partido que ya empiece, que se cierra a su hora de inicio. '
                 : 'Here you pick only who advances (the big points). You have until tonight’s deadline for the whole bracket — except a game that kicks off sooner, which closes at its start. '}
@@ -499,7 +499,7 @@ export function BracketBoard({ initialBracket, comparison, teams, bonus, locale 
               const mLocked = matchLocked(mn);
               return (
                 <div key={mn} className="rounded-xl border border-border/45 bg-card/50 overflow-hidden">
-                  <div className="px-2.5 py-1 text-[10px] text-muted-foreground/80 bg-secondary/40 flex items-center gap-1.5">
+                  <div className="px-2.5 py-1 text-[11px] text-muted-foreground/80 bg-secondary/40 flex items-center gap-1.5">
                     <span>{es ? 'Partido' : 'Match'} {mn}</span>
                     <PointsPill mn={mn} earned={statusOf(mn, p.advancerTeamId) === 'earned'} />
                     {!ready && <span>· {es ? 'esperando equipos' : 'awaiting teams'}</span>}
@@ -527,7 +527,7 @@ export function BracketBoard({ initialBracket, comparison, teams, bonus, locale 
                         onClick={() => teamId && setAdvancer(mn, teamId)}
                         className={cn(
                           // Whole row is the click target (clear, large hit area).
-                          'w-full flex items-center justify-between gap-2 px-2.5 py-2.5 text-[13px] text-left transition-colors',
+                          'w-full flex items-center justify-between gap-2 px-2.5 py-2.5 text-sm text-left transition-colors',
                           idx === 0 && 'border-b border-border/30',
                           resultSt ? STATUS_ROW[resultSt] : isWinner ? 'bg-emerald-500/15 font-bold text-emerald-300' : 'text-foreground',
                           selectable && !isWinner && 'hover:bg-secondary/60 cursor-pointer',
@@ -550,7 +550,7 @@ export function BracketBoard({ initialBracket, comparison, teams, bonus, locale 
                           <span className="truncate">{labelFor(mn, side, teamId)}</span>
                         </span>
                         {selectable && !isWinner && (
-                          <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-primary/70">
+                          <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wide text-primary/70">
                             {es ? 'elegir' : 'pick'}
                           </span>
                         )}
@@ -565,7 +565,7 @@ export function BracketBoard({ initialBracket, comparison, teams, bonus, locale 
           {/* CHAMPION CALLOUT on the final round */}
           {round.round === 'final' && championId && (
             <div className="mt-3 rounded-xl border border-amber-500/40 bg-amber-500/[0.08] p-3 text-center">
-              <div className="text-[10px] uppercase tracking-wider text-amber-500 font-bold">{es ? 'Tu campeón en la llave' : 'Your bracket champion'}</div>
+              <div className="text-[11px] uppercase tracking-wider text-amber-500 font-bold">{es ? 'Tu campeón en la llave' : 'Your bracket champion'}</div>
               <div className="text-base font-extrabold mt-0.5">{labelFor(104, 'home', championId)}</div>
             </div>
           )}
@@ -596,7 +596,7 @@ export function BracketBoard({ initialBracket, comparison, teams, bonus, locale 
       {!locked && r32Ready && (
         <div className="fixed bottom-[57px] md:bottom-0 left-0 w-full z-30 border-t border-border bg-card/90 backdrop-blur-md">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-3">
-            <span className="text-[11px] text-muted-foreground">
+            <span className="text-xs text-muted-foreground">
               {toast ?? (es ? 'Guarda cuando quieras; editable hasta el cierre' : 'Save anytime; editable until lock')}
             </span>
             <Button
@@ -635,7 +635,7 @@ function LadderView({
       <div className="flex gap-3 min-w-max items-stretch">
         {cols.map((r) => (
           <div key={r.round} className="flex flex-col justify-around gap-2 min-w-[152px]">
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground/80 font-bold text-center">
+            <div className="text-[11px] uppercase tracking-wider text-muted-foreground/80 font-bold text-center">
               {es ? ROUND_LABEL[r.round].es : ROUND_LABEL[r.round].en}
             </div>
             {r.matches.map((mn) => {
@@ -643,7 +643,7 @@ function LadderView({
               const awayId = sideTeam(mn, 'away', picks);
               const adv = picks[mn]?.advancerTeamId ?? null;
               return (
-                <div key={mn} className="rounded-lg border border-border/40 bg-card/50 overflow-hidden text-[11px]">
+                <div key={mn} className="rounded-lg border border-border/40 bg-card/50 overflow-hidden text-xs">
                   {(['home', 'away'] as const).map((side, i) => {
                     const id = side === 'home' ? homeId : awayId;
                     const win = !!id && adv === id;              // viewer picked this team to advance
@@ -675,7 +675,7 @@ function LadderView({
                           {win && <PointsPill mn={mn} earned={st === 'earned'} />}
                           {pct !== null && (
                             <span
-                              className="w-7 text-right text-[9px] tabular-nums text-muted-foreground/70"
+                              className="w-7 text-right text-[10px] tabular-nums text-muted-foreground/70"
                               title={es ? `${pct}% de la liga eligió este equipo` : `${pct}% of the league picked this team`}
                             >
                               {pct}%
@@ -693,15 +693,15 @@ function LadderView({
         {/* Champion */}
         <div className="flex flex-col justify-center min-w-[120px]">
           <div className="rounded-lg border border-amber-500/40 bg-amber-500/[0.08] p-2 text-center">
-            <div className="text-[9px] uppercase tracking-wider text-amber-500 font-bold">{es ? 'Campeón' : 'Champion'}</div>
-            <div className="text-[12px] font-extrabold mt-0.5 truncate">
+            <div className="text-[10px] uppercase tracking-wider text-amber-500 font-bold">{es ? 'Campeón' : 'Champion'}</div>
+            <div className="text-[13px] font-extrabold mt-0.5 truncate">
               {championId ? labelFor(104, 'home', championId) : '—'}
             </div>
           </div>
           {third && (
             <div className="mt-2 rounded-lg border border-border/40 bg-card/50 p-2 text-center">
-              <div className="text-[9px] uppercase tracking-wider text-muted-foreground/80 font-bold">{es ? '3er' : '3rd'}</div>
-              <div className="text-[11px] font-semibold mt-0.5 truncate">
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground/80 font-bold">{es ? '3er' : '3rd'}</div>
+              <div className="text-xs font-semibold mt-0.5 truncate">
                 {picks[103]?.advancerTeamId ? labelFor(103, 'home', picks[103].advancerTeamId) : '—'}
               </div>
             </div>

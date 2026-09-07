@@ -152,7 +152,7 @@ export default function CreateLeaguePage() {
 
             {/* Copyable code */}
             <div className="py-2 flex flex-col items-center gap-1.5 w-full">
-              <span className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest block select-none">
+              <span className="text-[11px] font-extrabold text-muted-foreground uppercase tracking-widest block select-none">
                 {t('league.inviteCode')}
               </span>
               <CopyableCode code={createdInfo.inviteCode} />

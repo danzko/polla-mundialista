@@ -106,7 +106,7 @@ export function PlayerPicker({
                 className="flex w-full items-center justify-between gap-2 px-3 py-2 text-sm text-left hover:bg-secondary transition-colors cursor-pointer"
               >
                 <span className="font-semibold truncate">{p.name}</span>
-                <span className="flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground shrink-0">
+                <span className="flex items-center gap-1 text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground shrink-0">
                   <Search className="h-3 w-3 opacity-50" />
                   {p.team}
                 </span>

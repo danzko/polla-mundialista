@@ -8,15 +8,15 @@ import { cn } from '@/lib/utils';
 import type { StatsData, Locale } from '@/lib/types';
 
 function Pills({ names, es }: { names: string[]; es: boolean }) {
-  if (!names.length) return <span className="text-[10px] italic text-muted-foreground/70">{es ? 'nadie todavía' : 'nobody yet'}</span>;
+  if (!names.length) return <span className="text-[11px] italic text-muted-foreground/70">{es ? 'nadie todavía' : 'nobody yet'}</span>;
   const shown = names.slice(0, 10);
   const extra = names.length - shown.length;
   return (
     <div className="mt-1 flex flex-wrap gap-1">
       {shown.map((n, i) => (
-        <span key={i} className="rounded-full bg-secondary/70 px-1.5 py-0.5 text-[10px] font-medium text-foreground/80">{n}</span>
+        <span key={i} className="rounded-full bg-secondary/70 px-1.5 py-0.5 text-[11px] font-medium text-foreground/80">{n}</span>
       ))}
-      {extra > 0 && <span className="px-1 py-0.5 text-[10px] text-muted-foreground">+{extra}</span>}
+      {extra > 0 && <span className="px-1 py-0.5 text-[11px] text-muted-foreground">+{extra}</span>}
     </div>
   );
 }
@@ -33,7 +33,7 @@ function SectionTitle({ icon, title, sub }: { icon: React.ReactNode; title: stri
   return (
     <div className="mb-2 mt-5 flex items-baseline gap-2 first:mt-0">
       <span className="flex items-center gap-1.5 text-sm font-extrabold">{icon}{title}</span>
-      {sub && <span className="text-[10px] text-muted-foreground">{sub}</span>}
+      {sub && <span className="text-[11px] text-muted-foreground">{sub}</span>}
     </div>
   );
 }
@@ -59,9 +59,9 @@ export function StatsSections({ data, locale, kind = 'world_cup' }: { data: Stat
           <div key={r.teamCode} className="rounded-xl border border-border/45 bg-card/50 px-3 py-2.5">
             <div className="flex items-center gap-2">
               {(r.flagEmoji || r.logoUrl) && <span className={cn(r.eliminated && 'opacity-40 grayscale')}><Flag code={r.teamCode} emoji={r.flagEmoji ?? ''} logoUrl={r.logoUrl} className="inline-block h-4 w-auto rounded-[2px] shadow-sm" /></span>}
-              <span className={cn('flex-1 truncate text-[13px] font-bold', r.eliminated && 'line-through text-muted-foreground')}>{r.teamName}</span>
+              <span className={cn('flex-1 truncate text-sm font-bold', r.eliminated && 'line-through text-muted-foreground')}>{r.teamName}</span>
               {r.vegasOdds && (
-                <span className="shrink-0 rounded-md bg-secondary/70 px-1.5 py-0.5 text-[10px] font-bold tabular-nums">
+                <span className="shrink-0 rounded-md bg-secondary/70 px-1.5 py-0.5 text-[11px] font-bold tabular-nums">
                   {r.vegasOdds}{r.vegasImpliedPct != null && <span className="ml-1 text-muted-foreground">{r.vegasImpliedPct}%</span>}
                 </span>
               )}
@@ -85,20 +85,20 @@ export function StatsSections({ data, locale, kind = 'world_cup' }: { data: Stat
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={b.photoUrl} alt="" className="h-9 w-9 shrink-0 rounded-full bg-secondary object-cover" />
               ) : (
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary text-[11px] font-bold text-muted-foreground">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-bold text-muted-foreground">
                   {b.flagEmoji && b.teamCode ? <Flag code={b.teamCode} emoji={b.flagEmoji} className="h-4 w-auto rounded-[2px]" /> : b.playerName.slice(0, 2).toUpperCase()}
                 </span>
               )}
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
-                  {b.rank != null && <span className="text-[10px] font-bold text-muted-foreground">#{b.rank}</span>}
-                  <span className="truncate text-[13px] font-bold">{b.playerName}</span>
+                  {b.rank != null && <span className="text-[11px] font-bold text-muted-foreground">#{b.rank}</span>}
+                  <span className="truncate text-sm font-bold">{b.playerName}</span>
                   {b.flagEmoji && b.teamCode && b.photoUrl && <Flag code={b.teamCode} emoji={b.flagEmoji} className="inline-block h-3 w-auto rounded-[1px]" />}
-                  {b.goals != null && <span className="ml-auto shrink-0 text-[11px] font-extrabold tabular-nums text-emerald-400">{b.goals} {es ? 'goles' : 'goals'}</span>}
+                  {b.goals != null && <span className="ml-auto shrink-0 text-xs font-extrabold tabular-nums text-emerald-400">{b.goals} {es ? 'goles' : 'goals'}</span>}
                 </div>
                 <div className="mt-1 flex items-center gap-2">
                   <Bar pct={b.leaguePct} className="bg-gradient-to-r from-emerald-500 to-emerald-300" />
-                  <span className="shrink-0 text-[11px] font-bold tabular-nums text-primary">{b.leaguePct}%</span>
+                  <span className="shrink-0 text-xs font-bold tabular-nums text-primary">{b.leaguePct}%</span>
                 </div>
               </div>
             </div>
@@ -115,7 +115,7 @@ export function StatsSections({ data, locale, kind = 'world_cup' }: { data: Stat
         {data.goldenBall.map((p, i) => (
           <div key={`${p.label}-${i}`} className="rounded-xl border border-border/45 bg-card/50 px-3 py-2.5">
             <div className="flex items-center gap-2">
-              <span className="flex-1 truncate text-[13px] font-bold">{p.label}</span>
+              <span className="flex-1 truncate text-sm font-bold">{p.label}</span>
               <span className="shrink-0 text-xs font-extrabold tabular-nums text-primary">{p.pct}%</span>
             </div>
             <div className="mt-1.5"><Bar pct={p.pct} className="bg-gradient-to-r from-amber-500 to-amber-300" /></div>
@@ -125,7 +125,7 @@ export function StatsSections({ data, locale, kind = 'world_cup' }: { data: Stat
       </div>
 
       {!data.snapshotLoaded && (
-        <p className="mt-5 text-center text-[10.5px] text-muted-foreground">
+        <p className="mt-5 text-center text-[11.5px] text-muted-foreground">
           {es ? 'Goleadores y cuotas en vivo aún no cargados.' : 'Live scorers & odds not loaded yet.'}
         </p>
       )}
@@ -134,5 +134,5 @@ export function StatsSections({ data, locale, kind = 'world_cup' }: { data: Stat
 }
 
 function Empty({ es }: { es: boolean }) {
-  return <div className="rounded-xl border border-border/30 bg-card/40 px-3 py-4 text-center text-[11px] text-muted-foreground">{es ? 'Nadie ha elegido todavía' : 'No picks yet'}</div>;
+  return <div className="rounded-xl border border-border/30 bg-card/40 px-3 py-4 text-center text-xs text-muted-foreground">{es ? 'Nadie ha elegido todavía' : 'No picks yet'}</div>;
 }

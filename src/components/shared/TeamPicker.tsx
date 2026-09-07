@@ -170,7 +170,7 @@ export function TeamPicker({
                         ({team.code})
                       </span>
                       {team.eliminated && (
-                        <span className="text-[9px] font-extrabold uppercase text-destructive border border-destructive/20 bg-destructive/5 px-1 rounded">
+                        <span className="text-[10px] font-extrabold uppercase text-destructive border border-destructive/20 bg-destructive/5 px-1 rounded">
                           {locale === 'es' ? 'Eliminado' : 'Out'}
                         </span>
                       )}

@@ -32,7 +32,7 @@ function Movement({ m }: { m: number | null }) {
   if (m == null || m === 0) return null;
   const up = m > 0;
   return (
-    <span className={cn('shrink-0 inline-flex items-center text-[10px] font-bold tabular-nums', up ? 'text-emerald-400' : 'text-rose-400')}>
+    <span className={cn('shrink-0 inline-flex items-center text-[11px] font-bold tabular-nums', up ? 'text-emerald-400' : 'text-rose-400')}>
       {up ? '▲' : '▼'}{Math.abs(m)}
     </span>
   );
@@ -132,14 +132,14 @@ export function LeaderboardScreen({ data, locale, embedded = false, stats, kind 
       <>
       {/* quick self-locator */}
       {me && (
-        <div className="mb-2 flex items-center justify-between rounded-lg border border-primary/40 bg-primary/[0.07] px-3 py-1.5 text-[11px]">
+        <div className="mb-2 flex items-center justify-between rounded-lg border border-primary/40 bg-primary/[0.07] px-3 py-1.5 text-xs">
           <span className="font-semibold text-primary">{es ? 'Tú' : 'You'} · #{me.rank}</span>
           <span className="font-extrabold tabular-nums">{me.total} pts</span>
         </div>
       )}
 
       {/* desktop column header */}
-      <div className="hidden md:grid grid-cols-[2.5rem_1fr_4rem_4rem_4rem_4.5rem] gap-2 px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">
+      <div className="hidden md:grid grid-cols-[2.5rem_1fr_4rem_4rem_4rem_4.5rem] gap-2 px-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">
         <span>#</span><span>{es ? 'Jugador' : 'Player'}</span>
         <span className="text-right">{es ? 'Partidos' : 'Matches'}</span>
         <span className="text-right">{es ? 'Llave' : 'Bracket'}</span>
@@ -175,8 +175,8 @@ export function LeaderboardScreen({ data, locale, embedded = false, stats, kind 
                   </span>
                   <span className="min-w-0 flex-1 flex items-center gap-1.5">
                     <ChampionFlag e={e} />
-                    <span className="truncate text-[13px] font-bold">
-                      {e.displayName}{e.isMe && <span className="ml-1 text-[10px] font-semibold text-primary">{es ? '(tú)' : '(you)'}</span>}
+                    <span className="truncate text-sm font-bold">
+                      {e.displayName}{e.isMe && <span className="ml-1 text-[11px] font-semibold text-primary">{es ? '(tú)' : '(you)'}</span>}
                     </span>
                     {isBottomThree && (
                       <span className="shrink-0 text-sm select-none" title={es ? 'Farolillo rojo' : 'Bringing up the rear'} aria-hidden>💩</span>
@@ -195,7 +195,7 @@ export function LeaderboardScreen({ data, locale, embedded = false, stats, kind 
               </button>
 
               {open && (
-                <div className="border-t border-border/30 px-3 py-2.5 text-[12px] space-y-2.5">
+                <div className="border-t border-border/30 px-3 py-2.5 text-[13px] space-y-2.5">
                   {/* ── MATCHES: scoreline points, shown as the actual math ── */}
                   <div>
                     <SectionHead
@@ -211,7 +211,7 @@ export function LeaderboardScreen({ data, locale, embedded = false, stats, kind 
                       <MathLine icon={<X className="h-3 w-3 text-rose-400/70" />}
                         label={es ? 'Fallados' : 'Missed'} count={e.wrongCount} mult={0} muted />
                     </div>
-                    <p className="mt-0.5 pl-5 text-[10px] text-muted-foreground">
+                    <p className="mt-0.5 pl-5 text-[11px] text-muted-foreground">
                       {es ? 'Grupos' : 'Group'} {e.groupScore} · {es ? 'Eliminatorias' : 'KO'} {e.koScore}
                     </p>
                   </div>
@@ -223,7 +223,7 @@ export function LeaderboardScreen({ data, locale, embedded = false, stats, kind 
                       label={es ? 'Llave (avance)' : 'Bracket'}
                       accent="text-sky-300" value={e.bracket}
                     />
-                    <p className="mt-0.5 pl-5 text-[10px] text-muted-foreground">
+                    <p className="mt-0.5 pl-5 text-[11px] text-muted-foreground">
                       <span className="font-semibold text-emerald-400">{e.bracketCorrect}</span> {es ? 'aciertos' : 'correct'}
                       {e.bracketAlive > 0 && (
                         <> · <span className="font-semibold text-sky-300">{e.bracketAlive}</span> {es ? 'aún vivos' : 'still alive'}</>
@@ -244,7 +244,7 @@ export function LeaderboardScreen({ data, locale, embedded = false, stats, kind 
                     <span className="tabular-nums text-base">
                       {e.total}
                       {tiedTotals.has(e.total) && (
-                        <span className="ml-1 font-normal text-[10px] text-muted-foreground">
+                        <span className="ml-1 font-normal text-[11px] text-muted-foreground">
                           · {es ? 'desempate' : 'tiebreak'} {e.koTiebreak}
                         </span>
                       )}
@@ -275,11 +275,11 @@ export function LeaderboardScreen({ data, locale, embedded = false, stats, kind 
 function SectionHead({ icon, label, accent, value }: { icon: React.ReactNode; label: string; accent: string; value: number }) {
   return (
     <div className="flex items-center justify-between gap-2">
-      <span className="flex items-center gap-1.5 min-w-0 font-bold uppercase tracking-wide text-[11px]">
+      <span className="flex items-center gap-1.5 min-w-0 font-bold uppercase tracking-wide text-xs">
         {icon}
         <span className="truncate">{label}</span>
       </span>
-      <span className={cn('shrink-0 tabular-nums font-extrabold', accent)}>{value}<span className="ml-0.5 text-[9px] font-semibold text-muted-foreground">pts</span></span>
+      <span className={cn('shrink-0 tabular-nums font-extrabold', accent)}>{value}<span className="ml-0.5 text-[10px] font-semibold text-muted-foreground">pts</span></span>
     </div>
   );
 }
@@ -291,9 +291,9 @@ function MathLine({ icon, label, count, mult, muted = false }: { icon: React.Rea
     <div className={cn('flex items-center justify-between gap-2 tabular-nums', muted && 'opacity-60')}>
       <span className="flex items-center gap-1.5 min-w-0">
         {icon}
-        <span className="truncate text-[11px]">{label}</span>
+        <span className="truncate text-xs">{label}</span>
       </span>
-      <span className="shrink-0 text-[11px] text-muted-foreground">
+      <span className="shrink-0 text-xs text-muted-foreground">
         {count} <span className="opacity-70">× {mult}</span>
         <span className="mx-1 opacity-40">=</span>
         <span className={cn('font-bold', muted ? 'text-muted-foreground' : 'text-foreground')}>{count * mult}</span>

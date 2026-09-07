@@ -59,10 +59,10 @@ export function SeasonPass({ hub, userName, locale }: { hub: SeasonHub; userName
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-6 pt-8 pb-6">
-          <div className="text-[11px] font-semibold uppercase tracking-[.4em] text-amber-200/80">
+          <div className="text-xs font-semibold uppercase tracking-[.4em] text-amber-200/80">
             {es ? 'Pase de temporada' : 'Season pass'}
           </div>
-          <div className="mt-3 text-[10px] uppercase tracking-[.3em] text-muted-foreground">
+          <div className="mt-3 text-[11px] uppercase tracking-[.3em] text-muted-foreground">
             {es ? t.nameEs : t.nameEn}
           </div>
           <div
@@ -82,7 +82,7 @@ export function SeasonPass({ hub, userName, locale }: { hub: SeasonHub; userName
 
           {last && last.myRank != null && (
             <div className="mt-5 rounded-xl border border-border/50 bg-card/40 px-4 py-3 text-left">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              <div className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
                 {es ? 'Tu última temporada' : 'Your last season'}
               </div>
               <div className="mt-1 flex items-center justify-between gap-3 text-sm">
@@ -92,7 +92,7 @@ export function SeasonPass({ hub, userName, locale }: { hub: SeasonHub; userName
                 </span>
               </div>
               {last.podium[0] && (
-                <div className="mt-1 text-[11px] text-muted-foreground">
+                <div className="mt-1 text-xs text-muted-foreground">
                   🏆 {last.podium[0].displayName}
                   {last.championCode && (
                     <span className="ml-2">

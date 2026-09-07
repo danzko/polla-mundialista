@@ -41,7 +41,7 @@ export default function LocaleError({
           Reintentar / Try again
         </button>
         {error.digest && (
-          <p className="text-[10px] text-muted-foreground/60 font-mono select-all">
+          <p className="text-[11px] text-muted-foreground/60 font-mono select-all">
             ref: {error.digest}
           </p>
         )}

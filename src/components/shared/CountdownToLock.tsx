@@ -79,7 +79,7 @@ export function CountdownToLock({ lockAt, onLockChange, className }: CountdownTo
 
   return (
     <div className={cn("inline-flex flex-col items-center gap-1.5", className)}>
-      <div className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest flex items-center gap-1 select-none">
+      <div className="text-[11px] font-extrabold text-muted-foreground uppercase tracking-widest flex items-center gap-1 select-none">
         <Clock className="h-3 w-3" />
         {t('bonuses.lockWarning')}
       </div>

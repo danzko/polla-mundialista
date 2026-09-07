@@ -53,7 +53,7 @@ export function LeagueInvite({ code, leagueName, locale }: { code: string; leagu
       {open && (
         <div className="absolute right-0 top-full z-50 mt-2 w-64 rounded-2xl border border-border/60 bg-card p-3 shadow-xl shadow-black/30">
           <div className="mb-2 flex items-center justify-between">
-            <span className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground">
+            <span className="text-[11px] font-extrabold uppercase tracking-widest text-muted-foreground">
               {es ? 'Código de invitación' : 'Invite code'}
             </span>
             <button type="button" onClick={() => setOpen(false)} className="p-0.5 text-muted-foreground">
@@ -64,12 +64,12 @@ export function LeagueInvite({ code, leagueName, locale }: { code: string; leagu
           <button
             type="button"
             onClick={handleShare}
-            className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-primary to-emerald-500 px-3 py-2 text-xs font-extrabold text-primary-foreground"
+            className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-primary to-[hsl(var(--brand-2))] px-3 py-2 text-xs font-extrabold text-primary-foreground"
           >
             <Share2 className="h-3.5 w-3.5" />
             {es ? 'Compartir invitación' : 'Share invite'}
           </button>
-          <p className="mt-2 text-[10px] leading-snug text-muted-foreground">
+          <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
             {es ? 'Comparte el código o el enlace para que tus amigos entren.' : 'Share the code or link so friends can join.'}
           </p>
         </div>

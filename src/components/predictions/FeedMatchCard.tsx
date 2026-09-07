@@ -84,27 +84,27 @@ export function FeedMatchCard({
   // Right-side status badge
   const badge = (() => {
     if (match.isVoided) {
-      return <span className="rounded text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 bg-destructive/10 text-destructive border border-destructive/30">{es ? 'anulado' : 'void'}</span>;
+      return <span className="rounded text-[11px] font-bold uppercase tracking-wide px-1.5 py-0.5 bg-destructive/10 text-destructive border border-destructive/30">{es ? 'anulado' : 'void'}</span>;
     }
     if (isLive) {
       return (
-        <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold text-red-300 bg-red-500/15 border border-red-500/40">
+        <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-bold text-red-300 bg-red-500/15 border border-red-500/40">
           <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
           {es ? 'en vivo' : 'live'} {live?.displayClock || ''}
         </span>
       );
     }
     if (isFinal) {
-      return <span className="rounded text-[10px] font-bold uppercase px-1.5 py-0.5 bg-secondary/70 text-muted-foreground border border-border/50">{es ? 'fin' : 'FT'}</span>;
+      return <span className="rounded text-[11px] font-bold uppercase px-1.5 py-0.5 bg-secondary/70 text-muted-foreground border border-border/50">{es ? 'fin' : 'FT'}</span>;
     }
     if (editable) {
-      return <span className="text-[10px] font-medium text-muted-foreground">{fmtTime(match.kickoffAt)}</span>;
+      return <span className="text-[11px] font-medium text-muted-foreground">{fmtTime(match.kickoffAt)}</span>;
     }
     // locked but not started, or started without data yet
     if (!started) {
-      return <span className="rounded text-[10px] font-semibold px-1.5 py-0.5 bg-amber-500/10 text-amber-500 border border-amber-500/25">{es ? 'cerrado' : 'locked'}</span>;
+      return <span className="rounded text-[11px] font-semibold px-1.5 py-0.5 bg-amber-500/10 text-amber-500 border border-amber-500/25">{es ? 'cerrado' : 'locked'}</span>;
     }
-    return <span className="rounded text-[10px] font-semibold px-1.5 py-0.5 bg-secondary/70 text-muted-foreground border border-border/50">{es ? 'en juego' : 'in play'}</span>;
+    return <span className="rounded text-[11px] font-semibold px-1.5 py-0.5 bg-secondary/70 text-muted-foreground border border-border/50">{es ? 'en juego' : 'in play'}</span>;
   })();
 
   // Your-pick + points sub-row
@@ -112,7 +112,7 @@ export function FeedMatchCard({
   const pointsPill =
     pts === null || match.isVoided ? null : (
       <span className={cn(
-        'rounded px-1.5 py-0.5 text-[10px] font-bold',
+        'rounded px-1.5 py-0.5 text-[11px] font-bold',
         pts >= 6 ? 'bg-amber-500/20 text-amber-300'
           : pts > 0 ? 'bg-emerald-500/20 text-emerald-300'
             : 'bg-muted/60 text-muted-foreground'
@@ -135,13 +135,13 @@ export function FeedMatchCard({
   return (
     <div>
       <div className={cn(
-        'rounded-xl border px-2.5 py-2 transition-colors',
+        'rounded-2xl border px-3.5 py-3 transition-colors',
         phaseClass,
         match.isVoided && 'opacity-60'
       )}>
         {/* meta row */}
-        <div className="mb-1 flex items-center justify-between">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">
             {stageLabel}
             {!editable && !isLive && !isFinal && !match.isVoided && (
               <span className="ml-1.5 font-medium normal-case tracking-normal">· {fmtTime(match.kickoffAt)}</span>
@@ -151,8 +151,8 @@ export function FeedMatchCard({
         </div>
 
         {/* scoreboard row */}
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-          <div className="flex items-center justify-end gap-1.5 min-w-0 text-[13px] font-semibold">
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+          <div className="flex items-center justify-end gap-2 min-w-0 text-[15px] font-semibold">
             <span className="truncate">{name(match.homeTeam, 'home')}</span>
             <span className="text-base leading-none shrink-0">{flag(match.homeTeam)}</span>
           </div>
@@ -166,11 +166,11 @@ export function FeedMatchCard({
                 {shownScore.h} <span className="text-muted-foreground font-normal">–</span> {shownScore.a}
               </span>
             ) : !editable ? (
-              <span className="text-[11px] font-semibold uppercase text-muted-foreground/70">vs</span>
+              <span className="text-xs font-semibold uppercase text-muted-foreground/70">vs</span>
             ) : null}
           </div>
 
-          <div className="flex items-center justify-start gap-1.5 min-w-0 text-[13px] font-semibold">
+          <div className="flex items-center justify-start gap-2 min-w-0 text-[15px] font-semibold">
             <span className="text-base leading-none shrink-0">{flag(match.awayTeam)}</span>
             <span className="truncate">{name(match.awayTeam, 'away')}</span>
           </div>
@@ -187,7 +187,7 @@ export function FeedMatchCard({
 
         {/* your pick + points (non-editable, when you predicted) */}
         {!editable && match.myPrediction && (
-          <div className="mt-1.5 flex items-center gap-2 text-[11px] text-muted-foreground">
+          <div className="mt-1.5 flex items-center gap-2 text-xs text-muted-foreground">
             <span>
               {es ? 'tu' : 'you'}{' '}
               <span className="font-semibold text-foreground/90 tabular-nums">

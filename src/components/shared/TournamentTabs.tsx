@@ -33,7 +33,7 @@ export function TournamentTabs({ tournaments, current, locale }: {
   };
 
   return (
-    <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-500/30 bg-amber-500/[0.06] px-3 py-2 text-[11px] text-amber-200/90">
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-500/30 bg-amber-500/[0.06] px-3 py-2 text-xs text-amber-200/90">
       <span className="inline-flex items-center gap-1.5">
         <Archive className="h-3.5 w-3.5" />
         {es ? 'Torneo anterior' : 'Previous tournament'}: <b>{es ? current.nameEs : current.nameEn}</b> · {es ? 'solo lectura' : 'read-only'}
@@ -45,7 +45,7 @@ export function TournamentTabs({ tournaments, current, locale }: {
           type="button"
           onClick={back}
           disabled={pending}
-          className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-[11px] font-bold text-primary-foreground disabled:opacity-60"
+          className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-xs font-bold text-primary-foreground disabled:opacity-60"
         >
           <ArrowLeft className="h-3 w-3" />
           {es ? `Volver a ${live.nameEs}` : `Back to ${live.nameEn}`}

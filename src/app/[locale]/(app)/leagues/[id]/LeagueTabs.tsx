@@ -157,7 +157,7 @@ export function LeagueTabs({ league, locale, currentUserId, leaderboardData }: L
 
                     <div className="flex items-center gap-2">
                       {member.isAdmin && (
-                        <span className="inline-flex items-center gap-1 text-[9px] font-extrabold uppercase bg-amber-500/10 border border-amber-500/20 text-amber-500 px-2 py-0.5 rounded-md tracking-wider select-none">
+                        <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase bg-amber-500/10 border border-amber-500/20 text-amber-500 px-2 py-0.5 rounded-md tracking-wider select-none">
                           👑 {t('common.admin')}
                         </span>
                       )}
@@ -169,7 +169,7 @@ export function LeagueTabs({ league, locale, currentUserId, leaderboardData }: L
                               size="sm"
                               onClick={() => handleKick(member.userId)}
                               disabled={busy === `kick-${member.userId}`}
-                              className="h-7 rounded-lg px-2 text-[10px] font-extrabold bg-destructive/80 hover:bg-destructive text-white cursor-pointer"
+                              className="h-7 rounded-lg px-2 text-[11px] font-extrabold bg-destructive/80 hover:bg-destructive text-white cursor-pointer"
                             >
                               {busy === `kick-${member.userId}` ? '…' : t('league.kickConfirmBtn')}
                             </Button>
@@ -177,7 +177,7 @@ export function LeagueTabs({ league, locale, currentUserId, leaderboardData }: L
                               size="sm"
                               variant="ghost"
                               onClick={() => setConfirmKickId(null)}
-                              className="h-7 rounded-lg px-2 text-[10px] font-bold text-muted-foreground cursor-pointer"
+                              className="h-7 rounded-lg px-2 text-[11px] font-bold text-muted-foreground cursor-pointer"
                             >
                               {t('common.cancel')}
                             </Button>
@@ -187,7 +187,7 @@ export function LeagueTabs({ league, locale, currentUserId, leaderboardData }: L
                             size="sm"
                             variant="ghost"
                             onClick={() => setConfirmKickId(member.userId)}
-                            className="h-7 rounded-lg px-2 text-[10px] font-bold text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer"
+                            className="h-7 rounded-lg px-2 text-[11px] font-bold text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer"
                           >
                             <UserMinus className="h-3.5 w-3.5 mr-1" />
                             {t('league.kickBtn')}

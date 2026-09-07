@@ -58,7 +58,7 @@ export default async function RulesPage({ params }: RulesPageProps) {
           <GitBranch className="h-4 w-4 text-primary" />
           {es ? '1. La Llave — los puntos grandes' : '1. The Bracket — the big points'}
         </h2>
-        <p className="text-[13px] text-muted-foreground mt-1.5 leading-relaxed">
+        <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
           {es
             ? 'Eliges quién avanza: qué equipos llegan a cada ronda. Ganas los puntos de la ronda por cada equipo que aciertes, y se acumula ronda a ronda.'
             : 'You pick who advances: which teams reach each round. You earn that round’s points for every team you get right, and it stacks round by round.'}
@@ -66,7 +66,7 @@ export default async function RulesPage({ params }: RulesPageProps) {
         {/* Bar graph: points escalate sharply by round (per correct team). */}
         <div className="mt-3 space-y-1.5">
           {advancement.map((r) => (
-            <div key={r.en} className="flex items-center gap-2 text-[12px]">
+            <div key={r.en} className="flex items-center gap-2 text-[13px]">
               <span className="w-24 shrink-0 text-muted-foreground">{es ? r.es : r.en}</span>
               <div className="flex-1 h-5 rounded bg-secondary/40 overflow-hidden">
                 <div
@@ -76,21 +76,21 @@ export default async function RulesPage({ params }: RulesPageProps) {
               </div>
               <span className="w-16 text-right font-extrabold text-primary">
                 +{r.pts}{' '}
-                <span className="text-[10px] font-medium text-muted-foreground">
+                <span className="text-[11px] font-medium text-muted-foreground">
                   {es ? '/equipo' : '/team'}
                 </span>
               </span>
             </div>
           ))}
         </div>
-        <div className="mt-3 rounded-xl border border-amber-500/40 bg-amber-500/[0.08] p-3 text-[13px] leading-relaxed">
+        <div className="mt-3 rounded-xl border border-amber-500/40 bg-amber-500/[0.08] p-3 text-sm leading-relaxed">
           {es ? (
             <>Un equipo que pones campeón y gana suma <strong>4+8+16+30+55 = 113 pts</strong> él solo. Solo importan los equipos, no el camino que dibujes.</>
           ) : (
             <>A team you call champion that wins is worth <strong>4+8+16+30+55 = 113 pts</strong> on its own. Only the teams matter, not the path you draw.</>
           )}
         </div>
-        <p className="text-[12px] text-amber-500 font-semibold mt-2">
+        <p className="text-[13px] text-amber-500 font-semibold mt-2">
           ⏰ {ucl
             ? (es
                 ? 'La Llave se abre tras el sorteo de los play-offs (finales de enero). Cada eliminatoria se cierra 15 min antes de su partido de ida.'
@@ -107,7 +107,7 @@ export default async function RulesPage({ params }: RulesPageProps) {
           <Calendar className="h-4 w-4 text-primary" />
           {es ? `2. Marcadores — igual que en ${regular}` : `2. Match scores — same as ${regular}`}
         </h2>
-        <p className="text-[13px] text-muted-foreground mt-1.5 leading-relaxed">
+        <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
           {ucl
             ? (es
                 ? 'En la pestaña Partidos predices el marcador de cada partido: las 8 jornadas de la fase de liga y luego cada partido eliminatorio (ida y vuelta) a medida que se conocen los cruces. Cada partido se cierra 15 min antes del pitazo:'
@@ -116,7 +116,7 @@ export default async function RulesPage({ params }: RulesPageProps) {
                 ? 'En la pestaña Partidos predices el marcador de cada partido eliminatorio, ronda por ronda, a medida que se conocen los equipos. Cada partido se cierra 15 min antes del pitazo. Puntúa exactamente igual que la fase de grupos:'
                 : 'In the Matches tab you predict each knockout game’s scoreline, round by round, as the teams become known. Each game locks 15 min before kickoff. It scores exactly like the group stage:')}
         </p>
-        <ul className="mt-3 space-y-2 text-[13px]">
+        <ul className="mt-3 space-y-2 text-sm">
           <li className="flex gap-2">
             <span className="font-bold text-emerald-400 shrink-0">+6</span>
             <span className="text-muted-foreground">
@@ -136,13 +136,13 @@ export default async function RulesPage({ params }: RulesPageProps) {
             </span>
           </li>
         </ul>
-        <p className="text-[12px] text-muted-foreground/70 mt-2">
+        <p className="text-[13px] text-muted-foreground/70 mt-2">
           {es
             ? 'Quién avanza por penales no afecta este marcador — eso se premia en la Llave.'
             : 'Who advances on penalties doesn’t affect this scoreline — that’s rewarded in the Bracket.'}
         </p>
         {/* Worked example: you predicted Brazil 2–1. */}
-        <div className="mt-3 rounded-xl border border-border/40 overflow-hidden text-[12px]">
+        <div className="mt-3 rounded-xl border border-border/40 overflow-hidden text-[13px]">
           <div className="bg-secondary/40 px-3 py-1.5 font-semibold">
             {es ? 'Ejemplo: predijiste 🇧🇷 Brasil 2–1' : 'Example: you predicted 🇧🇷 Brazil 2–1'}
           </div>
@@ -166,7 +166,7 @@ export default async function RulesPage({ params }: RulesPageProps) {
           <TrophyMark className="h-4 w-4" />
           {es ? 'Picks de bonos (pre-torneo)' : 'Bonus picks (pre-tournament)'}
         </h2>
-        <ul className="mt-3 space-y-2 text-[13px]">
+        <ul className="mt-3 space-y-2 text-sm">
           <li className="flex gap-2">
             <span className="font-bold text-amber-400 shrink-0">+50</span>
             <span className="text-muted-foreground">
@@ -199,7 +199,7 @@ export default async function RulesPage({ params }: RulesPageProps) {
         <h2 className="font-bold flex items-center gap-2">
           🧮 {es ? 'Ejemplo completo: cómo se suman los puntos' : 'Full example: how the points add up'}
         </h2>
-        <div className="mt-3 rounded-xl border border-border/40 overflow-hidden text-[12px]">
+        <div className="mt-3 rounded-xl border border-border/40 overflow-hidden text-[13px]">
           {(ucl ? [
             { what: es ? 'Real Madrid → Campeón (y gana)' : 'Real Madrid → Champion (and wins)', detail: '4+8+16+30+55', pts: 113 },
             { what: es ? 'Real Madrid, su pick de Campeón pre-torneo' : 'Real Madrid, his pre-tournament Champion pick', detail: '', pts: 50 },
@@ -224,7 +224,7 @@ export default async function RulesPage({ params }: RulesPageProps) {
             <span className="text-emerald-400">264</span>
           </div>
         </div>
-        <p className="text-[11px] text-muted-foreground/70 mt-2 leading-relaxed">
+        <p className="text-xs text-muted-foreground/70 mt-2 leading-relaxed">
           {es
             ? `Fíjate: ${ucl ? 'el Madrid' : 'Francia'} le pagó en cada ronda (se acumula) y otra vez por su pick de campeón. Una buena lectura del torneo vale mucho más que un marcador suelto.`
             : `Notice: ${ucl ? 'Madrid' : 'France'} paid him in every round (it stacks) and again via his champion pick. Reading the tournament right is worth far more than a lucky scoreline.`}
@@ -234,14 +234,14 @@ export default async function RulesPage({ params }: RulesPageProps) {
       {/* TIEBREAKER */}
       <section className="mt-4 rounded-2xl border border-border/50 bg-card/50 p-4">
         <h2 className="font-bold">{es ? 'Desempate' : 'Tiebreaker'}</h2>
-        <p className="text-[13px] text-muted-foreground mt-1.5 leading-relaxed">
+        <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
           {es
             ? 'Puntos totales y, si hay empate, quien más puntos haya sumado en la fase eliminatoria.'
             : 'Total points, and if tied, whoever earned the most points in the knockout stage.'}
         </p>
       </section>
 
-      <p className="text-[11px] text-muted-foreground/70 mt-4 text-center">
+      <p className="text-xs text-muted-foreground/70 mt-4 text-center">
         {ucl
           ? (es
               ? 'La fase de liga (8 jornadas, 144 partidos) puntúa 6 (exacto) / 2 (resultado) / 0 (fallo), sin multiplicador.'

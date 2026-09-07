@@ -109,7 +109,7 @@ export default function DashboardPage() {
       )}>
         <div>
           {tournament?.kind === 'ucl' && (
-            <div className="mb-1 text-[10px] font-semibold uppercase tracking-[.35em] text-blue-200/80">
+            <div className="mb-1 text-[11px] font-semibold uppercase tracking-[.35em] text-blue-200/80">
               {es ? 'Temporada 2026-27' : '2026-27 season'}
             </div>
           )}
@@ -160,7 +160,7 @@ export default function DashboardPage() {
               <Calendar className="h-6 w-6" />
             </div>
             <div className="space-y-1 min-w-0">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-primary">
+              <div className="text-[11px] font-bold uppercase tracking-widest text-primary">
                 {next.liveCount > 0
                   ? (es ? `${next.liveCount} en vivo ahora` : `${next.liveCount} live now`)
                   : (es ? 'Próxima jornada' : 'Next round')}
@@ -225,7 +225,7 @@ export default function DashboardPage() {
             <Link key={league.id} href={`${basePath}/leagues/${league.id}`} className="group block">
               <Card className="glass-card hover:border-primary/40 transition-all duration-300 h-full flex flex-col justify-between hover:-translate-y-1 relative overflow-hidden group-hover:shadow-lg group-hover:shadow-primary/5">
                 {league.isAdmin && (
-                  <div className="absolute top-0 right-0 bg-primary/10 border-l border-b border-primary/20 text-primary text-[10px] font-extrabold uppercase tracking-widest px-2.5 py-0.5 rounded-bl-lg">
+                  <div className="absolute top-0 right-0 bg-primary/10 border-l border-b border-primary/20 text-primary text-[11px] font-extrabold uppercase tracking-widest px-2.5 py-0.5 rounded-bl-lg">
                     {t('common.admin')}
                   </div>
                 )}
@@ -278,24 +278,24 @@ export default function DashboardPage() {
             {hub.honors.map((h) => (
               <Link key={h.tournament.id} href={`${basePath}/hall`} className="block rounded-2xl border border-amber-500/30 bg-[#0C111C] p-4 hover:border-amber-400/60 transition-colors"
                 style={{ background: 'radial-gradient(420px 160px at 50% -30%, rgba(242,196,82,.18), transparent 65%), #0C111C' }}>
-                <div className="text-[10px] font-semibold uppercase tracking-[.3em] text-amber-200/80">
+                <div className="text-[11px] font-semibold uppercase tracking-[.3em] text-amber-200/80">
                   {es ? h.tournament.nameEs : h.tournament.nameEn}
                 </div>
                 <div className="mt-1 flex items-end justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{es ? 'Campeón' : 'Champion'}</div>
+                    <div className="text-[11px] uppercase tracking-widest text-muted-foreground">{es ? 'Campeón' : 'Champion'}</div>
                     <div className="truncate text-xl font-bold" style={{ fontFamily: '"Iowan Old Style","Palatino Linotype",Palatino,Georgia,ui-serif,serif', color: '#F4D488' }}>
                       🏆 {h.podium[0]?.displayName ?? '—'}
                     </div>
                   </div>
                   {h.championCode && (
-                    <div className="shrink-0 text-right text-[10px] text-muted-foreground">
+                    <div className="shrink-0 text-right text-[11px] text-muted-foreground">
                       <Flag code={h.championCode} emoji={h.championFlagEmoji ?? ''} logoUrl={h.championLogoUrl} className="inline-block h-5 w-auto rounded-[2px]" />
                       <div className="mt-0.5">{h.championName}</div>
                     </div>
                   )}
                 </div>
-                <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                   {h.podium.slice(1).map((p, i) => (
                     <span key={p.userId}>{MEDAL[i + 1]} {p.displayName}</span>
                   ))}

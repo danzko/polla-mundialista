@@ -133,7 +133,7 @@ export function MatchCard({ match, locale, homeScore, awayScore, onChange }: Mat
               {getTeamName(match.homeTeam, 'home')}
             </span>
             {match.homeTeam && (
-              <span className="text-[10px] font-extrabold text-muted-foreground uppercase mt-0.5 tracking-widest">
+              <span className="text-[11px] font-extrabold text-muted-foreground uppercase mt-0.5 tracking-widest">
                 {match.homeTeam.code}
               </span>
             )}
@@ -153,7 +153,7 @@ export function MatchCard({ match, locale, homeScore, awayScore, onChange }: Mat
               {getTeamName(match.awayTeam, 'away')}
             </span>
             {match.awayTeam && (
-              <span className="text-[10px] font-extrabold text-muted-foreground uppercase mt-0.5 tracking-widest">
+              <span className="text-[11px] font-extrabold text-muted-foreground uppercase mt-0.5 tracking-widest">
                 {match.awayTeam.code}
               </span>
             )}
@@ -184,7 +184,7 @@ export function MatchCard({ match, locale, homeScore, awayScore, onChange }: Mat
         <div className="mt-2 text-center">
           {/* Result recorded banner */}
           {match.result && (
-            <div className="text-[11px] text-muted-foreground font-semibold flex items-center justify-center gap-1 bg-slate-900/60 py-1 rounded-lg border border-border/40 select-none">
+            <div className="text-xs text-muted-foreground font-semibold flex items-center justify-center gap-1 bg-slate-900/60 py-1 rounded-lg border border-border/40 select-none">
               <span>{t('matches.resultLabel')}:</span>
               <span className="text-foreground font-extrabold">
                 {match.result.homeScore} - {match.result.awayScore}

@@ -19,7 +19,7 @@ export function ViewTournamentButton({ slug, locale, label }: { slug: string; lo
         router.push(`/${locale}/leaderboard`);
         router.refresh();
       })}
-      className="inline-flex items-center gap-1.5 rounded-full border border-border/50 bg-card/60 px-3 py-1.5 text-[11px] font-bold text-muted-foreground hover:text-foreground disabled:opacity-60"
+      className="inline-flex items-center gap-1.5 rounded-full border border-border/50 bg-card/60 px-3 py-1.5 text-xs font-bold text-muted-foreground hover:text-foreground disabled:opacity-60"
     >
       <ExternalLink className="h-3 w-3" />
       {label}

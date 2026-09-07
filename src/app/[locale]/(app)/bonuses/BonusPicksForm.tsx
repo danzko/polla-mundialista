@@ -278,7 +278,7 @@ function LockedPill({ kind, es }: { kind: 'alive' | 'out' | 'pending' | 'nopick'
     nopick: { cls: 'bg-secondary/70 text-muted-foreground', txt: es ? 'Sin pick' : 'No pick' },
   }[kind];
   return (
-    <span className={cn('ml-auto inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold normal-case tracking-normal', map.cls)}>
+    <span className={cn('ml-auto inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold normal-case tracking-normal', map.cls)}>
       {map.txt}
     </span>
   );
