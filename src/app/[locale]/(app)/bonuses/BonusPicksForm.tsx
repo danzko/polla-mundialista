@@ -10,7 +10,8 @@ import { CountdownToLock } from '@/components/shared/CountdownToLock';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { PlayerPicker } from '@/components/shared/PlayerPicker';
-import { submitBonuses } from '@/lib/api';
+import { Top8Picker } from '@/components/shared/Top8Picker';
+import { submitBonuses, submitTop8 } from '@/lib/api';
 import { bonusPredictionsSchema } from '@/lib/validation';
 import type { BonusView, Team, Locale } from '@/lib/types';
 import { Award, Medal, Check, AlertCircle, RefreshCw, Star } from 'lucide-react';
@@ -46,6 +47,17 @@ export function BonusPicksForm({ initialBonuses, teams, locale, kind = 'world_cu
   const [locked, setLocked] = React.useState(initialBonuses.locked);
   const [saveStatus, setSaveStatus] = React.useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [apiError, setApiError] = React.useState<string | null>(null);
+
+  // Top 8 call (league phase): its own state + save, same lock.
+  const [top8, setTop8] = React.useState<string[]>(initialBonuses.top8TeamIds ?? []);
+  const [top8Status, setTop8Status] = React.useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [top8Error, setTop8Error] = React.useState<string | null>(null);
+  const saveTop8 = async () => {
+    setTop8Status('saving'); setTop8Error(null);
+    const r = await submitTop8({ teamIds: top8 });
+    if (r.ok) { setTop8Status('saved'); setTimeout(() => setTop8Status('idle'), 3000); }
+    else { setTop8Status('error'); setTop8Error(r.error); }
+  };
 
   // Once locked, the champion pick is the only one with a live signal — is that
   // team still in the tournament or knocked out? Boot/Ball are decided at the
@@ -107,6 +119,39 @@ export function BonusPicksForm({ initialBonuses, teams, locale, kind = 'world_cu
 
   return (
     <div className="space-y-6">
+
+      {/* TOP 8 CALL — league phase only */}
+      {ucl && (
+        <Card className="glass-card rounded-2xl border-border/75 shadow-xl">
+          <CardHeader className="pb-3 border-b border-border/40 select-none">
+            <CardTitle className="text-lg font-extrabold flex items-center gap-2">
+              🎯 {es ? 'Top 8 de la fase de liga' : 'League-phase Top 8'}
+            </CardTitle>
+            <CardDescription className="text-xs">
+              {es
+                ? 'Los 8 clubes que terminan entre los 8 primeros (pasan directo a octavos). +5 por cada acierto, +20 si aciertas los ocho. Se cierra con los demás picks.'
+                : 'The 8 clubs that finish in the top 8 (straight to the round of 16). +5 per correct club, +20 for all eight. Locks with the other picks.'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 sm:p-6">
+            {top8Error && (
+              <div className="mb-3 rounded-xl bg-destructive/10 border border-destructive/30 p-3 text-xs font-semibold text-destructive text-center">⚠️ {top8Error}</div>
+            )}
+            <Top8Picker teams={teams} value={top8} onChange={setTop8} locale={locale} disabled={locked} />
+          </CardContent>
+          {!locked && (
+            <CardFooter className="flex items-center justify-between gap-3 border-t border-border/40 bg-slate-950/20 py-3.5">
+              <span className="text-xs font-semibold">
+                {top8Status === 'saving' && <span className="text-primary animate-pulse">{t('common.saving')}</span>}
+                {top8Status === 'saved' && <span className="text-emerald-400 inline-flex items-center gap-1"><Check className="h-4 w-4" />{t('common.saved')}</span>}
+              </span>
+              <Button type="button" onClick={saveTop8} disabled={top8.length !== 8 || top8Status === 'saving'} className="rounded-xl font-bold h-11 px-6">
+                {es ? 'Guardar Top 8' : 'Save Top 8'}
+              </Button>
+            </CardFooter>
+          )}
+        </Card>
+      )}
 
       {/* COUNTDOWN BANNER */}
       <div className="glass-card p-6 rounded-2xl border border-border/60 flex flex-col items-center text-center space-y-4 shadow-md">

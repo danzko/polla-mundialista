@@ -55,6 +55,7 @@ export interface MatchView {
   awayTeam: Team | null;
   isVoided: boolean;
   locked: boolean;                  // true once kickoff has passed or voided
+  isBanker: boolean;                // La Fija: this game's points count double for the viewer
   myPrediction: ScorePrediction | null;
   result: ScorePrediction | null;   // null until a result is recorded
   pointsEarned: number | null;      // null until scored
@@ -149,6 +150,12 @@ export interface UnifiedLeaderboardEntry {
   wrongCount: number;     // # of missed scorelines (0-pointers), group + KO
   bracketCorrect: number; // # of bracket advancement picks currently paying off
   bracketAlive: number;   // # of bracket picks still able to score (team not yet out)
+  // season mechanics
+  bankerPoints: number;   // extra points earned by La Fija (the doubled half)
+  jornadaWins: number;    // matchdays won (+5 each, already in total)
+  top8Points: number;     // Top 8 call points (already in total)
+  exactStreak: number;    // consecutive exact scores, most recent first
+  duelRecord: { wins: number; losses: number; draws: number };
   // rank change since the start of the most recent result day (+ = climbed,
   // - = dropped, 0 = held, null = no prior snapshot to compare)
   movement: number | null;
@@ -174,6 +181,31 @@ export interface NextMatchday {
   open: number;               // of those, games still open for picks
   liveCount: number;
   fixtures: NextFixture[];    // the round's games in kickoff order (for the slip)
+  bankerMatchId: string | null; // the viewer's La Fija for this round
+  duel: Duel | null;          // this round's head-to-head (first league)
+}
+/** One matchday's head-to-head pairing for the viewer. */
+export interface Duel {
+  matchday: number;
+  opponentId: string;
+  opponentName: string;
+  myPoints: number;
+  theirPoints: number;
+  status: 'pending' | 'win' | 'loss' | 'draw';
+}
+/** Weekly board for one league + matchday. */
+export interface MatchdayBoard {
+  leagueId: string;
+  leagueName: string;
+  matchday: number;
+  matchdays: number[];        // rounds with any played game, for the selector
+  complete: boolean;          // every game of the round has a result
+  entries: {
+    rank: number; userId: string; displayName: string; points: number; isMe: boolean;
+    isWinner: boolean;        // top of a COMPLETE matchday (+5)
+    opponentId: string | null; opponentName: string | null;
+    duel: 'pending' | 'win' | 'loss' | 'draw' | 'bye';
+  }[];
 }
 export interface NextFixture {
   id: string;
@@ -305,8 +337,9 @@ export interface BonusView {
   semifinalists: string[];        // up to 4 team ids
   topScorerNames: string[];       // up to 3, ranked: gold, silver, bronze boot
   bestPlayerNames: string[];      // up to 3, ranked: gold, silver, bronze ball
+  top8TeamIds: string[];          // Top 8 call (league phase), up to 8 team ids
   locked: boolean;
-  lockAt: string;                 // ISO 8601 UTC, '2026-06-11T19:00:00Z'
+  lockAt: string;                 // ISO 8601 UTC
 }
 
 export type ActionResult<T = void> =

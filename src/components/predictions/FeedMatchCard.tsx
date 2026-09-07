@@ -19,6 +19,10 @@ interface FeedMatchCardProps {
   onChange?: (matchId: string, homeScore: number, awayScore: number) => void;
   picks?: MatchPickRow[];
   myUserId?: string;
+  /** La Fija: this card is the viewer's banker for its matchday. */
+  isBanker?: boolean;
+  /** Called when the star is tapped (only rendered when provided and the game is open). */
+  onBanker?: (matchId: string) => void;
 }
 
 /**
@@ -28,7 +32,7 @@ interface FeedMatchCardProps {
  * close time). The contestant pick strip tucks underneath once started.
  */
 export function FeedMatchCard({
-  match, locale, live, editable, homeScore, awayScore, onChange, picks, myUserId,
+  match, locale, live, editable, homeScore, awayScore, onChange, picks, myUserId, isBanker = false, onBanker,
 }: FeedMatchCardProps) {
   const es = locale === 'es';
 
@@ -138,6 +142,7 @@ export function FeedMatchCard({
       <div className={cn(
         'rounded-2xl border px-3.5 py-3 transition-colors',
         phaseClass,
+        isBanker && 'ring-1 ring-amber-400/60 border-amber-400/50',
         match.isVoided && 'opacity-60'
       )}>
         {/* meta row */}
@@ -193,6 +198,32 @@ export function FeedMatchCard({
             <ScoreStepper value={homeScore} onChange={(v) => onChange?.(match.id, v, awayScore)} />
             <span className="text-xs text-muted-foreground">–</span>
             <ScoreStepper value={awayScore} onChange={(v) => onChange?.(match.id, homeScore, v)} />
+          </div>
+        )}
+
+        {/* La Fija: one game per matchday counts double */}
+        {match.stage === 'league' && (isBanker || (editable && onBanker)) && (
+          <div className="mt-2 flex justify-center">
+            {editable && onBanker ? (
+              <button
+                type="button"
+                onClick={() => onBanker(match.id)}
+                aria-pressed={isBanker}
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold transition-colors',
+                  isBanker
+                    ? 'border-amber-400/70 bg-amber-400/15 text-amber-300'
+                    : 'border-border/60 bg-card/60 text-muted-foreground hover:border-amber-400/50 hover:text-amber-300'
+                )}
+              >
+                <span aria-hidden>{isBanker ? '⭐' : '☆'}</span>
+                {isBanker ? (es ? 'Tu Fija · puntos x2' : 'Your banker · points x2') : (es ? 'Hacer mi Fija' : 'Make it my banker')}
+              </button>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/50 bg-amber-400/10 px-3 py-1 text-xs font-bold text-amber-300">
+                ⭐ {es ? 'Tu Fija · x2' : 'Your banker · x2'}
+              </span>
+            )}
           </div>
         )}
 

@@ -24,7 +24,7 @@ const soon = (h: number) => new Date(Date.now() + h * 3600_000).toISOString();
 const mk = (n: number, h: Team, a: Team, kick: string, pick: [number, number] | null, result?: [number, number]): MatchView => ({
   id: `m${n}`, matchNumber: n, stage: 'league', groupLabel: null, matchday: 1, leg: null, tieNumber: null,
   kickoffAt: kick, homeTeam: h, awayTeam: a, isVoided: false,
-  locked: !!result, myPrediction: pick ? { homeScore: pick[0], awayScore: pick[1] } : null,
+  locked: !!result, isBanker: n === 4, myPrediction: pick ? { homeScore: pick[0], awayScore: pick[1] } : null,
   result: result ? { homeScore: result[0], awayScore: result[1] } : null,
   pointsEarned: result && pick ? (pick[0] === result[0] && pick[1] === result[1] ? 6 : Math.sign(pick[0] - pick[1]) === Math.sign(result[0] - result[1]) ? 2 : 0) : null,
 });
@@ -55,6 +55,8 @@ export const MOCK_HUB: SeasonHub = {
   nextMatchday: {
     matchday: 1, label: 'Jornada 1', firstKickoff: soon(20), lastKickoff: soon(70), total: 18, saved: 10, open: 18, liveCount: 0,
     fixtures: MOCK_MATCHES.map(fx),
+    bankerMatchId: 'm4',
+    duel: { matchday: 1, opponentId: 'c', opponentName: 'JuanMan', myPoints: 0, theirPoints: 0, status: 'pending' },
   },
   honors: [{
     tournament: { id: 'wc', slug: 'wc-2026', kind: 'world_cup', nameEn: 'World Cup 2026', nameEs: 'Mundial 2026', status: 'archived', startsAt: null, endsAt: null, picksLockAt: null, bracketDeadline: null },

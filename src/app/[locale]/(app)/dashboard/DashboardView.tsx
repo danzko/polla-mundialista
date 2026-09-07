@@ -4,7 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
-import { Plus, UserPlus, Users, Trophy, ChevronRight, Lock, Clock } from 'lucide-react';
+import { Plus, UserPlus, Users, Trophy, ChevronRight, Lock, Clock, Swords } from 'lucide-react';
 import { TrophyMark } from '@/components/shared/brand';
 import { Flag } from '@/components/shared/Flag';
 import { SeasonPass } from '@/components/shared/SeasonPass';
@@ -135,8 +135,19 @@ export function DashboardView({ leagues, hub, userName, locale }: {
                   {next.saved}/{next.total}
                 </div>
               </header>
+              {next.duel && (
+                <div className="mx-4 mb-2.5 flex items-center justify-between gap-3 rounded-xl border border-border/50 bg-secondary/40 px-3 py-2 text-sm">
+                  <span className="inline-flex items-center gap-2 min-w-0">
+                    <Swords className="h-4 w-4 shrink-0 text-primary" />
+                    <span className="truncate"><span className="text-muted-foreground">{es ? 'Duelo:' : 'Duel:'}</span> <b>{es ? 'tú' : 'you'} vs {next.duel.opponentName}</b></span>
+                  </span>
+                  <span className={cn('shrink-0 text-xs font-bold tabular-nums', next.duel.status === 'win' ? 'text-emerald-400' : next.duel.status === 'loss' ? 'text-rose-400' : 'text-muted-foreground')}>
+                    {next.duel.status === 'pending' ? (es ? 'en juego' : 'live') : `${next.duel.myPoints}–${next.duel.theirPoints}`}
+                  </span>
+                </div>
+              )}
               <ul className="divide-y divide-border/50 border-t border-border/50">
-                {next.fixtures.slice(0, 6).map((f) => <FixtureRow key={f.id} f={f} es={es} fmtTime={fmtTime} shortName={shortName} />)}
+                {next.fixtures.slice(0, 6).map((f) => <FixtureRow key={f.id} f={f} es={es} fmtTime={fmtTime} shortName={shortName} banker={next.bankerMatchId === f.id} />)}
               </ul>
               <footer className="px-4 py-3">
                 {next.fixtures.length > 6 && (
@@ -246,13 +257,14 @@ export function DashboardView({ leagues, hub, userName, locale }: {
   );
 }
 
-function FixtureRow({ f, es, fmtTime, shortName }: {
-  f: NextFixture; es: boolean;
+function FixtureRow({ f, es, fmtTime, shortName, banker }: {
+  f: NextFixture; es: boolean; banker?: boolean;
   fmtTime: (iso: string) => string; shortName: (n: string) => string;
 }) {
   const nm = (s: NextFixture['home']) => shortName(es ? s.nameEs : s.nameEn);
   return (
-    <li className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 py-2.5">
+    <li className={cn('relative grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 py-2.5', banker && 'bg-amber-400/[0.06]')}>
+      {banker && <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-xs" title={es ? 'Tu Fija (x2)' : 'Your banker (x2)'} aria-label="banker">⭐</span>}
       <div className="flex min-w-0 items-center justify-end gap-2 text-sm font-semibold">
         <span className="truncate">{nm(f.home)}</span>
         <Flag code={f.home.code} emoji={f.home.flagEmoji} logoUrl={f.home.logoUrl} className="h-6 w-6 shrink-0 object-contain" />

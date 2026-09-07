@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { FeedMatchCard } from '@/components/predictions/FeedMatchCard';
 import { Button } from '@/components/ui/button';
-import { submitPredictions, getLiveScores, getMatchPicks } from '@/lib/api';
+import { submitPredictions, getLiveScores, getMatchPicks, setBanker } from '@/lib/api';
 import { LOCK_BEFORE_KICKOFF_MS, LEAGUE_STAGES } from '@/lib/tournament';
 import type { MatchView, Locale, MatchPickRow, LiveScoresPayload } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -241,6 +241,23 @@ export function MatchesFilterView({
     dayRefs.current.get(key)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
+  // La Fija: one banker per matchday, saved immediately (optimistic). The
+  // previous banker of that matchday is un-starred unless it already kicked off.
+  const handleBanker = async (matchId: string) => {
+    const target = matches.find(m => m.id === matchId);
+    if (!target || target.matchday == null) return;
+    const md = target.matchday;
+    const prev = matches;
+    setMatches(ms => ms.map(m => (m.matchday === md ? { ...m, isBanker: m.id === matchId } : m)));
+    const res = await setBanker({ matchId });
+    if (!res.ok) {
+      setMatches(prev);
+      setToast({ show: true, message: res.error, type: 'error', skippedCount: 0 });
+    } else {
+      setToast({ show: true, message: es ? '⭐ Fija guardada: ese partido cuenta doble.' : '⭐ Banker saved: that game counts double.', type: 'success', skippedCount: 0 });
+    }
+  };
+
   const handleScoreChange = (matchId: string, homeScore: number, awayScore: number) => {
     setEdits(prev => ({ ...prev, [matchId]: { homeScore, awayScore } }));
     setTouched(prev => (prev.has(matchId) ? prev : new Set(prev).add(matchId)));
@@ -427,6 +444,8 @@ export function MatchesFilterView({
                     onChange={handleScoreChange}
                     picks={picks[m.id]}
                     myUserId={myUserId}
+                    isBanker={m.isBanker}
+                    onBanker={handleBanker}
                   />
                 </div>
               ))}

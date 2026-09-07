@@ -12,7 +12,7 @@ import type {
   BracketView, BracketMatchView, BracketComparison, BracketPeer,
   UnifiedLeaderboardEntry, LeaderboardData,
   StatsData, TitleRaceRow, BootRaceRow, PickShare, Tournament,
-  SeasonHub, NextMatchday, HonorsEntry,
+  SeasonHub, NextMatchday, HonorsEntry, MatchdayBoard,
 } from "./types";
 import {
   displayNameSchema, emailSchema, leagueNameSchema,
@@ -20,6 +20,7 @@ import {
 } from "./validation";
 import { calculateMatchPoints } from "./scoring/calculate-points";
 import { LOCK_BEFORE_KICKOFF_MS, TOURNAMENT_COOKIE, LEAGUE_STAGES, finiteIso } from "./tournament";
+import { pairMembers, duelOutcome } from "./duels";
 
 // ==========================================
 // TOURNAMENTS
@@ -396,6 +397,13 @@ export async function getMatches(
 
       predictionsMap = new Map(preds?.map((p) => [p.match_id, p]) ?? []);
     }
+    // La Fija: the viewer's banker games (one per matchday).
+    let bankerIds = new Set<string>();
+    if (user) {
+      const { data: bk } = await supabase
+        .from("bankers").select("match_id").eq("user_id", user.id).eq("tournament_id", tournament.id);
+      bankerIds = new Set((bk ?? []).map((b) => b.match_id as string));
+    }
 
     const now = new Date();
 
@@ -449,6 +457,7 @@ export async function getMatches(
         awayTeam,
         isVoided: m.is_voided,
         locked,
+        isBanker: bankerIds.has(m.id),
         myPrediction,
         result,
         pointsEarned,
@@ -896,10 +905,25 @@ export async function getLeaderboard(leagueId?: string): Promise<LeaderboardData
     // Scores (members with no activity won't appear in the view → default 0s).
     const { data: scoreRows } = await supabase
       .from("leaderboard_view")
-      .select("user_id, total_points, group_score_points, ko_score_points, bracket_points, bonus_pick_points, knockout_points, exact_count, result_count, wrong_count, first_prediction_at")
+      .select("*") // tolerant of the view gaining columns (migration 0032) after deploy
       .eq("tournament_id", tournament.id)
       .in("user_id", memberIds);
     const scoreById = new Map((scoreRows ?? []).map((s) => [s.user_id as string, s]));
+
+    // Duel records across completed matchdays (derived pairings, no table).
+    const duelRec = new Map<string, { wins: number; losses: number; draws: number }>(memberIds.map((id) => [id, { wins: 0, losses: 0, draws: 0 }]));
+    const byMd = await matchdayPointsFor(supabase, tournament.id, memberIds);
+    for (const [md, round] of byMd) {
+      if (!round.complete) continue;
+      const pairing = pairMembers(selected.id, md, memberIds);
+      for (const id of memberIds) {
+        const opp = pairing.get(id);
+        if (!opp) continue;
+        const o = duelOutcome(round.points.get(id) ?? 0, round.points.get(opp) ?? 0, true);
+        const rec = duelRec.get(id)!;
+        if (o === "win") rec.wins++; else if (o === "loss") rec.losses++; else rec.draws++;
+      }
+    }
 
     // Each member's predicted champion (+ team info for the flag).
     const { data: bonusRows } = await supabase
@@ -986,6 +1010,11 @@ export async function getLeaderboard(leagueId?: string): Promise<LeaderboardData
         wrongCount: (s?.wrong_count as number) ?? 0,
         bracketCorrect: bracketCorrectBy.get(uid) ?? 0,
         bracketAlive: bracketAliveBy.get(uid) ?? 0,
+        bankerPoints: (s?.banker_points as number) ?? 0,
+        jornadaWins: (s?.jornada_wins as number) ?? 0,
+        top8Points: (s?.top8_points as number) ?? 0,
+        exactStreak: (s?.exact_streak as number) ?? 0,
+        duelRecord: duelRec.get(uid) ?? { wins: 0, losses: 0, draws: 0 },
         movement: null,
         championTeamId,
         championCode: (team?.code as string) ?? null,
@@ -1330,6 +1359,7 @@ export async function getBonuses(): Promise<BonusView> {
         semifinalists: [],
         topScorerNames: [],
         bestPlayerNames: [],
+        top8TeamIds: [],
         locked,
         lockAt,
       };
@@ -1350,12 +1380,16 @@ export async function getBonuses(): Promise<BonusView> {
       locked = false;
     }
 
-    const { data: pred, error } = await supabase
-      .from("bonus_predictions")
-      .select("*")
-      .eq("user_id", user.id)
-      .eq("tournament_id", tournament.id)
-      .maybeSingle();
+    const [{ data: pred, error }, { data: t8 }] = await Promise.all([
+      supabase
+        .from("bonus_predictions")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("tournament_id", tournament.id)
+        .maybeSingle(),
+      supabase.from("top8_picks").select("team_ids").eq("user_id", user.id).eq("tournament_id", tournament.id).maybeSingle(),
+    ]);
+    const top8TeamIds = ((t8?.team_ids as string[] | null) ?? []);
 
     if (error || !pred) {
       return {
@@ -1365,11 +1399,11 @@ export async function getBonuses(): Promise<BonusView> {
         semifinalists: [],
         topScorerNames: [],
         bestPlayerNames: [],
+        top8TeamIds,
         locked,
         lockAt,
       };
     }
-
     return {
       championTeamId: pred.champion_team_id,
       runnerUpTeamId: pred.runner_up_team_id,
@@ -1377,6 +1411,7 @@ export async function getBonuses(): Promise<BonusView> {
       semifinalists: (pred.semifinalists as string[]) || [],
       topScorerNames: (pred.top_scorer_names as string[]) || [],
       bestPlayerNames: (pred.best_player_names as string[]) || [],
+      top8TeamIds,
       locked,
       lockAt,
     };
@@ -1389,6 +1424,7 @@ export async function getBonuses(): Promise<BonusView> {
       semifinalists: [],
       topScorerNames: [],
       bestPlayerNames: [],
+      top8TeamIds: [],
       locked,
       lockAt,
     };
@@ -1793,7 +1829,7 @@ export async function submitPrediction(
 }
 
 export async function submitBonuses(
-  input: Omit<BonusView, "locked" | "lockAt">
+  input: Omit<BonusView, "locked" | "lockAt" | "top8TeamIds">
 ): Promise<ActionResult> {
   const validation = bonusPredictionsSchema.safeParse(input);
   if (!validation.success) {
@@ -1998,6 +2034,134 @@ export async function kickMember(
 }
 
 // ==========================================
+// SEASON MECHANICS: La Fija · Top 8 · Jornada board · Duelos
+// ==========================================
+
+/** Set (or move) the viewer's banker for the matchday that game belongs to. RLS keeps it to open games. */
+export async function setBanker(input: { matchId: string }): Promise<ActionResult> {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { ok: false, error: "No autenticado / Not authenticated" };
+    const { data: m } = await supabase
+      .from("matches").select("id, tournament_id, matchday, kickoff_at, is_voided").eq("id", input.matchId).maybeSingle();
+    if (!m || m.matchday == null) return { ok: false, error: "Partido no válido / Invalid game" };
+    if (m.is_voided || Date.now() >= new Date(m.kickoff_at).getTime() - LOCK_BEFORE_KICKOFF_MS) {
+      return { ok: false, error: "Ese partido ya cerró / That game is locked" };
+    }
+    const { error } = await supabase.from("bankers").upsert(
+      { user_id: user.id, tournament_id: m.tournament_id, matchday: m.matchday, match_id: m.id, updated_at: new Date().toISOString() },
+      { onConflict: "user_id,tournament_id,matchday" }
+    );
+    if (error) {
+      const locked = error.message.toLowerCase().includes("policy");
+      return { ok: false, error: locked ? "Tu Fija actual ya empezó, no se puede mover / Your current banker already kicked off" : error.message };
+    }
+    return { ok: true, data: undefined };
+  } catch (err: any) {
+    return { ok: false, error: err.message || "Error" };
+  }
+}
+
+/** Save the Top 8 call (exactly 8 distinct clubs of the current tournament). Locks with the season picks. */
+export async function submitTop8(input: { teamIds: string[] }): Promise<ActionResult> {
+  try {
+    const ids = Array.from(new Set(input.teamIds.filter((s) => typeof s === "string")));
+    if (ids.length !== 8) return { ok: false, error: "Elige exactamente 8 equipos / Pick exactly 8 clubs" };
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { ok: false, error: "No autenticado / Not authenticated" };
+    const tournament = await getCurrentTournament();
+    const picksLockMs = tournament.picksLockAt ? new Date(tournament.picksLockAt).getTime() : Infinity;
+    if (Date.now() >= picksLockMs) return { ok: false, error: "Los picks ya están bloqueados / Picks are locked" };
+    const { count } = await supabase.from("teams").select("id", { count: "exact", head: true })
+      .eq("tournament_id", tournament.id).in("id", ids);
+    if (count !== 8) return { ok: false, error: "Equipos no válidos / Invalid clubs" };
+    const { error } = await supabase.from("top8_picks").upsert(
+      { user_id: user.id, tournament_id: tournament.id, team_ids: ids, updated_at: new Date().toISOString() },
+      { onConflict: "user_id,tournament_id" }
+    );
+    if (error) return { ok: false, error: error.message.toLowerCase().includes("policy") ? "Los picks ya están bloqueados / Picks are locked" : error.message };
+    return { ok: true, data: undefined };
+  } catch (err: any) {
+    return { ok: false, error: err.message || "Error" };
+  }
+}
+
+/** Per-matchday points for a set of users: matchday -> (userId -> points), plus completeness. */
+async function matchdayPointsFor(supabase: any, tournamentId: string, userIds: string[]) {
+  const { data } = await supabase
+    .from("matchday_points").select("user_id, matchday, points, complete")
+    .eq("tournament_id", tournamentId).in("user_id", userIds);
+  const byMd = new Map<number, { complete: boolean; points: Map<string, number> }>();
+  for (const r of data ?? []) {
+    const e = byMd.get(r.matchday) ?? { complete: !!r.complete, points: new Map() };
+    e.complete = !!r.complete;
+    e.points.set(r.user_id, r.points);
+    byMd.set(r.matchday, e);
+  }
+  return byMd;
+}
+
+/**
+ * Weekly board: everyone in the league ranked by that matchday's points, the
+ * jornada winner(s) once the round is complete, and each member's duel.
+ */
+export async function getMatchdayBoard(leagueId?: string, matchday?: number): Promise<MatchdayBoard | null> {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+    const tournament = await getCurrentTournament();
+
+    const { data: myMemberships } = await supabase.from("league_members").select("league_id").eq("user_id", user.id);
+    const myLeagueIds = (myMemberships ?? []).map((r) => r.league_id);
+    if (myLeagueIds.length === 0) return null;
+    const { data: leagueRows } = await supabase
+      .from("leagues").select("id, name").in("id", myLeagueIds).order("name", { ascending: true });
+    const league = (leagueRows ?? []).find((l) => l.id === leagueId) ?? leagueRows?.[0];
+    if (!league) return null;
+
+    const { data: memberRows } = await supabase.from("league_members").select("user_id").eq("league_id", league.id);
+    const memberIds = Array.from(new Set((memberRows ?? []).map((r) => r.user_id as string)));
+    const { data: userRows } = await supabase.from("users").select("id, display_name").in("id", memberIds);
+    const nameById = new Map<string, string>((userRows ?? []).map((u: any) => [u.id, u.display_name]));
+
+    // Rounds that have started (any game kicked off).
+    const { data: started } = await supabase
+      .from("matches").select("matchday").eq("tournament_id", tournament.id)
+      .not("matchday", "is", null).lte("kickoff_at", new Date().toISOString());
+    const matchdays = Array.from(new Set((started ?? []).map((m: any) => m.matchday as number))).sort((a, b) => a - b);
+    if (matchdays.length === 0) return { leagueId: league.id, leagueName: league.name, matchday: 1, matchdays: [], complete: false, entries: [] };
+    const md = matchday && matchdays.includes(matchday) ? matchday : matchdays[matchdays.length - 1];
+
+    const byMd = await matchdayPointsFor(supabase, tournament.id, memberIds);
+    const round = byMd.get(md) ?? { complete: false, points: new Map<string, number>() };
+    const pairing = pairMembers(league.id, md, memberIds);
+    const pts = (id: string) => round.points.get(id) ?? 0;
+    const max = Math.max(0, ...memberIds.map(pts));
+
+    const entries = memberIds
+      .map((id) => {
+        const opp = pairing.get(id) ?? null;
+        return {
+          rank: 0, userId: id, displayName: nameById.get(id) ?? "—", points: pts(id), isMe: id === user.id,
+          isWinner: round.complete && pts(id) === max && max > 0,
+          opponentId: opp, opponentName: opp ? nameById.get(opp) ?? "—" : null,
+          duel: opp ? duelOutcome(pts(id), pts(opp), round.complete) : ("bye" as const),
+        };
+      })
+      .sort((a, b) => b.points - a.points || a.displayName.localeCompare(b.displayName));
+    entries.forEach((e, i) => { e.rank = i + 1; });
+
+    return { leagueId: league.id, leagueName: league.name, matchday: md, matchdays, complete: round.complete, entries };
+  } catch (err) {
+    console.error("Error in getMatchdayBoard:", err);
+    return null;
+  }
+}
+
+// ==========================================
 // SEASON HUB + HALL OF FAME
 // ==========================================
 
@@ -2106,10 +2270,35 @@ export async function getSeasonHub(locale: Locale = "es"): Promise<SeasonHub | n
         const key = (m: any) => (m.matchday != null ? `md:${m.matchday}` : `st:${m.stage}`);
         const round = (ms ?? []).filter((m: any) => key(m) === key(cur));
         const ids = round.map((m: any) => m.id as string);
-        const [{ data: preds }, { data: live }] = await Promise.all([
+        const [{ data: preds }, { data: live }, { data: bk }] = await Promise.all([
           supabase.from("predictions").select("match_id, home_score, away_score").eq("user_id", user.id).in("match_id", ids),
           supabase.from("live_scores").select("match_id, status").in("match_id", ids),
+          supabase.from("bankers").select("match_id").eq("user_id", user.id).in("match_id", ids).maybeSingle(),
         ]);
+        // Duel for this round, in the viewer's first league.
+        let duel: NextMatchday["duel"] = null;
+        if (cur.matchday != null) {
+          const { data: mem } = await supabase.from("league_members").select("league_id").eq("user_id", user.id);
+          const lids = (mem ?? []).map((r: any) => r.league_id as string);
+          if (lids.length > 0) {
+            const { data: lg } = await supabase.from("leagues").select("id").in("id", lids).order("name", { ascending: true }).limit(1);
+            const leagueId = lg?.[0]?.id as string | undefined;
+            if (leagueId) {
+              const { data: members } = await supabase.from("league_members").select("user_id").eq("league_id", leagueId);
+              const memberIds = Array.from(new Set((members ?? []).map((r: any) => r.user_id as string)));
+              const opp = pairMembers(leagueId, cur.matchday, memberIds).get(user.id) ?? null;
+              if (opp) {
+                const [{ data: oppUser }, byMd] = await Promise.all([
+                  supabase.from("users").select("display_name").eq("id", opp).maybeSingle(),
+                  matchdayPointsFor(supabase, tournament.id, [user.id, opp]),
+                ]);
+                const r = byMd.get(cur.matchday);
+                const mine = r?.points.get(user.id) ?? 0, theirs = r?.points.get(opp) ?? 0;
+                duel = { matchday: cur.matchday, opponentId: opp, opponentName: oppUser?.display_name ?? "—", myPoints: mine, theirPoints: theirs, status: duelOutcome(mine, theirs, !!r?.complete) };
+              }
+            }
+          }
+        }
         const pickBy = new Map<string, { h: number; a: number }>((preds ?? []).map((p: any) => [p.match_id, { h: p.home_score, a: p.away_score }]));
         const side = (t: any) => {
           const r = Array.isArray(t) ? t[0] : t;
@@ -2136,6 +2325,8 @@ export async function getSeasonHub(locale: Locale = "es"): Promise<SeasonHub | n
           open: round.filter((m: any) => nowMs < new Date(m.kickoff_at).getTime() - LOCK_BEFORE_KICKOFF_MS).length,
           liveCount: (live ?? []).filter((l: any) => l.status === "in").length,
           fixtures,
+          bankerMatchId: (bk?.match_id as string | undefined) ?? null,
+          duel,
         };
       }
     }

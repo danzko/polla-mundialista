@@ -8,7 +8,8 @@ import { TrophyMark } from '@/components/shared/brand';
 import { Flag } from '@/components/shared/Flag';
 import { cn } from '@/lib/utils';
 import { StatsSections } from './StatsSections';
-import type { LeaderboardData, UnifiedLeaderboardEntry, Locale, StatsData } from '@/lib/types';
+import { MatchdayBoardView } from './MatchdayBoardView';
+import type { LeaderboardData, UnifiedLeaderboardEntry, Locale, StatsData, MatchdayBoard } from '@/lib/types';
 
 const MEDAL = ['🥇', '🥈', '🥉'];
 
@@ -49,11 +50,12 @@ function ChampionFlag({ e }: { e: UnifiedLeaderboardEntry }) {
   );
 }
 
-export function LeaderboardScreen({ data, locale, embedded = false, stats, kind }: { data: LeaderboardData; locale: Locale; embedded?: boolean; stats?: StatsData | null; kind?: 'world_cup' | 'ucl' }) {
+export function LeaderboardScreen({ data, locale, embedded = false, stats, kind, board, initialTab }: { data: LeaderboardData; locale: Locale; embedded?: boolean; stats?: StatsData | null; kind?: 'world_cup' | 'ucl'; board?: MatchdayBoard | null; initialTab?: 'standings' | 'jornada' | 'stats' }) {
   const es = locale === 'es';
   const router = useRouter();
   const [openId, setOpenId] = React.useState<string | null>(null);
-  const [tab, setTab] = React.useState<'standings' | 'stats'>('standings');
+  const [tab, setTab] = React.useState<'standings' | 'jornada' | 'stats'>(initialTab ?? 'standings');
+  const tabs = (['standings', ...(board !== undefined ? ['jornada'] : []), 'stats'] as const) as ReadonlyArray<'standings' | 'jornada' | 'stats'>;
   const me = data.entries.find((x) => x.isMe) ?? null;
   const showStats = !embedded && !!stats;
   // The KO-stage tiebreak only matters when two players share the same total —
@@ -113,14 +115,14 @@ export function LeaderboardScreen({ data, locale, embedded = false, stats, kind 
       {/* STANDINGS | STATS toggle (standalone screen only) */}
       {showStats && (
         <div className="mb-3 flex rounded-lg border border-border/40 bg-card/50 p-0.5 text-xs font-bold">
-          {(['standings', 'stats'] as const).map((tk) => (
+          {tabs.map((tk) => (
             <button
               key={tk}
               type="button"
               onClick={() => setTab(tk)}
               className={cn('flex-1 rounded-md py-1.5 transition-colors', tab === tk ? 'bg-primary text-primary-foreground' : 'text-muted-foreground')}
             >
-              {tk === 'standings' ? (es ? 'Tabla' : 'Standings') : (es ? 'Estadísticas' : 'Stats')}
+              {tk === 'standings' ? (es ? 'Temporada' : 'Season') : tk === 'jornada' ? (es ? 'Jornada' : 'Matchday') : (es ? 'Estadísticas' : 'Stats')}
             </button>
           ))}
         </div>
@@ -128,6 +130,8 @@ export function LeaderboardScreen({ data, locale, embedded = false, stats, kind 
 
       {tab === 'stats' && stats ? (
         <StatsSections data={stats} locale={locale} kind={kind} />
+      ) : tab === 'jornada' ? (
+        <MatchdayBoardView board={board ?? null} locale={locale} />
       ) : (
       <>
       {/* quick self-locator */}
@@ -182,6 +186,12 @@ export function LeaderboardScreen({ data, locale, embedded = false, stats, kind 
                       <span className="shrink-0 text-sm select-none" title={es ? 'Farolillo rojo' : 'Bringing up the rear'} aria-hidden>💩</span>
                     )}
                     <Movement m={e.movement} />
+                    {e.exactStreak >= 3 && (
+                      <span className="shrink-0 text-xs" title={es ? `Racha: ${e.exactStreak} exactos seguidos` : `Streak: ${e.exactStreak} exact in a row`} aria-label="streak">🔥{e.exactStreak}</span>
+                    )}
+                    {e.jornadaWins > 0 && (
+                      <span className="shrink-0 text-xs" title={es ? `${e.jornadaWins} jornadas ganadas` : `${e.jornadaWins} matchdays won`} aria-label="matchday wins">👑{e.jornadaWins > 1 ? e.jornadaWins : ''}</span>
+                    )}
                   </span>
                   {/* desktop numeric columns */}
                   <span className="hidden md:block text-right text-xs tabular-nums text-muted-foreground">{matches}</span>
@@ -230,6 +240,17 @@ export function LeaderboardScreen({ data, locale, embedded = false, stats, kind 
                       )}
                     </p>
                   </div>
+
+                  {/* ── SEASON MECHANICS ── */}
+                  {(e.bankerPoints > 0 || e.jornadaWins > 0 || e.top8Points > 0 || e.exactStreak > 0 || e.duelRecord.wins + e.duelRecord.losses + e.duelRecord.draws > 0) && (
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-1 pl-5 text-[12px] text-muted-foreground">
+                      <span>⭐ {es ? 'La Fija' : 'Banker'} <b className="text-foreground tabular-nums">+{e.bankerPoints}</b></span>
+                      <span>👑 {es ? 'Jornadas' : 'Matchdays'} <b className="text-foreground tabular-nums">{e.jornadaWins}</b> <span className="text-[11px]">(+{e.jornadaWins * 5})</span></span>
+                      <span>🎯 Top 8 <b className="text-foreground tabular-nums">+{e.top8Points}</b></span>
+                      <span>⚔️ {es ? 'Duelos' : 'Duels'} <b className="text-foreground tabular-nums">{e.duelRecord.wins}-{e.duelRecord.losses}{e.duelRecord.draws ? `-${e.duelRecord.draws}` : ''}</b></span>
+                      {e.exactStreak > 0 && <span>🔥 {es ? 'Racha' : 'Streak'} <b className="text-foreground tabular-nums">{e.exactStreak}</b> {es ? 'exactos' : 'exact'}</span>}
+                    </div>
+                  )}
 
                   {/* ── BONUS picks ── */}
                   <SectionHead
