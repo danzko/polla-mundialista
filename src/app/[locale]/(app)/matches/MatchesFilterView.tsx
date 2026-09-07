@@ -254,7 +254,7 @@ export function MatchesFilterView({
       setMatches(prev);
       setToast({ show: true, message: res.error, type: 'error', skippedCount: 0 });
     } else {
-      setToast({ show: true, message: es ? '⭐ Fija guardada: ese partido cuenta doble.' : '⭐ Banker saved: that game counts double.', type: 'success', skippedCount: 0 });
+      setToast({ show: true, message: es ? '⭐ La Fija™️ guardada: ese partido cuenta doble.' : '⭐ La Fija™️ saved: that game counts double.', type: 'success', skippedCount: 0 });
     }
   };
 

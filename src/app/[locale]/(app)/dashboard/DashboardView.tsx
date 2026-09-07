@@ -264,7 +264,7 @@ function FixtureRow({ f, es, fmtTime, shortName, banker }: {
   const nm = (s: NextFixture['home']) => shortName(es ? s.nameEs : s.nameEn);
   return (
     <li className={cn('relative grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 py-2.5', banker && 'bg-amber-400/[0.06]')}>
-      {banker && <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-xs" title={es ? 'Tu Fija (x2)' : 'Your banker (x2)'} aria-label="banker">⭐</span>}
+      {banker && <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-xs" title="La Fija™️ (x2)" aria-label="banker">⭐</span>}
       <div className="flex min-w-0 items-center justify-end gap-2 text-sm font-semibold">
         <span className="truncate">{nm(f.home)}</span>
         <Flag code={f.home.code} emoji={f.home.flagEmoji} logoUrl={f.home.logoUrl} className="h-6 w-6 shrink-0 object-contain" />

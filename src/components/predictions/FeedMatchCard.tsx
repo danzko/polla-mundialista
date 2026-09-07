@@ -217,11 +217,11 @@ export function FeedMatchCard({
                 )}
               >
                 <span aria-hidden>{isBanker ? '⭐' : '☆'}</span>
-                {isBanker ? (es ? 'Tu Fija · puntos x2' : 'Your banker · points x2') : (es ? 'Hacer mi Fija' : 'Make it my banker')}
+                {isBanker ? (es ? 'La Fija™️ · puntos x2' : 'La Fija™️ · points x2') : (es ? 'Escoger La Fija™️' : 'Pick La Fija™️')}
               </button>
             ) : (
               <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/50 bg-amber-400/10 px-3 py-1 text-xs font-bold text-amber-300">
-                ⭐ {es ? 'Tu Fija · x2' : 'Your banker · x2'}
+                ⭐ {es ? 'La Fija™️ · x2' : 'La Fija™️ · x2'}
               </span>
             )}
           </div>
