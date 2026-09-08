@@ -120,43 +120,10 @@ export function BonusPicksForm({ initialBonuses, teams, locale, kind = 'world_cu
   return (
     <div className="space-y-6">
 
-      {/* TOP 8 CALL — league phase only */}
-      {ucl && (
-        <Card className="glass-card rounded-2xl border-border/75 shadow-xl">
-          <CardHeader className="pb-3 border-b border-border/40 select-none">
-            <CardTitle className="text-lg font-extrabold flex items-center gap-2">
-              <Target className="h-5 w-5 text-primary" aria-hidden />{es ? "Top 8 de la fase de liga" : "League-phase Top 8"}
-            </CardTitle>
-            <CardDescription className="text-xs">
-              {es
-                ? 'Los 8 clubes que terminan entre los 8 primeros (pasan directo a octavos). +5 por cada acierto, +20 si aciertas los ocho. Se cierra con los demás picks.'
-                : 'The 8 clubs that finish in the top 8 (straight to the round of 16). +5 per correct club, +20 for all eight. Locks with the other picks.'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-4 sm:p-6">
-            {top8Error && (
-              <div className="mb-3 rounded-xl bg-destructive/10 border border-destructive/30 p-3 text-xs font-semibold text-destructive text-center">⚠️ {top8Error}</div>
-            )}
-            <Top8Picker teams={teams} value={top8} onChange={setTop8} locale={locale} disabled={locked} />
-          </CardContent>
-          {!locked && (
-            <CardFooter className="flex items-center justify-between gap-3 border-t border-border/40 bg-slate-950/20 py-3.5">
-              <span className="text-xs font-semibold">
-                {top8Status === 'saving' && <span className="text-primary animate-pulse">{t('common.saving')}</span>}
-                {top8Status === 'saved' && <span className="text-emerald-400 inline-flex items-center gap-1"><Check className="h-4 w-4" />{t('common.saved')}</span>}
-              </span>
-              <Button type="button" onClick={saveTop8} disabled={top8.length !== 8 || top8Status === 'saving'} className="rounded-xl font-bold h-11 px-6">
-                {es ? 'Guardar Top 8' : 'Save Top 8'}
-              </Button>
-            </CardFooter>
-          )}
-        </Card>
-      )}
-
       {/* COUNTDOWN BANNER */}
-      <div className="glass-card p-6 rounded-2xl border border-border/60 flex flex-col items-center text-center space-y-4 shadow-md">
+      <div className="rounded-xl border border-border/60 bg-card px-4 py-3 space-y-1.5">
         <CountdownToLock lockAt={initialBonuses.lockAt} onLockChange={handleLockChange} />
-        <p className="text-xs text-muted-foreground max-w-sm leading-relaxed font-light">
+        <p className="text-xs text-muted-foreground leading-relaxed">
           {locked
             ? (es
                 ? 'Tus picks están bloqueados. El campeón puntúa solo si gana todo; el goleador y el mejor jugador se definen al terminar el torneo.'
@@ -167,7 +134,7 @@ export function BonusPicksForm({ initialBonuses, teams, locale, kind = 'world_cu
 
       {/* FORM CONTAINER */}
       <form onSubmit={handleSubmit(onSubmit)}>
-        <Card className="glass-card rounded-2xl border-border/75 shadow-xl">
+        <Card className="glass-card rounded-2xl border-border/75 shadow-sm">
           <CardHeader className="pb-4 border-b border-border/40 select-none">
             <CardTitle className="text-xl font-extrabold flex items-center gap-2">
               <TrophyMark className="h-5 w-5" />
@@ -185,7 +152,7 @@ export function BonusPicksForm({ initialBonuses, teams, locale, kind = 'world_cu
 
             {/* THE THREE TOURNAMENT PICKS: champion 50 + top scorer 25 + best player 25 */}
             <div className="space-y-2 md:max-w-md">
-              <label className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5 select-none">
+              <label className="text-sm font-semibold text-amber-300 flex items-center gap-1.5 select-none">
 <TrophyMark className="h-4 w-4 shrink-0" /> {t('bonuses.champion')}
                 {locked && (
                   <LockedPill kind={initialBonuses.championTeamId ? (championAlive ? 'alive' : 'out') : 'nopick'} es={es} />
@@ -213,7 +180,7 @@ export function BonusPicksForm({ initialBonuses, teams, locale, kind = 'world_cu
               <div className="space-y-2">
                 <label
                   htmlFor="topScorerNames-0"
-                  className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 select-none"
+                  className="text-sm font-semibold text-foreground flex items-center gap-1.5 select-none"
                 >
                   <Award className="h-4 w-4 text-amber-500" />
                   {topScorerLabel}
@@ -244,7 +211,7 @@ export function BonusPicksForm({ initialBonuses, teams, locale, kind = 'world_cu
               <div className="space-y-2">
                 <label
                   htmlFor="bestPlayerNames-0"
-                  className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 select-none"
+                  className="text-sm font-semibold text-foreground flex items-center gap-1.5 select-none"
                 >
                   <Star className="h-4 w-4 text-emerald-500" />
                   {bestPlayerLabel}
@@ -276,7 +243,7 @@ export function BonusPicksForm({ initialBonuses, teams, locale, kind = 'world_cu
           </CardContent>
 
           {/* FOOTER ACTIONS */}
-          <CardFooter className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-border/40 bg-slate-950/20 py-4 select-none">
+          <CardFooter className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-border/40 py-4 select-none">
             
             {/* Status alerts */}
             <div className="min-h-[20px] text-xs font-semibold">
@@ -309,6 +276,38 @@ export function BonusPicksForm({ initialBonuses, teams, locale, kind = 'world_cu
           </CardFooter>
         </Card>
       </form>
+      {/* TOP 8 CALL — league phase only */}
+      {ucl && (
+        <Card className="glass-card rounded-2xl border-border/75 shadow-sm">
+          <CardHeader className="pb-3 border-b border-border/40 select-none">
+            <CardTitle className="text-lg font-extrabold flex items-center gap-2">
+              <Target className="h-5 w-5 text-primary" aria-hidden />{es ? "Top 8 de la fase de liga" : "League-phase Top 8"}
+            </CardTitle>
+            <CardDescription className="text-xs">
+              {es
+                ? 'Los 8 clubes que terminan entre los 8 primeros (pasan directo a octavos). +5 por cada acierto, +20 si aciertas los ocho. Se cierra con los demás picks.'
+                : 'The 8 clubs that finish in the top 8 (straight to the round of 16). +5 per correct club, +20 for all eight. Locks with the other picks.'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 sm:p-6">
+            {top8Error && (
+              <div className="mb-3 rounded-xl bg-destructive/10 border border-destructive/30 p-3 text-xs font-semibold text-destructive text-center">⚠️ {top8Error}</div>
+            )}
+            <Top8Picker teams={teams} value={top8} onChange={setTop8} locale={locale} disabled={locked} />
+          </CardContent>
+          {!locked && (
+            <CardFooter className="flex items-center justify-between gap-3 border-t border-border/40 py-3.5">
+              <span className="text-xs font-semibold">
+                {top8Status === 'saving' && <span className="text-primary animate-pulse">{t('common.saving')}</span>}
+                {top8Status === 'saved' && <span className="text-emerald-400 inline-flex items-center gap-1"><Check className="h-4 w-4" />{t('common.saved')}</span>}
+              </span>
+              <Button type="button" onClick={saveTop8} disabled={top8.length !== 8 || top8Status === 'saving'} className="rounded-xl font-bold h-11 px-6">
+                {es ? 'Guardar Top 8' : 'Save Top 8'}
+              </Button>
+            </CardFooter>
+          )}
+        </Card>
+      )}
     </div>
   );
 }

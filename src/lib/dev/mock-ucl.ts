@@ -79,3 +79,67 @@ export const MOCK_LEAGUES: LeagueSummary[] = [{
     { userId: 'b', displayName: 'Danny', points: 38, rank: 4, isMe: true },
   ],
 }];
+
+// ---- Tabla + Bonos ----
+import type { LeaderboardData, StatsData, MatchdayBoard, BonusView, UnifiedLeaderboardEntry } from '@/lib/types';
+
+const entry = (userId: string, displayName: string, total: number, o: Partial<UnifiedLeaderboardEntry> = {}): UnifiedLeaderboardEntry => ({
+  userId, displayName, isMe: userId === 'b', rank: 0, total,
+  groupScore: Math.round(total * 0.7), koScore: 0, bracket: 0, bonus: Math.round(total * 0.3), koTiebreak: 0,
+  exactCount: Math.round(total / 10), resultCount: Math.round(total / 6), wrongCount: 4,
+  bracketCorrect: 0, bracketAlive: 0,
+  bankerPoints: 6, jornadaWins: 0, top8Points: 0, exactStreak: 0, duelRecord: { wins: 1, losses: 0, draws: 0 },
+  movement: 0, championTeamId: 't-RMA', championCode: 'RMA', championNameEs: 'Real Madrid', championNameEn: 'Real Madrid',
+  championFlagEmoji: '', championLogoUrl: crest(86), championEliminated: false, ...o,
+});
+const LB_ENTRIES = [
+  entry('a', 'PollArmando', 52, { jornadaWins: 1, exactStreak: 3, movement: 1, bankerPoints: 12 }),
+  entry('c', 'JuanMan', 47, { movement: -1, championCode: 'BAR', championLogoUrl: crest(83) }),
+  entry('d', 'Tania', 44, { exactStreak: 1, championCode: 'MNC', championLogoUrl: crest(382) }),
+  entry('b', 'Danny', 38, { movement: 2, duelRecord: { wins: 0, losses: 1, draws: 0 } }),
+  entry('e', 'Espitia', 31, { championCode: 'PSG', championLogoUrl: crest(160) }),
+  entry('f', 'Macías', 27, { movement: -2 }),
+  entry('g', 'Emmanuel', 20, { championCode: 'LIV', championLogoUrl: crest(364) }),
+].map((e, i) => ({ ...e, rank: i + 1 }));
+
+export const MOCK_LEADERBOARD: LeaderboardData = {
+  myUserId: 'b', leagues: [{ id: 'l1', name: 'CSC Champions League' }], leagueId: 'l1', leagueName: 'CSC Champions League', entries: LB_ENTRIES,
+};
+
+export const MOCK_STATS: StatsData = {
+  leagues: [{ id: 'l1', name: 'CSC Champions League' }], leagueId: 'l1', leagueName: 'CSC Champions League', memberCount: 13, snapshotLoaded: false,
+  titleRace: [
+    { teamCode: 'RMA', teamName: 'Real Madrid', flagEmoji: null, logoUrl: crest(86), eliminated: false, vegasOdds: null, vegasImpliedPct: null, leagueCount: 5, leaguePct: 38, pickedBy: ['PollArmando', 'Danny', 'Tania', 'Macías', 'Emmanuel'] },
+    { teamCode: 'BAR', teamName: 'Barcelona', flagEmoji: null, logoUrl: crest(83), eliminated: false, vegasOdds: null, vegasImpliedPct: null, leagueCount: 3, leaguePct: 23, pickedBy: ['JuanMan', 'Espitia', 'Nico H'] },
+    { teamCode: 'MNC', teamName: 'Manchester City', flagEmoji: null, logoUrl: crest(382), eliminated: false, vegasOdds: null, vegasImpliedPct: null, leagueCount: 2, leaguePct: 15, pickedBy: ['NicoGanGol', 'Tania'] },
+  ],
+  goldenBoot: [
+    { rank: null, playerName: 'Kylian Mbappé', teamCode: null, flagEmoji: null, goals: null, photoUrl: null, leagueCount: 6, leaguePct: 46, pickedBy: ['PollArmando', 'Danny', 'JuanMan', 'Tania', 'Espitia', 'Emmanuel'] },
+    { rank: null, playerName: 'Erling Haaland', teamCode: null, flagEmoji: null, goals: null, photoUrl: null, leagueCount: 4, leaguePct: 31, pickedBy: ['Macías', 'Nico H', 'NicoGanGol', 'Andrés'] },
+  ],
+  goldenBall: [
+    { label: 'Lamine Yamal', count: 5, pct: 38, pickedBy: ['JuanMan', 'Tania', 'Espitia', 'Nico H', 'Andrés'] },
+    { label: 'Jude Bellingham', count: 3, pct: 23, pickedBy: ['PollArmando', 'Danny', 'Emmanuel'] },
+  ],
+};
+
+export const MOCK_BOARD: MatchdayBoard = {
+  leagueId: 'l1', leagueName: 'CSC Champions League', matchday: 1, matchdays: [1], complete: false,
+  entries: LB_ENTRIES.map((e, i) => ({
+    rank: i + 1, userId: e.userId, displayName: e.displayName, points: [14, 12, 12, 8, 6, 6, 2][i], isMe: e.isMe, isWinner: false,
+    opponentId: i % 2 === 0 ? LB_ENTRIES[i + 1]?.userId ?? null : LB_ENTRIES[i - 1].userId,
+    opponentName: i % 2 === 0 ? LB_ENTRIES[i + 1]?.displayName ?? null : LB_ENTRIES[i - 1].displayName,
+    duel: i === 6 ? 'bye' : 'pending',
+  })),
+};
+
+export const MOCK_BONUS: BonusView = {
+  championTeamId: 't-RMA', runnerUpTeamId: null, thirdPlaceTeamId: null, semifinalists: [],
+  topScorerNames: ['Kylian Mbappé'], bestPlayerNames: [], top8TeamIds: ['t-RMA', 't-BAR', 't-MNC', 't-PSG', 't-LIV'],
+  locked: false, lockAt: at('2026-10-20T16:45:00Z'),
+};
+export const MOCK_TEAMS = Object.values(CLUBS);
+export const MOCK_PLAYERS = [
+  { n: 'Kylian Mbappé', t: 'Real Madrid' }, { n: 'Jude Bellingham', t: 'Real Madrid' }, { n: 'Lamine Yamal', t: 'Barcelona' },
+  { n: 'Erling Haaland', t: 'Manchester City' }, { n: 'Harry Kane', t: 'Bayern Munich' }, { n: 'Mohamed Salah', t: 'Liverpool' },
+];

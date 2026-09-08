@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { Clock, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -21,6 +21,8 @@ interface TimeRemaining {
 
 export function CountdownToLock({ lockAt, onLockChange, className }: CountdownToLockProps) {
   const t = useTranslations();
+  const locale = useLocale();
+  const pad = (num: number) => String(num).padStart(2, '0');
 
   const calculateTimeRemaining = React.useCallback((): TimeRemaining => {
     const difference = new Date(lockAt).getTime() - new Date().getTime();
@@ -74,50 +76,20 @@ export function CountdownToLock({ lockAt, onLockChange, className }: CountdownTo
     );
   }
 
-  // Formatting utility to pad numbers
-  const pad = (num: number) => String(num).padStart(2, '0');
-
+  // One calm line: "Cierran en 42 d 13 h · mar 20 oct, 12:45 p.m. ET". No box-per-digit.
+  const when = new Date(lockAt).toLocaleString(locale === 'es' ? 'es-CO' : 'en-US', {
+    timeZone: 'America/New_York', weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit',
+  }).replace(/\bde\b/g, '').replace(/\s+/g, ' ').trim();
+  const rel = time.days > 0
+    ? `${time.days} d ${time.hours} h`
+    : time.hours > 0 ? `${time.hours} h ${pad(time.minutes)} min` : `${time.minutes} min ${pad(time.seconds)} s`;
   return (
-    <div className={cn("inline-flex flex-col items-center gap-1.5", className)}>
-      <div className="text-[11px] font-extrabold text-muted-foreground uppercase tracking-widest flex items-center gap-1 select-none">
-        <Clock className="h-3 w-3" />
-        {t('bonuses.lockWarning')}
-      </div>
-
-      <div className="flex items-center gap-1.5 text-center select-none font-mono">
-        {/* Days */}
-        {time.days > 0 && (
-          <>
-            <div className="flex flex-col items-center bg-slate-900/80 border border-border/80 rounded-lg px-2.5 py-1 min-w-[36px]">
-              <span className="text-sm font-extrabold text-foreground">{pad(time.days)}</span>
-              <span className="text-[8px] font-bold text-muted-foreground uppercase tracking-wider">
-                {time.days === 1 ? 'd' : 'd'}
-              </span>
-            </div>
-            <span className="text-muted-foreground font-extrabold pb-4">:</span>
-          </>
-        )}
-
-        {/* Hours */}
-        <div className="flex flex-col items-center bg-slate-900/80 border border-border/80 rounded-lg px-2.5 py-1 min-w-[36px]">
-          <span className="text-sm font-extrabold text-foreground">{pad(time.hours)}</span>
-          <span className="text-[8px] font-bold text-muted-foreground uppercase tracking-wider">h</span>
-        </div>
-        <span className="text-muted-foreground font-extrabold pb-4">:</span>
-
-        {/* Minutes */}
-        <div className="flex flex-col items-center bg-slate-900/80 border border-border/80 rounded-lg px-2.5 py-1 min-w-[36px]">
-          <span className="text-sm font-extrabold text-foreground">{pad(time.minutes)}</span>
-          <span className="text-[8px] font-bold text-muted-foreground uppercase tracking-wider">m</span>
-        </div>
-        <span className="text-muted-foreground font-extrabold pb-4">:</span>
-
-        {/* Seconds */}
-        <div className="flex flex-col items-center bg-slate-900/80 border border-border/80 rounded-lg px-2.5 py-1 min-w-[36px]">
-          <span className="text-sm font-extrabold text-primary">{pad(time.seconds)}</span>
-          <span className="text-[8px] font-bold text-muted-foreground uppercase tracking-wider">s</span>
-        </div>
-      </div>
+    <div className={cn('flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm', className)}>
+      <span className="inline-flex items-center gap-1.5 font-semibold text-foreground">
+        <Clock className="h-4 w-4 text-primary" aria-hidden />
+        {t('bonuses.lockWarning')} <span className="tabular-nums text-primary">{rel}</span>
+      </span>
+      <span className="text-xs text-muted-foreground">· {when} ET</span>
     </div>
   );
 }

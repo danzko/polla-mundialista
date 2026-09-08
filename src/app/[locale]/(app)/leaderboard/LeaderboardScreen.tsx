@@ -69,7 +69,7 @@ export function LeaderboardScreen({ data, locale, embedded = false, stats, kind,
 
   if (data.leagues.length === 0) {
     return (
-      <div className="rounded-2xl border border-border/40 bg-card/50 p-8 text-center">
+      <div className="rounded-2xl border border-border/40 bg-card p-8 text-center">
         <TrophyMark className="h-8 w-8 mx-auto mb-2" />
         <p className="text-sm font-bold">{es ? 'Aún no estás en una liga' : "You're not in a league yet"}</p>
         <Link href={`/${locale}/dashboard`} className="mt-2 inline-block text-xs font-semibold text-primary">
@@ -114,7 +114,7 @@ export function LeaderboardScreen({ data, locale, embedded = false, stats, kind,
 
       {/* STANDINGS | STATS toggle (standalone screen only) */}
       {showStats && (
-        <div className="mb-3 flex rounded-lg border border-border/40 bg-card/50 p-0.5 text-xs font-bold">
+        <div className="mb-3 flex rounded-lg border border-border/40 bg-card p-0.5 text-xs font-bold">
           {tabs.map((tk) => (
             <button
               key={tk}
@@ -143,7 +143,7 @@ export function LeaderboardScreen({ data, locale, embedded = false, stats, kind,
       )}
 
       {/* desktop column header */}
-      <div className="hidden md:grid grid-cols-[2.5rem_1fr_4rem_4rem_4rem_4.5rem] gap-2 px-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">
+      <div className="hidden md:grid grid-cols-[2.5rem_1fr_4rem_4rem_4rem_4.5rem] gap-2 px-3 pb-1 text-[11px] font-semibold text-muted-foreground">
         <span>#</span><span>{es ? 'Jugador' : 'Player'}</span>
         <span className="text-right">{es ? 'Partidos' : 'Matches'}</span>
         <span className="text-right">{es ? 'Llave' : 'Bracket'}</span>
@@ -162,14 +162,14 @@ export function LeaderboardScreen({ data, locale, embedded = false, stats, kind,
             <div
               key={e.userId}
               className={cn(
-                'rounded-xl border bg-card/50 overflow-hidden',
+                'rounded-xl border bg-card overflow-hidden',
                 e.isMe ? 'border-primary/50 ring-1 ring-primary/30' : 'border-border/45'
               )}
             >
               <button
                 type="button"
                 onClick={() => setOpenId(open ? null : e.userId)}
-                className="w-full px-3 py-1.5 text-left"
+                className="w-full px-3 py-2.5 text-left"
               >
                 {/* line 1 */}
                 <div className="md:grid md:grid-cols-[2.5rem_1fr_4rem_4rem_4rem_4.5rem] md:gap-2 md:items-center flex items-center gap-2">
@@ -219,12 +219,12 @@ export function LeaderboardScreen({ data, locale, embedded = false, stats, kind,
                         label={es ? 'Fallados' : 'Missed'} count={e.wrongCount} mult={0} muted />
                     </div>
                     <p className="mt-0.5 pl-5 text-[11px] text-muted-foreground">
-                      {es ? 'Grupos' : 'Group'} {e.groupScore} · {es ? 'Eliminatorias' : 'KO'} {e.koScore}
+                      {kind === 'ucl' ? (es ? 'Fase de liga' : 'League phase') : (es ? 'Grupos' : 'Group')} {e.groupScore} · {es ? 'Eliminatorias' : 'KO'} {e.koScore}
                     </p>
                   </div>
 
-                  {/* ── BRACKET: advancement points + how many spots are right ── */}
-                  <div>
+                  {/* ── BRACKET: advancement points + how many spots are right (hidden until the bracket exists) ── */}
+                  {(kind !== 'ucl' || e.bracket > 0 || e.bracketAlive > 0) && (<div>
                     <SectionHead
                       icon={<GitBranch className="h-3.5 w-3.5 text-sky-400" />}
                       label={es ? 'Llave (avance)' : 'Bracket'}
@@ -236,7 +236,7 @@ export function LeaderboardScreen({ data, locale, embedded = false, stats, kind,
                         <> · <span className="font-semibold text-sky-300">{e.bracketAlive}</span> {es ? 'aún vivos' : 'still alive'}</>
                       )}
                     </p>
-                  </div>
+                  </div>)}
 
                   {/* ── SEASON MECHANICS ── */}
                   {(e.bankerPoints > 0 || e.jornadaWins > 0 || e.top8Points > 0 || e.exactStreak > 0 || e.duelRecord.wins + e.duelRecord.losses + e.duelRecord.draws > 0) && (
@@ -269,13 +269,13 @@ export function LeaderboardScreen({ data, locale, embedded = false, stats, kind,
                     </span>
                   </div>
 
-                  <Link
+                  {(kind !== 'ucl' || e.bracket > 0 || e.bracketAlive > 0) && (<Link
                     href={`/${locale}/bracket?peer=${e.userId}`}
                     className="mt-1 flex items-center justify-center gap-1.5 rounded-lg border border-border/50 bg-secondary/40 py-2 text-xs font-bold text-primary"
                   >
                     <GitBranch className="h-3.5 w-3.5" />
                     {es ? `Ver la llave de ${e.displayName}` : `View ${e.displayName}'s bracket`} →
-                  </Link>
+                  </Link>)}
                 </div>
               )}
             </div>
@@ -293,7 +293,7 @@ export function LeaderboardScreen({ data, locale, embedded = false, stats, kind,
 function SectionHead({ icon, label, accent, value }: { icon: React.ReactNode; label: string; accent: string; value: number }) {
   return (
     <div className="flex items-center justify-between gap-2">
-      <span className="flex items-center gap-1.5 min-w-0 font-bold uppercase tracking-wide text-xs">
+      <span className="flex items-center gap-1.5 min-w-0 font-semibold text-xs">
         {icon}
         <span className="truncate">{label}</span>
       </span>

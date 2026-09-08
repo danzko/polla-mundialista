@@ -17,7 +17,7 @@ export function MatchdayBoardView({ board, locale }: { board: MatchdayBoard | nu
 
   if (!board || board.matchdays.length === 0) {
     return (
-      <div className="rounded-2xl border border-border/50 bg-card/50 p-8 text-center text-sm text-muted-foreground">
+      <div className="rounded-2xl border border-border/50 bg-card p-8 text-center text-sm text-muted-foreground">
         {es ? 'La jornada aparece aquí cuando arranque el primer partido.' : 'The matchday board appears once the first game kicks off.'}
       </div>
     );
@@ -36,7 +36,7 @@ export function MatchdayBoardView({ board, locale }: { board: MatchdayBoard | nu
             key={md}
             type="button"
             onClick={() => router.push(`/${locale}/leaderboard?league=${board.leagueId}&md=${md}&tab=jornada`, { scroll: false })}
-            className={cn('shrink-0 min-h-9 rounded-full border px-3.5 py-1.5 text-xs font-bold', md === board.matchday ? 'border-primary bg-primary text-primary-foreground' : 'border-border/50 bg-card/60 text-muted-foreground')}
+            className={cn('shrink-0 min-h-9 rounded-full border px-3.5 py-1.5 text-xs font-bold', md === board.matchday ? 'border-primary bg-primary text-primary-foreground' : 'border-border/50 bg-card text-muted-foreground')}
           >
             J{md}
           </button>
@@ -51,18 +51,18 @@ export function MatchdayBoardView({ board, locale }: { board: MatchdayBoard | nu
         <div className={cn('flex items-center justify-between gap-3 rounded-2xl border px-4 py-3',
           me.duel === 'win' ? 'border-emerald-500/40 bg-emerald-500/[0.08]' : me.duel === 'loss' ? 'border-rose-500/40 bg-rose-500/[0.06]' : 'border-primary/40 bg-primary/[0.06]')}>
           <div className="min-w-0">
-            <div className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground inline-flex items-center gap-1.5"><Swords className="h-3.5 w-3.5" />{es ? 'Tu duelo' : 'Your duel'} · J{board.matchday}</div>
+            <div className="text-xs font-semibold text-muted-foreground inline-flex items-center gap-1.5"><Swords className="h-3.5 w-3.5" />{es ? 'Tu duelo' : 'Your duel'} · J{board.matchday}</div>
             <div className="truncate text-base font-bold">{es ? 'Tú' : 'You'} <span className="text-muted-foreground font-medium">vs</span> {me.opponentName}</div>
           </div>
           <div className="shrink-0 text-right">
             <div className="text-xl font-extrabold tabular-nums">{me.points} <span className="text-muted-foreground">–</span> {board.entries.find((e) => e.userId === me.opponentId)?.points ?? 0}</div>
-            <div className={cn('text-[11px] font-bold uppercase tracking-wider', me.duel === 'win' ? 'text-emerald-400' : me.duel === 'loss' ? 'text-rose-400' : 'text-muted-foreground')}>{duelWord(me.duel)}</div>
+            <div className={cn('text-xs font-bold', me.duel === 'win' ? 'text-emerald-400' : me.duel === 'loss' ? 'text-rose-400' : 'text-muted-foreground')}>{duelWord(me.duel)}</div>
           </div>
         </div>
       )}
 
       {/* board */}
-      <ol className="overflow-hidden rounded-2xl border border-border/50 bg-card/50">
+      <ol className="overflow-hidden rounded-2xl border border-border/50 bg-card">
         {board.entries.map((e) => (
           <li key={e.userId} className={cn('flex items-center gap-3 border-t border-border/30 px-3.5 py-2.5 first:border-t-0 text-sm', e.isMe && 'bg-primary/[0.07]')}>
             <span className={cn('w-6 text-center text-xs font-extrabold tabular-nums', e.rank === 1 ? 'text-amber-300' : 'text-muted-foreground')}>{e.rank}</span>

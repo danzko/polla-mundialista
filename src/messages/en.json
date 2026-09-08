@@ -145,7 +145,7 @@
   },
   "bonuses": {
     "title": "Tournament Predictions",
-    "description": "These picks lock when the tournament starts. Make sure to save them before then!",
+    "description": "These picks lock at the date above. Make sure to save them before then!",
     "champion": "Champion (50 pts)",
     "runnerUp": "Runner-Up",
     "thirdPlace": "3rd Place (20 pts)",
@@ -161,7 +161,7 @@
     "ball1": "🥈 Silver Ball (2nd Best Player) — 10 pts",
     "ball2": "🥉 Bronze Ball (3rd Best Player) — 5 pts",
     "playerPlaceholder": "Player name",
-    "lockWarning": "Predictions lock in:",
+    "lockWarning": "Lock in",
     "locked": "Tournament predictions are locked.",
     "saveBtn": "Save Tournament Picks",
     "emptyTeamOption": "Select a team...",

@@ -45,7 +45,7 @@ export function StatsSections({ data, locale, kind = 'world_cup' }: { data: Stat
   const ballTitle = ucl ? (es ? 'Jugador de la temporada' : 'Player of the Season') : (es ? 'Balón de Oro' : 'Golden Ball');
 
   if (data.memberCount === 0) {
-    return <div className="rounded-xl border border-border/40 bg-card/50 p-6 text-center text-sm text-muted-foreground">{es ? 'Sin datos todavía' : 'No data yet'}</div>;
+    return <div className="rounded-xl border border-border/40 bg-card p-6 text-center text-sm text-muted-foreground">{es ? 'Sin datos todavía' : 'No data yet'}</div>;
   }
 
   return (
@@ -56,7 +56,7 @@ export function StatsSections({ data, locale, kind = 'world_cup' }: { data: Stat
       <div className="space-y-1.5">
         {data.titleRace.length === 0 && <Empty es={es} />}
         {data.titleRace.map((r) => (
-          <div key={r.teamCode} className="rounded-xl border border-border/45 bg-card/50 px-3 py-2.5">
+          <div key={r.teamCode} className="rounded-xl border border-border/45 bg-card px-3 py-2.5">
             <div className="flex items-center gap-2">
               {(r.flagEmoji || r.logoUrl) && <span className={cn(r.eliminated && 'opacity-40 grayscale')}><Flag code={r.teamCode} emoji={r.flagEmoji ?? ''} logoUrl={r.logoUrl} className="inline-block h-4 w-auto rounded-[2px] shadow-sm" /></span>}
               <span className={cn('flex-1 truncate text-sm font-bold', r.eliminated && 'line-through text-muted-foreground')}>{r.teamName}</span>
@@ -79,7 +79,7 @@ export function StatsSections({ data, locale, kind = 'world_cup' }: { data: Stat
       <div className="space-y-1.5">
         {data.goldenBoot.length === 0 && <Empty es={es} />}
         {data.goldenBoot.map((b, i) => (
-          <div key={`${b.playerName}-${i}`} className="rounded-xl border border-border/45 bg-card/50 px-3 py-2.5">
+          <div key={`${b.playerName}-${i}`} className="rounded-xl border border-border/45 bg-card px-3 py-2.5">
             <div className="flex items-center gap-2.5">
               {b.photoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -113,7 +113,7 @@ export function StatsSections({ data, locale, kind = 'world_cup' }: { data: Stat
       <div className="space-y-1.5">
         {data.goldenBall.length === 0 && <Empty es={es} />}
         {data.goldenBall.map((p, i) => (
-          <div key={`${p.label}-${i}`} className="rounded-xl border border-border/45 bg-card/50 px-3 py-2.5">
+          <div key={`${p.label}-${i}`} className="rounded-xl border border-border/45 bg-card px-3 py-2.5">
             <div className="flex items-center gap-2">
               <span className="flex-1 truncate text-sm font-bold">{p.label}</span>
               <span className="shrink-0 text-xs font-extrabold tabular-nums text-primary">{p.pct}%</span>
@@ -134,5 +134,5 @@ export function StatsSections({ data, locale, kind = 'world_cup' }: { data: Stat
 }
 
 function Empty({ es }: { es: boolean }) {
-  return <div className="rounded-xl border border-border/30 bg-card/40 px-3 py-4 text-center text-xs text-muted-foreground">{es ? 'Nadie ha elegido todavía' : 'No picks yet'}</div>;
+  return <div className="rounded-xl border border-border/30 bg-card px-3 py-4 text-center text-xs text-muted-foreground">{es ? 'Nadie ha elegido todavía' : 'No picks yet'}</div>;
 }

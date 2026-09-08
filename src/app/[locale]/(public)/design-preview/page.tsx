@@ -3,7 +3,9 @@ import { notFound } from 'next/navigation';
 import { AppShell } from '@/components/shared/AppShell';
 import { DashboardView } from '@/app/[locale]/(app)/dashboard/DashboardView';
 import { MatchesFilterView } from '@/app/[locale]/(app)/matches/MatchesFilterView';
-import { MOCK_HUB, MOCK_LEAGUES, MOCK_MATCHES } from '@/lib/dev/mock-ucl';
+import { MOCK_HUB, MOCK_LEAGUES, MOCK_MATCHES, MOCK_LEADERBOARD, MOCK_STATS, MOCK_BOARD, MOCK_BONUS, MOCK_TEAMS, MOCK_PLAYERS } from '@/lib/dev/mock-ucl';
+import { LeaderboardScreen } from '@/app/[locale]/(app)/leaderboard/LeaderboardScreen';
+import { BonusPicksForm } from '@/app/[locale]/(app)/bonuses/BonusPicksForm';
 import type { Locale } from '@/lib/types';
 
 /**
@@ -15,17 +17,21 @@ export const dynamic = 'force-dynamic';
 
 export default async function DesignPreview({ params, searchParams }: {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ screen?: string }>;
+  searchParams: Promise<{ screen?: string; tab?: string }>;
 }) {
   if (process.env.NODE_ENV !== 'development') notFound();
   const { locale } = await params;
-  const { screen = 'home' } = await searchParams;
+  const { screen = 'home', tab } = await searchParams;
   const user = { id: 'b', displayName: 'Danny', preferredLanguage: locale as Locale, isSuperadmin: true, onboarded: true, nameChangeUsed: false };
 
   return (
     <AppShell user={user} theme="ucl">
       {screen === 'matches' ? (
         <MatchesFilterView initialMatches={MOCK_MATCHES} locale={locale as Locale} myUserId="b" />
+      ) : screen === 'tabla' ? (
+        <LeaderboardScreen data={MOCK_LEADERBOARD} locale={locale as Locale} stats={MOCK_STATS} kind="ucl" board={MOCK_BOARD} initialTab={(tab as any) ?? 'standings'} />
+      ) : screen === 'bonos' ? (
+        <BonusPicksForm initialBonuses={MOCK_BONUS} teams={MOCK_TEAMS} locale={locale as Locale} kind="ucl" players={MOCK_PLAYERS} />
       ) : (
         <DashboardView leagues={MOCK_LEAGUES} hub={MOCK_HUB} userName="Danny" locale={locale as Locale} />
       )}

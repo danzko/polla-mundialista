@@ -145,7 +145,7 @@
   },
   "bonuses": {
     "title": "Pronósticos del Torneo",
-    "description": "Estos pronósticos se bloquean cuando empieza el torneo. ¡Asegúrate de guardarlos antes!",
+    "description": "Estos picks se cierran en la fecha de arriba. ¡Guárdalos antes!",
     "champion": "Campeón (50 pts)",
     "runnerUp": "Subcampeón",
     "thirdPlace": "Tercer Puesto (20 pts)",
@@ -161,7 +161,7 @@
     "ball1": "🥈 Balón de Plata (2º Mejor Jugador) — 10 pts",
     "ball2": "🥉 Balón de Bronce (3er Mejor Jugador) — 5 pts",
     "playerPlaceholder": "Nombre del jugador",
-    "lockWarning": "Predicciones cierran en:",
+    "lockWarning": "Cierran en",
     "locked": "Pronósticos del torneo cerrados.",
     "saveBtn": "Guardar Pronósticos Especiales",
     "emptyTeamOption": "Seleccionar un equipo...",
