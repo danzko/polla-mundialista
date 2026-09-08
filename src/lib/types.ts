@@ -155,7 +155,6 @@ export interface UnifiedLeaderboardEntry {
   jornadaWins: number;    // matchdays won (+5 each, already in total)
   top8Points: number;     // Top 8 call points (already in total)
   exactStreak: number;    // consecutive exact scores, most recent first
-  duelRecord: { wins: number; losses: number; draws: number };
   // rank change since the start of the most recent result day (+ = climbed,
   // - = dropped, 0 = held, null = no prior snapshot to compare)
   movement: number | null;
@@ -182,16 +181,6 @@ export interface NextMatchday {
   liveCount: number;
   fixtures: NextFixture[];    // the round's games in kickoff order (for the slip)
   bankerMatchId: string | null; // the viewer's La Fija for this round
-  duel: Duel | null;          // this round's head-to-head (first league)
-}
-/** One matchday's head-to-head pairing for the viewer. */
-export interface Duel {
-  matchday: number;
-  opponentId: string;
-  opponentName: string;
-  myPoints: number;
-  theirPoints: number;
-  status: 'pending' | 'win' | 'loss' | 'draw';
 }
 /** Weekly board for one league + matchday. */
 export interface MatchdayBoard {
@@ -203,8 +192,6 @@ export interface MatchdayBoard {
   entries: {
     rank: number; userId: string; displayName: string; points: number; isMe: boolean;
     isWinner: boolean;        // top of a COMPLETE matchday (+5)
-    opponentId: string | null; opponentName: string | null;
-    duel: 'pending' | 'win' | 'loss' | 'draw' | 'bye';
   }[];
 }
 export interface NextFixture {

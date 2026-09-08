@@ -4,7 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
-import { Plus, UserPlus, Users, Trophy, ChevronRight, Lock, Clock, Swords, Star } from "lucide-react";
+import { Plus, UserPlus, Users, Trophy, ChevronRight, Lock, Clock, Star } from "lucide-react";
 import { RankBadge } from "@/components/shared/RankBadge";
 import { TrophyMark } from '@/components/shared/brand';
 import { Flag } from '@/components/shared/Flag';
@@ -134,17 +134,6 @@ export function DashboardView({ leagues, hub, userName, locale }: {
                   {next.saved}/{next.total}
                 </div>
               </header>
-              {next.duel && (
-                <div className="flex items-center justify-between gap-3 border-t border-border/50 px-4 py-2.5 text-sm">
-                  <span className="inline-flex items-center gap-2 min-w-0">
-                    <Swords className="h-4 w-4 shrink-0 text-primary" />
-                    <span className="truncate"><span className="text-muted-foreground">{es ? 'Duelo:' : 'Duel:'}</span> <b>{es ? 'tú' : 'you'} vs {next.duel.opponentName}</b></span>
-                  </span>
-                  <span className={cn('shrink-0 text-xs font-bold tabular-nums', next.duel.status === 'win' ? 'text-emerald-400' : next.duel.status === 'loss' ? 'text-rose-400' : 'text-muted-foreground')}>
-                    {next.duel.status === 'pending' ? (es ? 'en juego' : 'live') : `${next.duel.myPoints}–${next.duel.theirPoints}`}
-                  </span>
-                </div>
-              )}
               <ul className="divide-y divide-border/50 border-t border-border/50">
                 {next.fixtures.slice(0, 6).map((f) => <FixtureRow key={f.id} f={f} es={es} fmtTime={fmtTime} shortName={shortName} banker={next.bankerMatchId === f.id} />)}
               </ul>

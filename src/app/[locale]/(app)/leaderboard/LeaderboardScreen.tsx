@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { GitBranch, Star, ChevronDown, Goal, Check, Minus, X, Flame, Crown, Target, Swords } from "lucide-react";
+import { GitBranch, Star, ChevronDown, Goal, Check, Minus, X, Flame, Crown, Target } from "lucide-react";
 import { RankBadge } from "@/components/shared/RankBadge";
 import { TrophyMark } from '@/components/shared/brand';
 import { Flag } from '@/components/shared/Flag';
@@ -239,12 +239,11 @@ export function LeaderboardScreen({ data, locale, embedded = false, stats, kind,
                   </div>)}
 
                   {/* ── SEASON MECHANICS ── */}
-                  {(e.bankerPoints > 0 || e.jornadaWins > 0 || e.top8Points > 0 || e.exactStreak > 0 || e.duelRecord.wins + e.duelRecord.losses + e.duelRecord.draws > 0) && (
+                  {(e.bankerPoints > 0 || e.jornadaWins > 0 || e.top8Points > 0 || e.exactStreak > 0) && (
                     <div className="grid grid-cols-2 gap-x-3 gap-y-1 pl-5 text-[12px] text-muted-foreground">
                       <span className="inline-flex items-center gap-1.5"><Star className="h-3.5 w-3.5 text-amber-300" />{es ? "La Fija" : "Banker"} <b className="text-foreground tabular-nums">+{e.bankerPoints}</b></span>
                       <span className="inline-flex items-center gap-1.5"><Crown className="h-3.5 w-3.5 text-amber-300" />{es ? "Jornadas" : "Matchdays"} <b className="text-foreground tabular-nums">{e.jornadaWins}</b> <span className="text-[11px]">(+{e.jornadaWins * 5})</span></span>
                       <span className="inline-flex items-center gap-1.5"><Target className="h-3.5 w-3.5 text-primary" />Top 8 <b className="text-foreground tabular-nums">+{e.top8Points}</b></span>
-                      <span className="inline-flex items-center gap-1.5"><Swords className="h-3.5 w-3.5 text-emerald-400" />{es ? "Duelos" : "Duels"} <b className="text-foreground tabular-nums">{e.duelRecord.wins}-{e.duelRecord.losses}{e.duelRecord.draws ? `-${e.duelRecord.draws}` : ''}</b></span>
                       {e.exactStreak > 0 && <span className="inline-flex items-center gap-1.5"><Flame className="h-3.5 w-3.5 text-orange-400" />{es ? "Racha" : "Streak"} <b className="text-foreground tabular-nums">{e.exactStreak}</b> {es ? 'exactos' : 'exact'}</span>}
                     </div>
                   )}

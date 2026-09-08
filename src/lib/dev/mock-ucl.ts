@@ -56,7 +56,6 @@ export const MOCK_HUB: SeasonHub = {
     matchday: 1, label: 'Jornada 1', firstKickoff: soon(20), lastKickoff: soon(70), total: 18, saved: 10, open: 18, liveCount: 0,
     fixtures: MOCK_MATCHES.map(fx),
     bankerMatchId: 'm4',
-    duel: { matchday: 1, opponentId: 'c', opponentName: 'JuanMan', myPoints: 0, theirPoints: 0, status: 'pending' },
   },
   honors: [{
     tournament: { id: 'wc', slug: 'wc-2026', kind: 'world_cup', nameEn: 'World Cup 2026', nameEs: 'Mundial 2026', status: 'archived', startsAt: null, endsAt: null, picksLockAt: null, bracketDeadline: null },
@@ -88,7 +87,7 @@ const entry = (userId: string, displayName: string, total: number, o: Partial<Un
   groupScore: Math.round(total * 0.7), koScore: 0, bracket: 0, bonus: Math.round(total * 0.3), koTiebreak: 0,
   exactCount: Math.round(total / 10), resultCount: Math.round(total / 6), wrongCount: 4,
   bracketCorrect: 0, bracketAlive: 0,
-  bankerPoints: 6, jornadaWins: 0, top8Points: 0, exactStreak: 0, duelRecord: { wins: 1, losses: 0, draws: 0 },
+  bankerPoints: 6, jornadaWins: 0, top8Points: 0, exactStreak: 0,
   movement: 0, championTeamId: 't-RMA', championCode: 'RMA', championNameEs: 'Real Madrid', championNameEn: 'Real Madrid',
   championFlagEmoji: '', championLogoUrl: crest(86), championEliminated: false, ...o,
 });
@@ -96,7 +95,7 @@ const LB_ENTRIES = [
   entry('a', 'PollArmando', 52, { jornadaWins: 1, exactStreak: 3, movement: 1, bankerPoints: 12 }),
   entry('c', 'JuanMan', 47, { movement: -1, championCode: 'BAR', championLogoUrl: crest(83) }),
   entry('d', 'Tania', 44, { exactStreak: 1, championCode: 'MNC', championLogoUrl: crest(382) }),
-  entry('b', 'Danny', 38, { movement: 2, duelRecord: { wins: 0, losses: 1, draws: 0 } }),
+  entry('b', 'Danny', 38, { movement: 2 }),
   entry('e', 'Espitia', 31, { championCode: 'PSG', championLogoUrl: crest(160) }),
   entry('f', 'Macías', 27, { movement: -2 }),
   entry('g', 'Emmanuel', 20, { championCode: 'LIV', championLogoUrl: crest(364) }),
@@ -127,9 +126,6 @@ export const MOCK_BOARD: MatchdayBoard = {
   leagueId: 'l1', leagueName: 'CSC Champions League', matchday: 1, matchdays: [1], complete: false,
   entries: LB_ENTRIES.map((e, i) => ({
     rank: i + 1, userId: e.userId, displayName: e.displayName, points: [14, 12, 12, 8, 6, 6, 2][i], isMe: e.isMe, isWinner: false,
-    opponentId: i % 2 === 0 ? LB_ENTRIES[i + 1]?.userId ?? null : LB_ENTRIES[i - 1].userId,
-    opponentName: i % 2 === 0 ? LB_ENTRIES[i + 1]?.displayName ?? null : LB_ENTRIES[i - 1].displayName,
-    duel: i === 6 ? 'bye' : 'pending',
   })),
 };
 

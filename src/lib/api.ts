@@ -20,7 +20,6 @@ import {
 } from "./validation";
 import { calculateMatchPoints } from "./scoring/calculate-points";
 import { LOCK_BEFORE_KICKOFF_MS, TOURNAMENT_COOKIE, LEAGUE_STAGES, finiteIso } from "./tournament";
-import { pairMembers, duelOutcome } from "./duels";
 
 // ==========================================
 // TOURNAMENTS
@@ -910,21 +909,6 @@ export async function getLeaderboard(leagueId?: string): Promise<LeaderboardData
       .in("user_id", memberIds);
     const scoreById = new Map((scoreRows ?? []).map((s) => [s.user_id as string, s]));
 
-    // Duel records across completed matchdays (derived pairings, no table).
-    const duelRec = new Map<string, { wins: number; losses: number; draws: number }>(memberIds.map((id) => [id, { wins: 0, losses: 0, draws: 0 }]));
-    const byMd = await matchdayPointsFor(supabase, tournament.id, memberIds);
-    for (const [md, round] of byMd) {
-      if (!round.complete) continue;
-      const pairing = pairMembers(selected.id, md, memberIds);
-      for (const id of memberIds) {
-        const opp = pairing.get(id);
-        if (!opp) continue;
-        const o = duelOutcome(round.points.get(id) ?? 0, round.points.get(opp) ?? 0, true);
-        const rec = duelRec.get(id)!;
-        if (o === "win") rec.wins++; else if (o === "loss") rec.losses++; else rec.draws++;
-      }
-    }
-
     // Each member's predicted champion (+ team info for the flag).
     const { data: bonusRows } = await supabase
       .from("bonus_predictions").select("user_id, champion_team_id")
@@ -1014,7 +998,6 @@ export async function getLeaderboard(leagueId?: string): Promise<LeaderboardData
         jornadaWins: (s?.jornada_wins as number) ?? 0,
         top8Points: (s?.top8_points as number) ?? 0,
         exactStreak: (s?.exact_streak as number) ?? 0,
-        duelRecord: duelRec.get(uid) ?? { wins: 0, losses: 0, draws: 0 },
         movement: null,
         championTeamId,
         championCode: (team?.code as string) ?? null,
@@ -2034,7 +2017,7 @@ export async function kickMember(
 }
 
 // ==========================================
-// SEASON MECHANICS: La Fija · Top 8 · Jornada board · Duelos
+// SEASON MECHANICS: La Fija · Top 8 · Jornada board
 // ==========================================
 
 /** Set (or move) the viewer's banker for the matchday that game belongs to. RLS keeps it to open games. */
@@ -2104,8 +2087,8 @@ async function matchdayPointsFor(supabase: any, tournamentId: string, userIds: s
 }
 
 /**
- * Weekly board: everyone in the league ranked by that matchday's points, the
- * jornada winner(s) once the round is complete, and each member's duel.
+ * Weekly board: everyone in the league ranked by that matchday's points and
+ * the jornada winner(s) once the round is complete.
  */
 export async function getMatchdayBoard(leagueId?: string, matchday?: number): Promise<MatchdayBoard | null> {
   try {
@@ -2137,20 +2120,14 @@ export async function getMatchdayBoard(leagueId?: string, matchday?: number): Pr
 
     const byMd = await matchdayPointsFor(supabase, tournament.id, memberIds);
     const round = byMd.get(md) ?? { complete: false, points: new Map<string, number>() };
-    const pairing = pairMembers(league.id, md, memberIds);
     const pts = (id: string) => round.points.get(id) ?? 0;
     const max = Math.max(0, ...memberIds.map(pts));
 
     const entries = memberIds
-      .map((id) => {
-        const opp = pairing.get(id) ?? null;
-        return {
-          rank: 0, userId: id, displayName: nameById.get(id) ?? "—", points: pts(id), isMe: id === user.id,
-          isWinner: round.complete && pts(id) === max && max > 0,
-          opponentId: opp, opponentName: opp ? nameById.get(opp) ?? "—" : null,
-          duel: opp ? duelOutcome(pts(id), pts(opp), round.complete) : ("bye" as const),
-        };
-      })
+      .map((id) => ({
+        rank: 0, userId: id, displayName: nameById.get(id) ?? "—", points: pts(id), isMe: id === user.id,
+        isWinner: round.complete && pts(id) === max && max > 0,
+      }))
       .sort((a, b) => b.points - a.points || a.displayName.localeCompare(b.displayName));
     entries.forEach((e, i) => { e.rank = i + 1; });
 
@@ -2275,30 +2252,6 @@ export async function getSeasonHub(locale: Locale = "es"): Promise<SeasonHub | n
           supabase.from("live_scores").select("match_id, status").in("match_id", ids),
           supabase.from("bankers").select("match_id").eq("user_id", user.id).in("match_id", ids).maybeSingle(),
         ]);
-        // Duel for this round, in the viewer's first league.
-        let duel: NextMatchday["duel"] = null;
-        if (cur.matchday != null) {
-          const { data: mem } = await supabase.from("league_members").select("league_id").eq("user_id", user.id);
-          const lids = (mem ?? []).map((r: any) => r.league_id as string);
-          if (lids.length > 0) {
-            const { data: lg } = await supabase.from("leagues").select("id").in("id", lids).order("name", { ascending: true }).limit(1);
-            const leagueId = lg?.[0]?.id as string | undefined;
-            if (leagueId) {
-              const { data: members } = await supabase.from("league_members").select("user_id").eq("league_id", leagueId);
-              const memberIds = Array.from(new Set((members ?? []).map((r: any) => r.user_id as string)));
-              const opp = pairMembers(leagueId, cur.matchday, memberIds).get(user.id) ?? null;
-              if (opp) {
-                const [{ data: oppUser }, byMd] = await Promise.all([
-                  supabase.from("users").select("display_name").eq("id", opp).maybeSingle(),
-                  matchdayPointsFor(supabase, tournament.id, [user.id, opp]),
-                ]);
-                const r = byMd.get(cur.matchday);
-                const mine = r?.points.get(user.id) ?? 0, theirs = r?.points.get(opp) ?? 0;
-                duel = { matchday: cur.matchday, opponentId: opp, opponentName: oppUser?.display_name ?? "—", myPoints: mine, theirPoints: theirs, status: duelOutcome(mine, theirs, !!r?.complete) };
-              }
-            }
-          }
-        }
         const pickBy = new Map<string, { h: number; a: number }>((preds ?? []).map((p: any) => [p.match_id, { h: p.home_score, a: p.away_score }]));
         const side = (t: any) => {
           const r = Array.isArray(t) ? t[0] : t;
@@ -2326,7 +2279,6 @@ export async function getSeasonHub(locale: Locale = "es"): Promise<SeasonHub | n
           liveCount: (live ?? []).filter((l: any) => l.status === "in").length,
           fixtures,
           bankerMatchId: (bk?.match_id as string | undefined) ?? null,
-          duel,
         };
       }
     }
