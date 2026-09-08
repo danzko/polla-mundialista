@@ -3,7 +3,8 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { GitBranch, Star, ChevronDown, Goal, Check, Minus, X } from 'lucide-react';
+import { GitBranch, Star, ChevronDown, Goal, Check, Minus, X, Flame, Crown, Target, Swords } from "lucide-react";
+import { RankBadge } from "@/components/shared/RankBadge";
 import { TrophyMark } from '@/components/shared/brand';
 import { Flag } from '@/components/shared/Flag';
 import { cn } from '@/lib/utils';
@@ -11,7 +12,6 @@ import { StatsSections } from './StatsSections';
 import { MatchdayBoardView } from './MatchdayBoardView';
 import type { LeaderboardData, UnifiedLeaderboardEntry, Locale, StatsData, MatchdayBoard } from '@/lib/types';
 
-const MEDAL = ['🥇', '🥈', '🥉'];
 
 // Proportional 3-segment "where the points come from" bar.
 function SourceBar({ e }: { e: UnifiedLeaderboardEntry }) {
@@ -120,7 +120,7 @@ export function LeaderboardScreen({ data, locale, embedded = false, stats, kind,
               key={tk}
               type="button"
               onClick={() => setTab(tk)}
-              className={cn('flex-1 rounded-md py-1.5 transition-colors', tab === tk ? 'bg-primary text-primary-foreground' : 'text-muted-foreground')}
+              className={cn("flex-1 rounded-md py-2 min-h-9", tab === tk ? 'bg-primary text-primary-foreground' : 'text-muted-foreground')}
             >
               {tk === 'standings' ? (es ? 'Temporada' : 'Season') : tk === 'jornada' ? (es ? 'Jornada' : 'Matchday') : (es ? 'Estadísticas' : 'Stats')}
             </button>
@@ -173,10 +173,7 @@ export function LeaderboardScreen({ data, locale, embedded = false, stats, kind,
               >
                 {/* line 1 */}
                 <div className="md:grid md:grid-cols-[2.5rem_1fr_4rem_4rem_4rem_4.5rem] md:gap-2 md:items-center flex items-center gap-2">
-                  <span className={cn('shrink-0 w-7 md:w-auto text-center text-sm font-extrabold tabular-nums',
-                    e.rank === 1 ? 'text-amber-400' : e.rank === 2 ? 'text-slate-300' : e.rank === 3 ? 'text-amber-700' : 'text-muted-foreground')}>
-                    {e.rank <= 3 ? MEDAL[e.rank - 1] : e.rank}
-                  </span>
+                  <span className="flex w-7 shrink-0 justify-center md:w-auto md:justify-start"><RankBadge rank={e.rank} /></span>
                   <span className="min-w-0 flex-1 flex items-center gap-1.5">
                     <ChampionFlag e={e} />
                     <span className="truncate text-sm font-bold">
@@ -187,10 +184,10 @@ export function LeaderboardScreen({ data, locale, embedded = false, stats, kind,
                     )}
                     <Movement m={e.movement} />
                     {e.exactStreak >= 3 && (
-                      <span className="shrink-0 text-xs" title={es ? `Racha: ${e.exactStreak} exactos seguidos` : `Streak: ${e.exactStreak} exact in a row`} aria-label="streak">🔥{e.exactStreak}</span>
+                      <span title={es ? `Racha: ${e.exactStreak} exactos seguidos` : `Streak: ${e.exactStreak} exact in a row`} aria-label="streak" className="inline-flex shrink-0 items-center gap-0.5 text-xs font-bold text-orange-400"><Flame className="h-3.5 w-3.5 fill-current" />{e.exactStreak}</span>
                     )}
                     {e.jornadaWins > 0 && (
-                      <span className="shrink-0 text-xs" title={es ? `${e.jornadaWins} jornadas ganadas` : `${e.jornadaWins} matchdays won`} aria-label="matchday wins">👑{e.jornadaWins > 1 ? e.jornadaWins : ''}</span>
+                      <span title={es ? `${e.jornadaWins} jornadas ganadas` : `${e.jornadaWins} matchdays won`} aria-label="matchday wins" className="inline-flex shrink-0 items-center gap-0.5 text-xs font-bold text-amber-300"><Crown className="h-3.5 w-3.5 fill-current" />{e.jornadaWins > 1 ? e.jornadaWins : ""}</span>
                     )}
                   </span>
                   {/* desktop numeric columns */}
@@ -244,11 +241,11 @@ export function LeaderboardScreen({ data, locale, embedded = false, stats, kind,
                   {/* ── SEASON MECHANICS ── */}
                   {(e.bankerPoints > 0 || e.jornadaWins > 0 || e.top8Points > 0 || e.exactStreak > 0 || e.duelRecord.wins + e.duelRecord.losses + e.duelRecord.draws > 0) && (
                     <div className="grid grid-cols-2 gap-x-3 gap-y-1 pl-5 text-[12px] text-muted-foreground">
-                      <span>⭐ {es ? 'La Fija' : 'Banker'} <b className="text-foreground tabular-nums">+{e.bankerPoints}</b></span>
-                      <span>👑 {es ? 'Jornadas' : 'Matchdays'} <b className="text-foreground tabular-nums">{e.jornadaWins}</b> <span className="text-[11px]">(+{e.jornadaWins * 5})</span></span>
-                      <span>🎯 Top 8 <b className="text-foreground tabular-nums">+{e.top8Points}</b></span>
-                      <span>⚔️ {es ? 'Duelos' : 'Duels'} <b className="text-foreground tabular-nums">{e.duelRecord.wins}-{e.duelRecord.losses}{e.duelRecord.draws ? `-${e.duelRecord.draws}` : ''}</b></span>
-                      {e.exactStreak > 0 && <span>🔥 {es ? 'Racha' : 'Streak'} <b className="text-foreground tabular-nums">{e.exactStreak}</b> {es ? 'exactos' : 'exact'}</span>}
+                      <span className="inline-flex items-center gap-1.5"><Star className="h-3.5 w-3.5 text-amber-300" />{es ? "La Fija" : "Banker"} <b className="text-foreground tabular-nums">+{e.bankerPoints}</b></span>
+                      <span className="inline-flex items-center gap-1.5"><Crown className="h-3.5 w-3.5 text-amber-300" />{es ? "Jornadas" : "Matchdays"} <b className="text-foreground tabular-nums">{e.jornadaWins}</b> <span className="text-[11px]">(+{e.jornadaWins * 5})</span></span>
+                      <span className="inline-flex items-center gap-1.5"><Target className="h-3.5 w-3.5 text-primary" />Top 8 <b className="text-foreground tabular-nums">+{e.top8Points}</b></span>
+                      <span className="inline-flex items-center gap-1.5"><Swords className="h-3.5 w-3.5 text-emerald-400" />{es ? "Duelos" : "Duels"} <b className="text-foreground tabular-nums">{e.duelRecord.wins}-{e.duelRecord.losses}{e.duelRecord.draws ? `-${e.duelRecord.draws}` : ''}</b></span>
+                      {e.exactStreak > 0 && <span className="inline-flex items-center gap-1.5"><Flame className="h-3.5 w-3.5 text-orange-400" />{es ? "Racha" : "Streak"} <b className="text-foreground tabular-nums">{e.exactStreak}</b> {es ? 'exactos' : 'exact'}</span>}
                     </div>
                   )}
 

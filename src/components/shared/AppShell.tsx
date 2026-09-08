@@ -81,7 +81,7 @@ export function AppShell({ children, user, onLogout, theme = 'ucl' }: AppShellPr
           <div className="flex items-center gap-6">
             <Link href={`${basePath}/dashboard`} className="flex items-center gap-2">
               <BallMark className="h-6 w-6 shrink-0 drop-shadow-[0_0_6px_rgba(25,194,90,0.35)]" />
-              <span className="bg-gradient-to-r from-primary to-[hsl(var(--brand-2))] bg-clip-text text-xl font-extrabold tracking-tight text-transparent">
+              <span className="text-xl font-extrabold tracking-tight text-foreground">
                 {t('common.title')}
               </span>
             </Link>
@@ -282,19 +282,22 @@ export function AppShell({ children, user, onLogout, theme = 'ucl' }: AppShellPr
 
       {/* MOBILE BOTTOM NAVIGATION BAR */}
       {user && (
-        <nav className="fixed bottom-0 left-0 z-40 w-full border-t border-border bg-card/90 backdrop-blur-md md:hidden px-2 py-1.5 shadow-lg flex justify-around">
+        <nav className="fixed bottom-0 left-0 z-40 w-full border-t border-border bg-card/95 backdrop-blur-md md:hidden px-1 pt-1 pb-[max(0.35rem,env(safe-area-inset-bottom))] shadow-lg flex justify-around">
           {navItems.map((item) => {
             const active = isActive(item.href);
             return (
               <Link
                 key={item.href}
                 href={item.href}
+                aria-current={active ? 'page' : undefined}
                 className={cn(
-                  "flex flex-col items-center gap-1 text-xs font-semibold py-1 transition-all duration-200",
-                  active ? "text-primary scale-110" : "text-muted-foreground hover:text-foreground"
+                  "flex min-h-[48px] min-w-[56px] flex-col items-center justify-center gap-0.5 rounded-xl px-2 text-[11px] font-semibold",
+                  active ? "text-primary" : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                <item.icon className="h-5 w-5" />
+                <span className={cn("flex h-7 w-11 items-center justify-center rounded-full", active && "bg-primary/15")}>
+                  <item.icon className="h-5 w-5" />
+                </span>
                 <span>{item.label}</span>
               </Link>
             );

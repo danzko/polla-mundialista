@@ -14,7 +14,7 @@ import { Top8Picker } from '@/components/shared/Top8Picker';
 import { submitBonuses, submitTop8 } from '@/lib/api';
 import { bonusPredictionsSchema } from '@/lib/validation';
 import type { BonusView, Team, Locale } from '@/lib/types';
-import { Award, Medal, Check, AlertCircle, RefreshCw, Star } from 'lucide-react';
+import { Award, Medal, Check, AlertCircle, RefreshCw, Star, Target } from "lucide-react";
 import { TrophyMark } from '@/components/shared/brand';
 import { cn } from '@/lib/utils';
 
@@ -125,7 +125,7 @@ export function BonusPicksForm({ initialBonuses, teams, locale, kind = 'world_cu
         <Card className="glass-card rounded-2xl border-border/75 shadow-xl">
           <CardHeader className="pb-3 border-b border-border/40 select-none">
             <CardTitle className="text-lg font-extrabold flex items-center gap-2">
-              🎯 {es ? 'Top 8 de la fase de liga' : 'League-phase Top 8'}
+              <Target className="h-5 w-5 text-primary" aria-hidden />{es ? "Top 8 de la fase de liga" : "League-phase Top 8"}
             </CardTitle>
             <CardDescription className="text-xs">
               {es

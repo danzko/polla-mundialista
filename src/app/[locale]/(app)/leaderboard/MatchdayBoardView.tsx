@@ -36,7 +36,7 @@ export function MatchdayBoardView({ board, locale }: { board: MatchdayBoard | nu
             key={md}
             type="button"
             onClick={() => router.push(`/${locale}/leaderboard?league=${board.leagueId}&md=${md}&tab=jornada`, { scroll: false })}
-            className={cn('shrink-0 rounded-full border px-3 py-1.5 text-xs font-bold', md === board.matchday ? 'border-primary bg-primary text-primary-foreground' : 'border-border/50 bg-card/60 text-muted-foreground')}
+            className={cn('shrink-0 min-h-9 rounded-full border px-3.5 py-1.5 text-xs font-bold', md === board.matchday ? 'border-primary bg-primary text-primary-foreground' : 'border-border/50 bg-card/60 text-muted-foreground')}
           >
             J{md}
           </button>

@@ -4,7 +4,8 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
-import { Plus, UserPlus, Users, Trophy, ChevronRight, Lock, Clock, Swords } from 'lucide-react';
+import { Plus, UserPlus, Users, Trophy, ChevronRight, Lock, Clock, Swords, Star } from "lucide-react";
+import { RankBadge } from "@/components/shared/RankBadge";
 import { TrophyMark } from '@/components/shared/brand';
 import { Flag } from '@/components/shared/Flag';
 import { SeasonPass } from '@/components/shared/SeasonPass';
@@ -12,7 +13,6 @@ import { shortTeamName } from '@/lib/team-names';
 import type { LeagueSummary, SeasonHub, Locale, NextFixture } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
-const MEDAL = ['🥇', '🥈', '🥉'];
 const SERIF = '"Iowan Old Style","Palatino Linotype",Palatino,Georgia,ui-serif,serif';
 
 /** Home screen, presentational. Data comes from the page (or the dev harness). */
@@ -58,12 +58,11 @@ export function DashboardView({ leagues, hub, userName, locale }: {
       <section className={cn('rounded-2xl border p-4 sm:p-5', ucl ? 'ucl-sky border-white/10' : 'border-border/60 bg-card')}>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className={cn('text-[11px] font-bold uppercase tracking-[.3em]', ucl ? 'text-blue-200/80' : 'text-primary')}>
+            <div className={cn('text-[11px] font-bold uppercase tracking-[.18em]', ucl ? 'text-blue-200/80' : 'text-primary')}>
               {archived ? (es ? 'Torneo terminado' : 'Tournament over') : (es ? 'Temporada 2026-27' : '2026-27 season')}
             </div>
             <h1
               className="mt-1 text-[26px] sm:text-3xl font-bold leading-none"
-              style={ucl ? { fontFamily: SERIF, background: 'linear-gradient(180deg,#FFFFFF 0%,#DCE4FF 55%,#9DB2FF 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' } : undefined}
             >
               {tournament ? (es ? tournament.nameEs : tournament.nameEn) : t('dashboard.title')}
             </h1>
@@ -122,7 +121,7 @@ export function DashboardView({ leagues, hub, userName, locale }: {
             <section className="overflow-hidden rounded-2xl border border-border/60 bg-card">
               <header className="flex items-center justify-between gap-3 px-4 pt-3.5 pb-2.5">
                 <div className="min-w-0">
-                  <div className="text-[11px] font-bold uppercase tracking-widest text-primary">
+                  <div className="text-xs font-semibold text-primary">
                     {next.liveCount > 0
                       ? <span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />{next.liveCount} {es ? 'en vivo' : 'live'}</span>
                       : (es ? 'Próxima jornada' : 'Next round')}
@@ -136,7 +135,7 @@ export function DashboardView({ leagues, hub, userName, locale }: {
                 </div>
               </header>
               {next.duel && (
-                <div className="mx-4 mb-2.5 flex items-center justify-between gap-3 rounded-xl border border-border/50 bg-secondary/40 px-3 py-2 text-sm">
+                <div className="flex items-center justify-between gap-3 border-t border-border/50 px-4 py-2.5 text-sm">
                   <span className="inline-flex items-center gap-2 min-w-0">
                     <Swords className="h-4 w-4 shrink-0 text-primary" />
                     <span className="truncate"><span className="text-muted-foreground">{es ? 'Duelo:' : 'Duel:'}</span> <b>{es ? 'tú' : 'you'} vs {next.duel.opponentName}</b></span>
@@ -185,7 +184,7 @@ export function DashboardView({ leagues, hub, userName, locale }: {
                     </div>
                   </div>
                   <div className="shrink-0 text-right">
-                    <div className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">{es ? 'Tu puesto' : 'Your rank'}</div>
+                    <div className="text-xs font-medium text-muted-foreground">{es ? 'Tu puesto' : 'Your rank'}</div>
                     <div className={cn('text-xl font-extrabold leading-none tabular-nums', league.myRank === 1 ? 'text-amber-300' : 'text-foreground')}>
                       {league.myRank != null ? `#${league.myRank}` : '—'}
                     </div>
@@ -194,7 +193,7 @@ export function DashboardView({ leagues, hub, userName, locale }: {
                 <ol className="border-t border-border/50">
                   {league.top.map((r) => (
                     <li key={r.userId} className={cn('flex items-center gap-3 px-4 py-2 text-sm', r.isMe && 'bg-primary/[0.08]')}>
-                      <span className={cn('w-5 text-center text-xs font-bold tabular-nums', r.rank <= 3 ? 'text-amber-300' : 'text-muted-foreground')}>{r.rank <= 3 ? MEDAL[r.rank - 1] : r.rank}</span>
+                      <RankBadge rank={r.rank} />
                       <span className={cn('flex-1 truncate', r.isMe ? 'font-bold text-primary' : 'font-medium')}>{r.displayName}{r.isMe ? (es ? ' (tú)' : ' (you)') : ''}</span>
                       <span className="font-bold tabular-nums">{r.points} <span className="text-[11px] font-medium text-muted-foreground">pts</span></span>
                     </li>
@@ -213,7 +212,7 @@ export function DashboardView({ leagues, hub, userName, locale }: {
       {hub && hub.honors.length > 0 && (
         <section>
           <div className="mb-2.5 flex items-center justify-between">
-            <h2 className="text-xs font-bold uppercase tracking-[.2em] text-amber-300/90 flex items-center gap-2">
+            <h2 className="text-sm font-bold text-amber-200 flex items-center gap-2">
               <Trophy className="h-4 w-4" />
               {es ? 'Salón de la Fama' : 'Hall of Fame'}
             </h2>
@@ -226,7 +225,7 @@ export function DashboardView({ leagues, hub, userName, locale }: {
               <Link key={h.tournament.id} href={`${basePath}/hall`} className="block rounded-2xl border border-amber-500/30 p-4 transition-colors hover:border-amber-400/60"
                 style={{ background: 'radial-gradient(420px 160px at 50% -30%, rgba(242,196,82,.18), transparent 65%), #0C111C' }}>
                 <div className="flex items-center justify-between gap-2">
-                  <div className="text-[11px] font-bold uppercase tracking-[.25em] text-amber-200/80">{es ? h.tournament.nameEs : h.tournament.nameEn}</div>
+                  <div className="text-xs font-semibold text-amber-200/90">{es ? h.tournament.nameEs : h.tournament.nameEn}</div>
                   {h.myRank != null && (
                     <span className={cn('rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums', h.myRank <= 3 ? 'bg-amber-400/15 text-amber-200' : 'bg-white/5 text-slate-300')}>
                       {es ? 'Tú' : 'You'} #{h.myRank} · {h.myPoints}
@@ -235,8 +234,8 @@ export function DashboardView({ leagues, hub, userName, locale }: {
                 </div>
                 <div className="mt-2 flex items-end justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="text-[10px] uppercase tracking-widest text-slate-400">{es ? 'Campeón' : 'Champion'}</div>
-                    <div className="truncate text-2xl font-bold leading-tight" style={{ fontFamily: SERIF, color: '#F4D488' }}>🏆 {h.podium[0]?.displayName ?? '—'}</div>
+                    <div className="text-[11px] font-medium text-slate-400">{es ? 'Campeón' : 'Champion'}</div>
+                    <div className="truncate text-2xl font-bold leading-tight" style={{ fontFamily: SERIF, color: '#F4D488' }}><Trophy className="mr-1.5 inline h-5 w-5 -translate-y-0.5 text-amber-300" aria-hidden />{h.podium[0]?.displayName ?? "—"}</div>
                   </div>
                   {h.championCode && (
                     <div className="shrink-0 text-right text-[11px] text-slate-400">
@@ -246,7 +245,7 @@ export function DashboardView({ leagues, hub, userName, locale }: {
                   )}
                 </div>
                 <div className="mt-2.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-300">
-                  {h.podium.slice(1).map((p, i) => <span key={p.userId}>{MEDAL[i + 1]} {p.displayName}</span>)}
+                  {h.podium.slice(1).map((p, i) => <span key={p.userId} className="inline-flex items-center gap-1.5"><RankBadge rank={i + 2} size="sm" />{p.displayName}</span>)}
                 </div>
               </Link>
             ))}
@@ -264,7 +263,7 @@ function FixtureRow({ f, es, fmtTime, shortName, banker }: {
   const nm = (s: NextFixture['home']) => shortName(es ? s.nameEs : s.nameEn);
   return (
     <li className={cn('relative grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 py-2.5', banker && 'bg-amber-400/[0.06]')}>
-      {banker && <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-xs" title="La Fija™️ (x2)" aria-label="banker">⭐</span>}
+      {banker && <Star className="absolute left-1.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 fill-amber-300 text-amber-300" aria-label="La Fija (x2)" />}
       <div className="flex min-w-0 items-center justify-end gap-2 text-sm font-semibold">
         <span className="truncate">{nm(f.home)}</span>
         <Flag code={f.home.code} emoji={f.home.flagEmoji} logoUrl={f.home.logoUrl} className="h-6 w-6 shrink-0 object-contain" />

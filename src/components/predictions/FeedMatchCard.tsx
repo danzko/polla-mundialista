@@ -4,7 +4,8 @@ import * as React from 'react';
 import { ScoreStepper } from './ScoreStepper';
 import { PicksStrip } from './PicksStrip';
 import { knockoutSlotLabel } from '@/lib/bracket-slots';
-import { Flag } from '@/components/shared/Flag';
+import { Flag } from "@/components/shared/Flag";
+import { Star } from "lucide-react";
 import { shortTeamName } from '@/lib/team-names';
 import { cn } from '@/lib/utils';
 import type { MatchView, Locale, MatchPickRow, LiveScore } from '@/lib/types';
@@ -210,18 +211,18 @@ export function FeedMatchCard({
                 onClick={() => onBanker(match.id)}
                 aria-pressed={isBanker}
                 className={cn(
-                  'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold transition-colors',
+                  "inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3.5 py-1 text-xs font-bold",
                   isBanker
                     ? 'border-amber-400/70 bg-amber-400/15 text-amber-300'
                     : 'border-border/60 bg-card/60 text-muted-foreground hover:border-amber-400/50 hover:text-amber-300'
                 )}
               >
-                <span aria-hidden>{isBanker ? '⭐' : '☆'}</span>
+                <Star className={cn("h-3.5 w-3.5", isBanker && "fill-current")} aria-hidden />
                 {isBanker ? (es ? 'La Fija™️ · puntos x2' : 'La Fija™️ · points x2') : (es ? 'Escoger La Fija™️' : 'Pick La Fija™️')}
               </button>
             ) : (
               <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/50 bg-amber-400/10 px-3 py-1 text-xs font-bold text-amber-300">
-                ⭐ {es ? 'La Fija™️ · x2' : 'La Fija™️ · x2'}
+                <Star className="h-3.5 w-3.5 fill-current" aria-hidden />{es ? "La Fija™️ · x2" : "La Fija™️ · x2"}
               </span>
             )}
           </div>

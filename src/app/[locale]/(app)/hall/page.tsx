@@ -5,6 +5,7 @@ import { getHallOfFame } from '@/lib/api';
 import { Flag } from '@/components/shared/Flag';
 import { TrophyMark } from '@/components/shared/brand';
 import { ViewTournamentButton } from '@/components/shared/ViewTournamentButton';
+import { RankBadge } from '@/components/shared/RankBadge';
 import { cn } from '@/lib/utils';
 import type { Locale } from '@/lib/types';
 
@@ -60,12 +61,7 @@ export default async function HallPage({ params }: { params: Promise<{ locale: s
             </div>
             <div
               className="mt-2 font-bold leading-[.95] text-[clamp(34px,8vw,64px)]"
-              style={{
-                fontFamily: SERIF,
-                background: 'linear-gradient(180deg,#FBE7B6 0%,#F2C452 46%,#A9863A 100%)',
-                WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
-                textWrap: 'balance',
-              }}
+              style={{ fontFamily: SERIF, color: '#F4D488', textWrap: 'balance', textShadow: '0 2px 28px rgba(242,196,82,.35)' }}
             >
               {h.podium[0]?.displayName ?? '—'}
             </div>
@@ -95,7 +91,7 @@ export default async function HallPage({ params }: { params: Promise<{ locale: s
                       p.isMe && 'ring-1 ring-primary/60'
                     )}
                   >
-                    <div className="text-lg leading-none">{MEDAL[i]}</div>
+                    <div className="flex justify-center"><RankBadge rank={i + 1} /></div>
                     <div className="mt-1 truncate text-[13px] font-bold">{p.displayName}</div>
                     <div className="text-xs text-muted-foreground tabular-nums">{p.points} pts</div>
                   </div>

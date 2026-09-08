@@ -1,7 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { Flag } from '@/components/shared/Flag';
+import { Flag } from "@/components/shared/Flag";
+import { Trophy } from "lucide-react";
 import type { SeasonHub, Locale } from '@/lib/types';
 
 const SERIF = '"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",ui-serif,serif';
@@ -67,14 +68,9 @@ export function SeasonPass({ hub, userName, locale }: { hub: SeasonHub; userName
           </div>
           <div
             className="relative mt-2 font-bold leading-[.95] text-[clamp(34px,9vw,54px)]"
-            style={{
-              fontFamily: SERIF,
-              background: 'linear-gradient(180deg,#FBE7B6 0%,#F2C452 46%,#A9863A 100%)',
-              WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', textWrap: 'balance',
-            }}
+            style={{ fontFamily: SERIF, color: '#F4D488', textWrap: 'balance', textShadow: '0 2px 24px rgba(242,196,82,.35)' }}
           >
             {userName}
-            <span className="sp-shine" aria-hidden="true">{userName}</span>
           </div>
           {last?.leagueName && (
             <div className="mt-2 text-sm font-semibold text-foreground/90">{last.leagueName}</div>
@@ -93,7 +89,7 @@ export function SeasonPass({ hub, userName, locale }: { hub: SeasonHub; userName
               </div>
               {last.podium[0] && (
                 <div className="mt-1 text-xs text-muted-foreground">
-                  🏆 {last.podium[0].displayName}
+                  <Trophy className="mr-1 inline h-3.5 w-3.5 -translate-y-px text-amber-300" aria-hidden />{last.podium[0].displayName}
                   {last.championCode && (
                     <span className="ml-2">
                       <Flag code={last.championCode} emoji={last.championFlagEmoji ?? ''} logoUrl={last.championLogoUrl} className="inline-block h-3 w-auto rounded-[2px] align-[-2px]" />{' '}

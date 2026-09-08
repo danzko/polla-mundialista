@@ -1,6 +1,6 @@
 import * as React from 'react';
 import Link from 'next/link';
-import { GitBranch, Calendar, ArrowLeft } from 'lucide-react';
+import { GitBranch, Calendar, ArrowLeft, Star, Crown, Target, Swords, Flame } from "lucide-react";
 import { TrophyMark } from '@/components/shared/brand';
 import { getCurrentTournament } from '@/lib/api';
 
@@ -166,14 +166,14 @@ export default async function RulesPage({ params }: RulesPageProps) {
           <h2 className="font-bold flex items-center gap-2">⚡ {es ? 'Mecánicas de temporada' : 'Season mechanics'}</h2>
           <ul className="mt-3 space-y-2.5 text-[13px]">
             {[
-              { ic: '⭐', t: 'La Fija™️', d: es ? 'Cada jornada marcas UN partido como tu Fija: sus puntos cuentan doble (12 exacto / 4 resultado / 0). Puedes moverla hasta que ese partido cierre.' : 'Each matchday you mark ONE game as your banker: its points count double (12 exact / 4 result / 0). Movable until that game locks.' },
-              { ic: '👑', t: es ? 'Rey de la jornada' : 'Matchday king', d: es ? 'Quien más puntos suma en una jornada completa gana +5 (si hay empate, todos los empatados). Ocho jornadas, ocho coronas.' : 'Whoever scores the most in a complete matchday gets +5 (ties: everyone tied). Eight matchdays, eight crowns.' },
-              { ic: '🎯', t: 'Top 8', d: es ? 'Antes de que cierren los picks, eliges los 8 clubes que terminan entre los 8 primeros de la fase de liga: +5 por acierto, +20 si aciertas los ocho.' : 'Before picks lock, choose the 8 clubs that finish top 8 of the league phase: +5 per hit, +20 for all eight.' },
-              { ic: '⚔️', t: es ? 'Duelos' : 'Duels', d: es ? 'Cada jornada te toca un rival de tu liga (sorteo automático). Más puntos en la jornada = ganas el duelo. Sin puntos, puro honor: tu récord aparece en la tabla.' : 'Each matchday you are paired with a league-mate (automatic draw). Most points that round wins the duel. No points, pure honour: your record shows on the table.' },
-              { ic: '🔥', t: es ? 'Racha' : 'Streak', d: es ? 'Tres marcadores exactos seguidos encienden la llama junto a tu nombre. Se apaga con el primer fallo.' : 'Three exact scores in a row light the flame next to your name. The first miss puts it out.' },
+              { ic: Star, t: 'La Fija™️', d: es ? 'Cada jornada marcas UN partido como tu Fija: sus puntos cuentan doble (12 exacto / 4 resultado / 0). Puedes moverla hasta que ese partido cierre.' : 'Each matchday you mark ONE game as your banker: its points count double (12 exact / 4 result / 0). Movable until that game locks.' },
+              { ic: Crown, t: es ? 'Rey de la jornada' : 'Matchday king', d: es ? 'Quien más puntos suma en una jornada completa gana +5 (si hay empate, todos los empatados). Ocho jornadas, ocho coronas.' : 'Whoever scores the most in a complete matchday gets +5 (ties: everyone tied). Eight matchdays, eight crowns.' },
+              { ic: Target, t: 'Top 8', d: es ? 'Antes de que cierren los picks, eliges los 8 clubes que terminan entre los 8 primeros de la fase de liga: +5 por acierto, +20 si aciertas los ocho.' : 'Before picks lock, choose the 8 clubs that finish top 8 of the league phase: +5 per hit, +20 for all eight.' },
+              { ic: Swords, t: es ? 'Duelos' : 'Duels', d: es ? 'Cada jornada te toca un rival de tu liga (sorteo automático). Más puntos en la jornada = ganas el duelo. Sin puntos, puro honor: tu récord aparece en la tabla.' : 'Each matchday you are paired with a league-mate (automatic draw). Most points that round wins the duel. No points, pure honour: your record shows on the table.' },
+              { ic: Flame, t: es ? 'Racha' : 'Streak', d: es ? 'Tres marcadores exactos seguidos encienden la llama junto a tu nombre. Se apaga con el primer fallo.' : 'Three exact scores in a row light the flame next to your name. The first miss puts it out.' },
             ].map((m) => (
               <li key={m.t} className="flex gap-2.5">
-                <span className="shrink-0 text-base leading-5">{m.ic}</span>
+                <m.ic className="mt-0.5 h-4.5 w-4.5 shrink-0 text-amber-300" aria-hidden />
                 <span><b>{m.t}.</b> <span className="text-muted-foreground">{m.d}</span></span>
               </li>
             ))}

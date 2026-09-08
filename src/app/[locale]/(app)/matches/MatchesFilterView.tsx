@@ -254,7 +254,7 @@ export function MatchesFilterView({
       setMatches(prev);
       setToast({ show: true, message: res.error, type: 'error', skippedCount: 0 });
     } else {
-      setToast({ show: true, message: es ? '⭐ La Fija™️ guardada: ese partido cuenta doble.' : '⭐ La Fija™️ saved: that game counts double.', type: 'success', skippedCount: 0 });
+      setToast({ show: true, message: es ? 'La Fija™️ guardada: ese partido cuenta doble.' : 'La Fija™️ saved: that game counts double.', type: 'success', skippedCount: 0 });
     }
   };
 
@@ -363,7 +363,7 @@ export function MatchesFilterView({
           <button
             type="button"
             onClick={scrollToNow}
-            className="flex-shrink-0 inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold bg-primary text-primary-foreground active:scale-95 transition-transform shadow-sm"
+            className="flex-shrink-0 inline-flex min-h-9 items-center gap-1 rounded-full px-3.5 py-1.5 text-xs font-bold bg-primary text-primary-foreground shadow-sm"
           >
             <ArrowDownToLine className="h-3 w-3" />
             {es ? 'Hoy' : 'Today'}
@@ -380,7 +380,7 @@ export function MatchesFilterView({
                   ref={(el) => { if (el) chipRefs.current.set(key, el); else chipRefs.current.delete(key); }}
                   onClick={() => jumpToDay(key)}
                   className={cn(
-                    'flex-shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold whitespace-nowrap transition-colors border',
+                    'flex-shrink-0 min-h-9 rounded-full px-3.5 py-1.5 text-xs font-semibold whitespace-nowrap border',
                     isActive
                       ? 'bg-foreground text-background border-foreground'
                       : isToday

@@ -158,7 +158,7 @@ export function LeagueTabs({ league, locale, currentUserId, leaderboardData }: L
                     <div className="flex items-center gap-2">
                       {member.isAdmin && (
                         <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase bg-amber-500/10 border border-amber-500/20 text-amber-500 px-2 py-0.5 rounded-md tracking-wider select-none">
-                          👑 {t('common.admin')}
+                          {t('common.admin')}
                         </span>
                       )}
 
