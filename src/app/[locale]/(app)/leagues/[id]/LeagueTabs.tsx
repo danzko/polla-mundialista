@@ -7,7 +7,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { User, RefreshCw, Trash2, UserMinus, Settings } from 'lucide-react';
+import { User, Users, RefreshCw, Trash2, UserMinus, Settings, SlidersHorizontal } from 'lucide-react';
 import { renameLeague, regenerateLeagueCode, deleteLeague, kickMember } from '@/lib/api';
 import type { LeagueDetail, Locale, LeaderboardData } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -19,9 +19,10 @@ interface LeagueTabsProps {
   locale: Locale;
   currentUserId: string;
   leaderboardData?: LeaderboardData | null;
+  kind?: 'world_cup' | 'ucl';
 }
 
-export function LeagueTabs({ league, locale, currentUserId, leaderboardData }: LeagueTabsProps) {
+export function LeagueTabs({ league, locale, currentUserId, leaderboardData, kind }: LeagueTabsProps) {
   const t = useTranslations();
   const router = useRouter();
 
@@ -93,15 +94,15 @@ export function LeagueTabs({ league, locale, currentUserId, leaderboardData }: L
         "grid w-full bg-secondary/60 p-1 rounded-xl",
         league.isAdmin ? "grid-cols-3 max-w-xl" : "grid-cols-2 max-w-md"
       )}>
-        <TabsTrigger value="leaderboard" className="rounded-lg font-bold py-2">
-<TrophyMark className="inline-block h-4 w-4 align-middle mr-1" />{t('league.tabLeaderboard')}
+        <TabsTrigger value="leaderboard" className="rounded-lg font-bold py-2 min-h-9">
+<TrophyMark className="h-4 w-4 mr-1.5" />{t('league.tabLeaderboard')}
         </TabsTrigger>
-        <TabsTrigger value="members" className="rounded-lg font-bold py-2">
-          👥 {t('league.tabMembers')}
+        <TabsTrigger value="members" className="rounded-lg font-bold py-2 min-h-9">
+          <Users className="h-4 w-4 mr-1.5" />{t('league.tabMembers')}
         </TabsTrigger>
         {league.isAdmin && (
-          <TabsTrigger value="settings" className="rounded-lg font-bold py-2">
-            ⚙️ {t('league.tabSettings')}
+          <TabsTrigger value="settings" className="rounded-lg font-bold py-2 min-h-9">
+            <SlidersHorizontal className="h-4 w-4 mr-1.5" />{t('league.tabSettings')}
           </TabsTrigger>
         )}
       </TabsList>
@@ -121,10 +122,10 @@ export function LeagueTabs({ league, locale, currentUserId, leaderboardData }: L
       {/* LEADERBOARD TAB */}
       <TabsContent value="leaderboard" className="mt-6">
         {leaderboardData && leaderboardData.entries.length > 0 ? (
-          <LeaderboardScreen data={leaderboardData} locale={locale} embedded />
+          <LeaderboardScreen data={leaderboardData} locale={locale} embedded kind={kind} />
         ) : (
-          <Card className="glass-card overflow-hidden rounded-2xl border-border/60">
-            <CardContent className="py-12 text-center text-muted-foreground font-light">
+          <Card className="overflow-hidden rounded-2xl border-border/60 bg-card">
+            <CardContent className="py-12 text-center text-muted-foreground">
               {t('league.noLeaderboard')}
             </CardContent>
           </Card>
@@ -133,10 +134,10 @@ export function LeagueTabs({ league, locale, currentUserId, leaderboardData }: L
 
       {/* MEMBERS TAB */}
       <TabsContent value="members" className="mt-6">
-        <Card className="glass-card overflow-hidden rounded-2xl border-border/60">
+        <Card className="overflow-hidden rounded-2xl border-border/60 bg-card">
           <CardContent className="p-4 space-y-3">
             {league.members.length === 0 ? (
-              <div className="py-8 text-center text-muted-foreground font-light">
+              <div className="py-8 text-center text-muted-foreground">
                 {t('league.noMembers')}
               </div>
             ) : (
@@ -144,7 +145,7 @@ export function LeagueTabs({ league, locale, currentUserId, leaderboardData }: L
                 {league.members.map((member) => (
                   <div
                     key={member.userId}
-                    className="flex items-center justify-between p-3 bg-slate-900/40 rounded-xl border border-border/40"
+                    className="flex items-center justify-between p-3 bg-secondary/40 rounded-xl border border-border/40"
                   >
                     <div className="flex items-center gap-2.5">
                       <div className="h-8 w-8 rounded-lg bg-secondary text-muted-foreground flex items-center justify-center border border-border/40 select-none">
@@ -157,7 +158,7 @@ export function LeagueTabs({ league, locale, currentUserId, leaderboardData }: L
 
                     <div className="flex items-center gap-2">
                       {member.isAdmin && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase bg-amber-500/10 border border-amber-500/20 text-amber-500 px-2 py-0.5 rounded-md tracking-wider select-none">
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold bg-amber-500/10 border border-amber-500/20 text-amber-400 px-2 py-0.5 rounded-md select-none">
                           {t('common.admin')}
                         </span>
                       )}
@@ -169,7 +170,7 @@ export function LeagueTabs({ league, locale, currentUserId, leaderboardData }: L
                               size="sm"
                               onClick={() => handleKick(member.userId)}
                               disabled={busy === `kick-${member.userId}`}
-                              className="h-7 rounded-lg px-2 text-[11px] font-extrabold bg-destructive/80 hover:bg-destructive text-white cursor-pointer"
+                              className="h-9 rounded-lg px-3 text-xs font-bold bg-destructive/80 hover:bg-destructive text-white"
                             >
                               {busy === `kick-${member.userId}` ? '…' : t('league.kickConfirmBtn')}
                             </Button>
@@ -177,7 +178,7 @@ export function LeagueTabs({ league, locale, currentUserId, leaderboardData }: L
                               size="sm"
                               variant="ghost"
                               onClick={() => setConfirmKickId(null)}
-                              className="h-7 rounded-lg px-2 text-[11px] font-bold text-muted-foreground cursor-pointer"
+                              className="h-9 rounded-lg px-3 text-xs font-bold text-muted-foreground"
                             >
                               {t('common.cancel')}
                             </Button>
@@ -187,7 +188,7 @@ export function LeagueTabs({ league, locale, currentUserId, leaderboardData }: L
                             size="sm"
                             variant="ghost"
                             onClick={() => setConfirmKickId(member.userId)}
-                            className="h-7 rounded-lg px-2 text-[11px] font-bold text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer"
+                            className="h-9 rounded-lg px-3 text-xs font-bold text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                           >
                             <UserMinus className="h-3.5 w-3.5 mr-1" />
                             {t('league.kickBtn')}
@@ -206,12 +207,12 @@ export function LeagueTabs({ league, locale, currentUserId, leaderboardData }: L
       {/* SETTINGS TAB (league admin only) */}
       {league.isAdmin && (
         <TabsContent value="settings" className="mt-6">
-          <Card className="glass-card overflow-hidden rounded-2xl border-border/60">
+          <Card className="overflow-hidden rounded-2xl border-border/60 bg-card">
             <CardContent className="p-6 space-y-8">
 
               {/* Rename */}
               <div className="space-y-2">
-                <label htmlFor="league-rename" className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 select-none">
+                <label htmlFor="league-rename" className="text-sm font-semibold text-foreground flex items-center gap-1.5 select-none">
                   <Settings className="h-4 w-4" />
                   {t('league.renameLabel')}
                 </label>
@@ -221,12 +222,12 @@ export function LeagueTabs({ league, locale, currentUserId, leaderboardData }: L
                     value={renameValue}
                     onChange={(e) => setRenameValue(e.target.value)}
                     maxLength={40}
-                    className="rounded-xl font-semibold bg-card/65"
+                    className="rounded-xl font-semibold bg-card h-11"
                   />
                   <Button
                     onClick={handleRename}
                     disabled={busy === 'rename' || renameValue.trim().length < 2 || renameValue === league.name}
-                    className="rounded-xl font-bold px-5 cursor-pointer"
+                    className="rounded-xl font-bold px-5"
                   >
                     {busy === 'rename' ? t('common.saving') : t('common.save')}
                   </Button>
@@ -235,18 +236,18 @@ export function LeagueTabs({ league, locale, currentUserId, leaderboardData }: L
 
               {/* Regenerate invite code */}
               <div className="space-y-2 pt-4 border-t border-border/40">
-                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 select-none">
+                <label className="text-sm font-semibold text-foreground flex items-center gap-1.5 select-none">
                   <RefreshCw className="h-4 w-4" />
                   {t('league.regenLabel')}
                 </label>
-                <p className="text-xs text-muted-foreground font-light">
+                <p className="text-xs text-muted-foreground">
                   {t('league.regenDesc')}
                 </p>
                 <Button
                   variant="ghost"
                   onClick={handleRegenerate}
                   disabled={busy === 'regen'}
-                  className="rounded-xl font-bold border border-border/60 hover:bg-secondary/40 cursor-pointer"
+                  className="rounded-xl font-bold border border-border/60 hover:bg-secondary/40"
                 >
                   {busy === 'regen' ? t('common.saving') : t('league.regenBtn')}
                 </Button>
@@ -254,11 +255,11 @@ export function LeagueTabs({ league, locale, currentUserId, leaderboardData }: L
 
               {/* Delete league */}
               <div className="space-y-2 pt-4 border-t border-destructive/20">
-                <label className="text-xs font-bold uppercase tracking-wider text-destructive flex items-center gap-1.5 select-none">
+                <label className="text-sm font-semibold text-destructive flex items-center gap-1.5 select-none">
                   <Trash2 className="h-4 w-4" />
                   {t('league.deleteLabel')}
                 </label>
-                <p className="text-xs text-muted-foreground font-light">
+                <p className="text-xs text-muted-foreground">
                   {t('league.deleteDesc')}
                 </p>
                 {confirmDelete ? (
@@ -266,14 +267,14 @@ export function LeagueTabs({ league, locale, currentUserId, leaderboardData }: L
                     <Button
                       onClick={handleDelete}
                       disabled={busy === 'delete'}
-                      className="rounded-xl font-extrabold bg-destructive hover:bg-destructive/90 text-white cursor-pointer"
+                      className="rounded-xl font-extrabold bg-destructive hover:bg-destructive/90 text-white"
                     >
                       {busy === 'delete' ? '…' : t('league.deleteConfirmBtn')}
                     </Button>
                     <Button
                       variant="ghost"
                       onClick={() => setConfirmDelete(false)}
-                      className="rounded-xl font-bold text-muted-foreground cursor-pointer"
+                      className="rounded-xl font-bold text-muted-foreground"
                     >
                       {t('common.cancel')}
                     </Button>
@@ -282,7 +283,7 @@ export function LeagueTabs({ league, locale, currentUserId, leaderboardData }: L
                   <Button
                     variant="ghost"
                     onClick={() => setConfirmDelete(true)}
-                    className="rounded-xl font-bold border border-destructive/40 text-destructive hover:bg-destructive/10 cursor-pointer"
+                    className="rounded-xl font-bold border border-destructive/40 text-destructive hover:bg-destructive/10"
                   >
                     {t('league.deleteBtn')}
                   </Button>

@@ -139,3 +139,9 @@ export const MOCK_PLAYERS = [
   { n: 'Kylian Mbappé', t: 'Real Madrid' }, { n: 'Jude Bellingham', t: 'Real Madrid' }, { n: 'Lamine Yamal', t: 'Barcelona' },
   { n: 'Erling Haaland', t: 'Manchester City' }, { n: 'Harry Kane', t: 'Bayern Munich' }, { n: 'Mohamed Salah', t: 'Liverpool' },
 ];
+
+export const MOCK_LEAGUE_DETAIL = {
+  id: 'l1', name: 'CSC Champions League', inviteCode: 'Z25MYR', language: 'es' as const, isAdmin: true,
+  members: LB_ENTRIES.map((e) => ({ userId: e.userId, displayName: e.displayName, isAdmin: e.userId === 'b' })),
+  leaderboard: [],
+};

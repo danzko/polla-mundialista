@@ -26,11 +26,11 @@ export function LeagueInvite({ code, leagueName, locale }: { code: string; leagu
   const handleShare = async () => {
     const url = typeof window !== 'undefined' ? `${window.location.origin}/${locale}/leagues/join` : '';
     const text = es
-      ? `¡Únete a mi polla "${leagueName}" para el Mundial 2026! Código: ${code}`
-      : `Join my World Cup 2026 pool "${leagueName}"! Code: ${code}`;
+      ? `¡Únete a mi polla "${leagueName}" en La Polla! Código: ${code}`
+      : `Join my pool "${leagueName}" on La Polla! Code: ${code}`;
     try {
       if (typeof navigator !== 'undefined' && navigator.share) {
-        await navigator.share({ title: 'Polla 2026', text, url });
+        await navigator.share({ title: 'La Polla', text, url });
       } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
         await navigator.clipboard.writeText(`${text}\n${url}`);
       }
@@ -44,7 +44,7 @@ export function LeagueInvite({ code, leagueName, locale }: { code: string; leagu
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1.5 rounded-xl border border-primary/30 bg-card px-3 py-2 text-xs font-bold text-foreground transition-colors hover:bg-primary/10"
+        className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-primary/30 bg-card px-3.5 text-xs font-bold text-foreground hover:bg-primary/10"
       >
         <UserPlus className="h-3.5 w-3.5 text-primary" />
         {es ? 'Invitar' : 'Invite'}
@@ -53,10 +53,10 @@ export function LeagueInvite({ code, leagueName, locale }: { code: string; leagu
       {open && (
         <div className="absolute right-0 top-full z-50 mt-2 w-64 rounded-2xl border border-border/60 bg-card p-3 shadow-xl shadow-black/30">
           <div className="mb-2 flex items-center justify-between">
-            <span className="text-[11px] font-extrabold uppercase tracking-widest text-muted-foreground">
+            <span className="text-xs font-semibold text-muted-foreground">
               {es ? 'Código de invitación' : 'Invite code'}
             </span>
-            <button type="button" onClick={() => setOpen(false)} className="p-0.5 text-muted-foreground">
+            <button type="button" onClick={() => setOpen(false)} aria-label="close" className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary">
               <X className="h-3.5 w-3.5" />
             </button>
           </div>

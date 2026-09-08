@@ -62,7 +62,7 @@ function PointsPill({ mn, earned }: { mn: number; earned?: boolean }) {
       className="inline-flex items-center rounded-full px-1.5 py-px text-[10px] font-bold tabular-nums bg-amber-400/20 text-amber-200 ring-1 ring-inset ring-amber-400/50"
       title={mn === 104 ? 'Champion' : `+${pts} earned`}
     >
-      +{pts}{mn === 104 ? '👑' : ''}
+      +{pts}
     </span>
   );
 }
