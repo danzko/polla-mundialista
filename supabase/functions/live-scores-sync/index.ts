@@ -24,6 +24,10 @@ const ESPN = (league: string) =>
 
 const DAY_MS = 86_400_000;
 const STABLE_MS = 5 * 60_000;
+// Per-day ESPN fetches: how far back to chase missing results, and the cap
+// on requests per run so a long gap can't burst hundreds of calls at once.
+const LOOKBACK_DAYS = 30;
+const MAX_DAYS_PER_RUN = 10;
 // Stages whose games never feed a bracket.
 const LEAGUE = new Set(["group", "league"]);
 
@@ -39,30 +43,79 @@ function codeOf(rel: unknown): string | null {
   return (r as { code?: string } | null)?.code ?? null;
 }
 
+// Team identity is matched on code OR club name, normalized. ESPN's
+// abbreviations are not stable (Oct 2026: Viking FK's "VIK" became
+// "Viking FK"), and trusting the abbreviation alone silently drops games.
+const norm = (v: unknown) =>
+  String(v ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+/** Our side's identifiers: {code, name_en} normalized. null when the slot is TBD. */
+function keysOf(rel: unknown): Set<string> | null {
+  const r = (Array.isArray(rel) ? rel[0] : rel) as { code?: string; name_en?: string } | null;
+  if (!r) return null;
+  const out = new Set<string>();
+  if (r.code) out.add(norm(r.code));
+  if (r.name_en) out.add(norm(r.name_en));
+  return out.size > 0 ? out : null;
+}
+
+/** Does our side refer to the same club as this ESPN competitor? */
+const sameTeam = (ours: Set<string> | null, ab: string, name: string) =>
+  !!ours && (ours.has(norm(ab)) || ours.has(norm(name)));
+
 type Counts = { events_seen?: number; matched?: number; unmatched?: number; drift_count?: number };
 type Outcome = { ok: boolean; counts: Counts; message: string | null };
 
 // deno-lint-ignore no-explicit-any
 async function syncTournament(supabase: any, t: any): Promise<Outcome> {
   const nowMs = Date.now();
-  const from = new Date(nowMs - 2 * DAY_MS);
-  const to = new Date(nowMs + 6 * DAY_MS);
-  const res = await fetch(`${ESPN(t.espn_league)}?dates=${ymd(from)}-${ymd(to)}&limit=300`, {
-    headers: { "user-agent": "polla-mundialista/2.0 (live results sync)" },
-  });
-  if (!res.ok) return { ok: false, counts: {}, message: `ESPN HTTP ${res.status}` };
-  const data = await res.json();
-  // deno-lint-ignore no-explicit-any
-  const events: any[] = data?.events ?? [];
 
   const { data: matches, error: mErr } = await supabase
     .from("matches")
     .select(
-      "id, match_number, kickoff_at, stage, is_voided, home:teams!matches_home_team_id_fkey(code), away:teams!matches_away_team_id_fkey(code)",
+      "id, match_number, kickoff_at, stage, is_voided, home:teams!matches_home_team_id_fkey(code, name_en), away:teams!matches_away_team_id_fkey(code, name_en), match_results(match_id)",
     )
     .eq("tournament_id", t.id);
-  if (mErr) return { ok: false, counts: { events_seen: events.length }, message: `db matches: ${mErr.message}` };
+  if (mErr) return { ok: false, counts: {}, message: `db matches: ${mErr.message}` };
   const matchIds = new Set((matches ?? []).map((m: any) => m.id as string));
+
+  // ESPN dropped date-RANGE support on the scoreboard endpoint (Oct 2026:
+  // any `dates=A-B` returns 400), so fetch one day at a time. Which days:
+  // every fixture inside the window that still has NO recorded result,
+  // padded ±1 day for kickoff/timezone drift. That covers live games, finals
+  // waiting to confirm, the week ahead, AND any historical gap (a sync
+  // outage self-heals instead of needing a manual backfill). Quiet weeks
+  // cost zero requests.
+  const hasResult = (m: any) =>
+    Array.isArray(m.match_results) ? m.match_results.length > 0 : !!m.match_results;
+  const dayKeys = new Set<string>();
+  for (const m of matches ?? []) {
+    if (m.is_voided || hasResult(m)) continue;
+    const k = new Date(m.kickoff_at).getTime();
+    if (k < nowMs - LOOKBACK_DAYS * DAY_MS || k > nowMs + 6 * DAY_MS) continue;
+    for (const off of [-DAY_MS, 0, DAY_MS]) dayKeys.add(ymd(new Date(k + off)));
+  }
+  const days = [...dayKeys].sort().slice(0, MAX_DAYS_PER_RUN);
+
+  // deno-lint-ignore no-explicit-any
+  const events: any[] = [];
+  const fetchErrors: string[] = [];
+  for (const day of days) {
+    try {
+      const res = await fetch(`${ESPN(t.espn_league)}?dates=${day}&limit=100`, {
+        headers: { "user-agent": "polla-mundialista/2.0 (live results sync)" },
+      });
+      if (!res.ok) { fetchErrors.push(`${day}:HTTP ${res.status}`); continue; }
+      const data = await res.json();
+      for (const ev of data?.events ?? []) events.push(ev);
+    } catch (e) {
+      fetchErrors.push(`${day}:${String(e).slice(0, 60)}`);
+    }
+  }
+  // Every requested day failed: report it instead of silently "0 events".
+  if (days.length > 0 && events.length === 0 && fetchErrors.length === days.length) {
+    return { ok: false, counts: {}, message: `ESPN ${fetchErrors.slice(0, 3).join(", ")}` };
+  }
 
   const { data: existingAll, error: eErr } = await supabase
     .from("live_scores")
@@ -98,6 +151,8 @@ async function syncTournament(supabase: any, t: any): Promise<Outcome> {
     const evKick = new Date(ev.date ?? comp.date);
     const homeAb: string = homeC.team?.abbreviation ?? "";
     const awayAb: string = awayC.team?.abbreviation ?? "";
+    const homeNm: string = homeC.team?.displayName ?? "";
+    const awayNm: string = awayC.team?.displayName ?? "";
 
     // 1) sticky by stored event id
     let match = (() => {
@@ -110,10 +165,11 @@ async function syncTournament(supabase: any, t: any): Promise<Outcome> {
     if (!match) {
       const candidates = (matches ?? []).filter((m: any) => {
         if (used.has(m.id)) return false;
-        const h = codeOf(m.home);
-        const a = codeOf(m.away);
-        if (!h || !a) return false;
-        return (h === homeAb && a === awayAb) || (h === awayAb && a === homeAb);
+        const hk = keysOf(m.home);
+        const ak = keysOf(m.away);
+        if (!hk || !ak) return false;
+        return (sameTeam(hk, homeAb, homeNm) && sameTeam(ak, awayAb, awayNm)) ||
+               (sameTeam(hk, awayAb, awayNm) && sameTeam(ak, homeAb, homeNm));
       });
       candidates.sort(
         (x: any, y: any) =>
@@ -144,8 +200,8 @@ async function syncTournament(supabase: any, t: any): Promise<Outcome> {
     }
     used.add(match.id);
 
-    const ourHomeCode = codeOf(match.home);
-    const swapped = ourHomeCode !== null && ourHomeCode === awayAb;
+    // Our home side listed as ESPN's away side -> flip the scoreline.
+    const swapped = sameTeam(keysOf(match.home), awayAb, awayNm);
 
     const hs = numOrNull(homeC.score);
     const as_ = numOrNull(awayC.score);
@@ -164,8 +220,11 @@ async function syncTournament(supabase: any, t: any): Promise<Outcome> {
       matched.push({
         matchId: match.id,
         stage: match.stage,
-        bothUnassigned: codeOf(match.home) === null && codeOf(match.away) === null,
-        homeAb, awayAb, winnerAb, completed,
+        bothUnassigned: keysOf(match.home) === null && keysOf(match.away) === null,
+        homeAb: homeNm || homeAb,
+        awayAb: awayNm || awayAb,
+        winnerAb: winnerAb === homeAb ? (homeNm || homeAb) : winnerAb === awayAb ? (awayNm || awayAb) : winnerAb,
+        completed,
       });
     }
 
@@ -270,13 +329,17 @@ async function syncTournament(supabase: any, t: any): Promise<Outcome> {
 
   // AUTO-ASSIGN real knockout teams + record advancers (fill-only).
   if (matched.length > 0) {
-    const { data: teamRows } = await supabase.from("teams").select("id, code").eq("tournament_id", t.id);
-    const codeToId = new Map((teamRows ?? []).map((x: any) => [x.code as string, x.id as string]));
+    const { data: teamRows } = await supabase.from("teams").select("id, code, name_en").eq("tournament_id", t.id);
+    const codeToId = new Map<string, string>();
+    for (const x of teamRows ?? []) {
+      if (x.code) codeToId.set(norm(x.code), x.id as string);
+      if (x.name_en) codeToId.set(norm(x.name_en), x.id as string);
+    }
     let teamsAssigned = 0;
     let advancersSet = 0;
     for (const km of matched) {
-      const hId = codeToId.get(km.homeAb);
-      const aId = codeToId.get(km.awayAb);
+      const hId = codeToId.get(norm(km.homeAb));
+      const aId = codeToId.get(norm(km.awayAb));
       if (km.bothUnassigned && hId && aId) {
         const { error } = await supabase
           .from("matches")
@@ -286,7 +349,7 @@ async function syncTournament(supabase: any, t: any): Promise<Outcome> {
         if (!error) teamsAssigned++;
       }
       if (km.completed && km.winnerAb) {
-        const wId = codeToId.get(km.winnerAb);
+        const wId = codeToId.get(norm(km.winnerAb));
         if (wId) {
           const { error } = await supabase
             .from("match_results")
@@ -302,6 +365,7 @@ async function syncTournament(supabase: any, t: any): Promise<Outcome> {
   }
 
   if (unmatched.length > 0) notes.push(`unmatched: ${unmatched.join(", ")}`);
+  if (fetchErrors.length > 0) notes.push(`fetch: ${fetchErrors.slice(0, 3).join(", ")}`);
 
   return {
     ok: true,
