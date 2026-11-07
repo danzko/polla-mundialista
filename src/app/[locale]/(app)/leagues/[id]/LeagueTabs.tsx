@@ -25,6 +25,13 @@ interface LeagueTabsProps {
 export function LeagueTabs({ league, locale, currentUserId, leaderboardData, kind }: LeagueTabsProps) {
   const t = useTranslations();
   const router = useRouter();
+  const es = locale === 'es';
+  // Who shows up on the board this season; the rest are members who haven't
+  // entered anything yet, flagged here so an admin can chase or remove them.
+  const competing = React.useMemo(
+    () => new Set((leaderboardData?.entries ?? []).map((e) => e.userId)),
+    [leaderboardData]
+  );
 
   // Admin action state
   const [renameValue, setRenameValue] = React.useState(league.name);
@@ -157,6 +164,11 @@ export function LeagueTabs({ league, locale, currentUserId, leaderboardData, kin
                     </div>
 
                     <div className="flex items-center gap-2">
+                      {!competing.has(member.userId) && (
+                        <span className="inline-flex items-center text-[11px] font-semibold bg-secondary text-muted-foreground px-2 py-0.5 rounded-md select-none">
+                          {es ? 'sin jugar' : 'not playing'}
+                        </span>
+                      )}
                       {member.isAdmin && (
                         <span className="inline-flex items-center gap-1 text-[11px] font-bold bg-amber-500/10 border border-amber-500/20 text-amber-400 px-2 py-0.5 rounded-md select-none">
                           {t('common.admin')}

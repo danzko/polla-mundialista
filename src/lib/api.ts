@@ -63,6 +63,42 @@ export async function setCurrentTournament(slug: string): Promise<ActionResult> 
   return { ok: true, data: undefined };
 }
 
+/**
+ * Who is actually competing in this tournament: anyone who has entered a
+ * scoreline, a season pick, a Top 8 or a Fija for it. Standings show only
+ * these people, so a pool of 33 league members from past seasons doesn't
+ * bury the handful actually playing under a wall of zeroes. Someone who
+ * plays badly still counts; someone who hasn't shown up doesn't.
+ * Membership itself is untouched: enter one pick and you reappear.
+ */
+async function participantIds(supabase: any, tournamentId: string, memberIds: string[]): Promise<Set<string>> {
+  if (memberIds.length === 0) return new Set();
+  const [bonus, top8, bankers] = await Promise.all([
+    supabase.from("bonus_predictions").select("user_id").eq("tournament_id", tournamentId).in("user_id", memberIds),
+    supabase.from("top8_picks").select("user_id").eq("tournament_id", tournamentId).in("user_id", memberIds),
+    supabase.from("bankers").select("user_id").eq("tournament_id", tournamentId).in("user_id", memberIds),
+  ]);
+  const out = new Set<string>();
+  for (const r of [...(bonus.data ?? []), ...(top8.data ?? []), ...(bankers.data ?? [])]) {
+    out.add((r as { user_id: string }).user_id);
+  }
+  // Scorelines: the API caps a response at 1000 rows and a full season is
+  // players x 144 games, so page (ordered, so pages are stable) and stop as
+  // soon as everyone is accounted for.
+  const PAGE = 1000;
+  for (let from = 0; out.size < memberIds.length; from += PAGE) {
+    const { data, error } = await supabase
+      .from("predictions").select("user_id, match_id, matches!inner(tournament_id)")
+      .eq("matches.tournament_id", tournamentId).in("user_id", memberIds)
+      .order("user_id", { ascending: true }).order("match_id", { ascending: true })
+      .range(from, from + PAGE - 1);
+    if (error || !data || data.length === 0) break;
+    for (const r of data) out.add((r as { user_id: string }).user_id);
+    if (data.length < PAGE) break;
+  }
+  return out;
+}
+
 /** Advancement points per deciding match of a tournament's bracket (bracket_nodes). */
 async function advancementWeights(supabase: any, tournamentId: string): Promise<Record<number, number>> {
   const { data } = await supabase
@@ -161,7 +197,10 @@ export async function getDashboard(): Promise<LeagueSummary[]> {
         .select("user_id")
         .eq("league_id", league.id);
 
-      const memberIds = members?.map((mem) => mem.user_id) || [];
+      const allMemberIds = members?.map((mem) => mem.user_id) || [];
+      // Standings are over current competitors only (see participantIds).
+      const playing = await participantIds(supabase, tournament.id, allMemberIds);
+      const memberIds = allMemberIds.filter((id: string) => playing.has(id));
 
       // Fetch leaderboard standings for these members
       const { data: scores } = await supabase
@@ -513,7 +552,11 @@ export async function getMatchPicks(): Promise<Record<string, MatchPickRow[]>> {
 
     const { data: memberRows } = await supabase
       .from("league_members").select("user_id").in("league_id", leagueIds);
-    const memberIds = Array.from(new Set((memberRows ?? []).map((r) => r.user_id)));
+    const allMemberIds = Array.from(new Set((memberRows ?? []).map((r) => r.user_id)));
+    if (allMemberIds.length === 0) return {};
+    const tournamentForPicks = await getCurrentTournament();
+    const playingPicks = await participantIds(supabase, tournamentForPicks.id, allMemberIds);
+    const memberIds = allMemberIds.filter((id: string) => playingPicks.has(id));
     if (memberIds.length === 0) return {};
 
     const nowIso = new Date().toISOString();
@@ -893,7 +936,10 @@ export async function getLeaderboard(leagueId?: string): Promise<LeaderboardData
     // Members of the selected league + their names.
     const { data: memberRows } = await supabase
       .from("league_members").select("user_id").eq("league_id", selected.id);
-    const memberIds = Array.from(new Set((memberRows ?? []).map((r) => r.user_id)));
+    const allMemberIds = Array.from(new Set((memberRows ?? []).map((r) => r.user_id)));
+    // Only current competitors appear on the board (see participantIds).
+    const playing = await participantIds(supabase, tournament.id, allMemberIds);
+    const memberIds = allMemberIds.filter((id: string) => playing.has(id));
     if (memberIds.length === 0) {
       return { myUserId: user.id, leagues, leagueId: selected.id, leagueName: selected.name, entries: [] };
     }
@@ -2106,7 +2152,9 @@ export async function getMatchdayBoard(leagueId?: string, matchday?: number): Pr
     if (!league) return null;
 
     const { data: memberRows } = await supabase.from("league_members").select("user_id").eq("league_id", league.id);
-    const memberIds = Array.from(new Set((memberRows ?? []).map((r) => r.user_id as string)));
+    const allMemberIds = Array.from(new Set((memberRows ?? []).map((r) => r.user_id as string)));
+    const playing = await participantIds(supabase, tournament.id, allMemberIds);
+    const memberIds = allMemberIds.filter((id) => playing.has(id));
     const { data: userRows } = await supabase.from("users").select("id, display_name").in("id", memberIds);
     const nameById = new Map<string, string>((userRows ?? []).map((u: any) => [u.id, u.display_name]));
 
