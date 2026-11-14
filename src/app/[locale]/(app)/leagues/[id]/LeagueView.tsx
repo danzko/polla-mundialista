@@ -16,8 +16,8 @@ export function LeagueView({ league, locale, currentUserId, leaderboardData, kin
 }) {
   const es = locale === 'es';
   const basePath = `/${locale}`;
-  // Standings only list current competitors, so the header says how many of
-  // the league's members are actually playing this season.
+  // Standings only list members with points, so the header says how many of
+  // the league's members are on the board this season.
   const competing = leaderboardData?.entries.length ?? null;
   return (
     <div className="space-y-5">
@@ -35,7 +35,7 @@ export function LeagueView({ league, locale, currentUserId, leaderboardData, kin
           <p className="inline-flex min-w-0 items-center gap-1.5 whitespace-nowrap text-sm text-muted-foreground">
             <Users className="h-4 w-4 shrink-0" />
             {competing != null && competing < league.members.length
-              ? (es ? `${competing} jugando de ${league.members.length}` : `${competing} of ${league.members.length} playing`)
+              ? (es ? `${competing} con puntos de ${league.members.length}` : `${competing} of ${league.members.length} scoring`)
               : (es ? `${league.members.length} participantes` : `${league.members.length} players`)}
           </p>
         <div className="flex shrink-0 items-center gap-2">

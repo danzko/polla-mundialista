@@ -26,8 +26,8 @@ export function LeagueTabs({ league, locale, currentUserId, leaderboardData, kin
   const t = useTranslations();
   const router = useRouter();
   const es = locale === 'es';
-  // Who shows up on the board this season; the rest are members who haven't
-  // entered anything yet, flagged here so an admin can chase or remove them.
+  // Who shows up on the board this season (anyone with points); the rest are
+  // flagged here so an admin can chase or remove them.
   const competing = React.useMemo(
     () => new Set((leaderboardData?.entries ?? []).map((e) => e.userId)),
     [leaderboardData]
@@ -166,7 +166,7 @@ export function LeagueTabs({ league, locale, currentUserId, leaderboardData, kin
                     <div className="flex items-center gap-2">
                       {!competing.has(member.userId) && (
                         <span className="inline-flex items-center text-[11px] font-semibold bg-secondary text-muted-foreground px-2 py-0.5 rounded-md select-none">
-                          {es ? 'sin jugar' : 'not playing'}
+                          {es ? 'sin puntos' : 'no points'}
                         </span>
                       )}
                       {member.isAdmin && (

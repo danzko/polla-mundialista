@@ -64,15 +64,22 @@ export async function setCurrentTournament(slug: string): Promise<ActionResult> 
 }
 
 /**
- * Who is actually competing in this tournament: anyone who has entered a
- * scoreline, a season pick, a Top 8 or a Fija for it. Standings show only
- * these people, so a pool of 33 league members from past seasons doesn't
- * bury the handful actually playing under a wall of zeroes. Someone who
- * plays badly still counts; someone who hasn't shown up doesn't.
- * Membership itself is untouched: enter one pick and you reappear.
+ * Who appears on the standings of this tournament: members with MORE THAN
+ * ZERO points. Owner call (Nov 2026): people on the board should be people
+ * who have actually scored, not the full roster of past seasons.
+ *
+ * Fallback: until anyone has scored (the first matchday of a season), show
+ * everyone who has entered a scoreline, pick, Top 8 or La Fija, so the board
+ * is never empty on day one. Membership itself is untouched: score a point
+ * and you appear on the next load.
  */
 async function participantIds(supabase: any, tournamentId: string, memberIds: string[]): Promise<Set<string>> {
   if (memberIds.length === 0) return new Set();
+  const { data: scored } = await supabase
+    .from("leaderboard_view").select("user_id")
+    .eq("tournament_id", tournamentId).in("user_id", memberIds).gt("total_points", 0);
+  if ((scored ?? []).length > 0) return new Set((scored as { user_id: string }[]).map((r) => r.user_id));
+  // Nobody has scored yet: fall back to everyone who has entered anything.
   const [bonus, top8, bankers] = await Promise.all([
     supabase.from("bonus_predictions").select("user_id").eq("tournament_id", tournamentId).in("user_id", memberIds),
     supabase.from("top8_picks").select("user_id").eq("tournament_id", tournamentId).in("user_id", memberIds),
