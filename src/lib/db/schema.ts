@@ -56,6 +56,8 @@ export const users = pgTable("users", {
   displayName: text("display_name").notNull(),
   preferredLanguage: languageEnum("preferred_language").default("es").notNull(),
   isSuperadmin: boolean("is_superadmin").default(false).notNull(),
+  // false = unsubscribed from reminder emails (migration 0034)
+  emailReminders: boolean("email_reminders").default(true).notNull(),
   // Owner-granted window to (re)enter tournament picks after the global
   // lock; null for everyone else. Column writes are revoked from
   // authenticated (migration 0011) — superadmin tooling only.
@@ -327,6 +329,18 @@ export const bracketPicks = pgTable(
 // ============================================================
 // Relations (for Drizzle relational queries)
 // ============================================================
+
+export const reminderLog = pgTable(
+  "reminder_log",
+  {
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    tournamentId: uuid("tournament_id").notNull().references(() => tournaments.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(), // 'matchday' | 'picks'
+    roundKey: text("round_key").notNull(),
+    sentAt: timestamp("sent_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.tournamentId, t.kind, t.roundKey] })]
+);
 
 export const usersRelations = relations(users, ({ many }) => ({
   predictions: many(predictions),

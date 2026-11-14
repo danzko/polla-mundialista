@@ -215,9 +215,9 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=        # server-only, for seed script and admin actions
 NEXT_PUBLIC_BMC_URL=              # Buy Me a Coffee link
 NEXT_PUBLIC_CAFECITO_URL=         # Cafecito link
-RESEND_API_KEY=                   # matchday reminder emails (cron no-ops without it)
-RESEND_FROM=                      # e.g. "La Polla <polla@yourdomain.com>" (verified sender in Resend)
-CRON_SECRET=                      # Vercel cron bearer token for /api/cron/*
+BREVO_API_KEY=                    # reminder emails (or RESEND_API_KEY + RESEND_FROM); cron no-ops without a provider
+EMAIL_FROM=                       # e.g. "La Polla <polla2026@northstaraipartners.com>" (verified Brevo sender)
+CRON_SECRET=                      # REQUIRED: cron bearer token AND unsubscribe-link signing key; cron does nothing without it
 NEXT_PUBLIC_APP_URL=              # optional, links in emails (defaults to the Vercel URL)
 ```
 

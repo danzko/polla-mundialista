@@ -332,3 +332,20 @@ export interface BonusView {
 export type ActionResult<T = void> =
   | { ok: true; data: T }
   | { ok: false; error: string; fieldErrors?: Record<string, string> };
+
+export interface ReminderStatus {
+  tournamentName: string;
+  isUcl: boolean;
+  round: { label: string; firstKickoff: string; openGames: number } | null;
+  lockAt: string | null;
+  emailReady: boolean;
+  members: {
+    userId: string;
+    name: string;
+    picks: number; // scorelines entered for the next round
+    hasChampion: boolean;
+    hasTop8: boolean;
+    onBoard: boolean;
+    emailsOn: boolean;
+  }[];
+}

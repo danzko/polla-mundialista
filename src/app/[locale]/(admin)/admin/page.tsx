@@ -2,6 +2,8 @@ import * as React from "react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentTournament } from "@/lib/api";
 import { ResultRow, type RowMatch } from "./ResultRow";
+import { getReminderStatus } from "@/lib/reminder-status";
+import { ReminderPanel } from "@/components/shared/ReminderPanel";
 import { LivePanel, type LiveItem, type SyncState } from "./LivePanel";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +31,8 @@ export default async function AdminResultsPage({
     supabase.from("live_scores").select("*"),
     supabase.from("live_sync_state").select("*").eq("tournament_id", tournament.id).maybeSingle(),
   ]);
+
+  const reminder = await getReminderStatus();
 
   const rows: RowMatch[] = (matches ?? []).map((m: any) => {
     const r = Array.isArray(m.match_results) ? m.match_results[0] : m.match_results;
@@ -97,6 +101,7 @@ export default async function AdminResultsPage({
 
   return (
     <div className="space-y-3">
+      {reminder && <ReminderPanel status={reminder} />}
       <LivePanel items={liveItems} sync={syncState} />
       <div className="mb-2 text-sm text-muted-foreground">
         <span className="font-semibold text-foreground">{tournament.nameEs}</span> · {withResult} de {rows.length} partidos con resultado
